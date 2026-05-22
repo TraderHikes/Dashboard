@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TraderHikes — Sign In</title>
+<title>Market Basecamp — Sign In</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -70,22 +70,42 @@
   .logo-wrap {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     margin-bottom: 20px;
   }
   .logo-icon {
-    width: 40px; height: 40px;
-    border-radius: 12px;
-    background: linear-gradient(135deg, #5c6ffb, #7c4dff);
+    width: 44px; height: 44px;
+    border-radius: 11px;
+    background: linear-gradient(135deg,#1a2040 0%,#0e1528 100%);
+    border: 1.5px solid rgba(143,163,255,.35);
     display: flex; align-items: center; justify-content: center;
-    font-size: 20px; font-weight: 800; color: #fff;
-    box-shadow: 0 4px 18px rgba(92,111,251,.45);
+    box-shadow: 0 4px 20px rgba(92,111,251,.35), inset 0 1px 0 rgba(255,255,255,.08);
+    position: relative; overflow: hidden; flex-shrink: 0;
   }
-  .logo-text {
-    font-size: 22px; font-weight: 800;
-    color: var(--white); letter-spacing: -.5px;
+  .logo-icon::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg,rgba(143,163,255,.12) 0%,transparent 60%);
   }
-  .logo-text span { color: #8fa3ff; }
+  .logo-mb {
+    font-size: 15px; font-weight: 800;
+    letter-spacing: 1.5px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    color: #8fa3ff; position: relative; z-index: 1;
+    text-shadow: 0 0 12px rgba(143,163,255,.4);
+  }
+  .logo-text-wrap { display: flex; flex-direction: column; gap: 2px; text-align: left; }
+  .logo-line1 {
+    font-size: 12px; font-weight: 800;
+    color: var(--white); letter-spacing: 2.5px;
+    text-transform: uppercase; line-height: 1;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+  .logo-line2 {
+    font-size: 12px; font-weight: 700;
+    color: #8fa3ff; letter-spacing: 2.5px;
+    text-transform: uppercase; line-height: 1;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
   .card-title {
     font-size: 20px; font-weight: 800;
     color: var(--white); letter-spacing: -.3px;
@@ -285,10 +305,13 @@
   <!-- Header -->
   <div class="card-header">
     <div class="logo-wrap">
-      <div class="logo-icon">₹</div>
-      <div class="logo-text">Trader<span>Hikes</span></div>
+      <div class="logo-icon"><span class="logo-mb">MB</span></div>
+      <div class="logo-text-wrap">
+        <span class="logo-line1">Market</span>
+        <span class="logo-line2">Basecamp</span>
+      </div>
     </div>
-    <div class="card-title">Member Dashboard</div>
+    <div class="card-title">Member Access</div>
     <div class="card-sub">Sign in to access live trades &amp; market analysis</div>
   </div>
 
@@ -384,7 +407,7 @@
 
   <!-- Footer -->
   <div class="card-footer">
-    <strong>TraderHikes</strong> — Premium Trading Education &nbsp;|&nbsp;
+    <strong>Market Basecamp</strong> by TraderHikes &nbsp;|&nbsp;
     Access for paid course members only
   </div>
 
@@ -431,14 +454,31 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 // CHECK STUDENT ACCESS
 // ═══════════════════════════════════════════════
 async function checkAccess(userId, email) {
-  // Check approved_students table by email
   const { data, error } = await sb
-    .from('approved_students')
+    .from('students')
     .select('plan, access_until')
-    .eq('email', email.toLowerCase())
+    .eq('id', userId)
     .single();
 
-  if (error || !data) return false;
+  // If not found by ID, try by email
+  // (needed for Google sign-in where ID may differ from initial setup)
+  if (error || !data) {
+    const { data: byEmail } = await sb
+      .from('students')
+      .select('plan, access_until, id')
+      .eq('email', email)
+      .single();
+
+    if (!byEmail) return false;
+
+    // Update the row with the correct auth ID
+    await sb.from('students').update({ id: userId }).eq('email', email);
+
+    if (byEmail.plan !== 'active') return false;
+    if (byEmail.access_until && new Date(byEmail.access_until) < new Date()) return false;
+    return true;
+  }
+
   if (data.plan !== 'active') return false;
   if (data.access_until && new Date(data.access_until) < new Date()) return false;
   return true;
