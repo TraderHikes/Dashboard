@@ -3,7 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PaisaPro — Trading Dashboard</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>TraderHikes — Member Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -493,8 +496,8 @@ canvas.tc{display:block;width:100%;height:100%}
 <nav class="nav">
   <div class="ntab active" onclick="sw('portfolio',this)">🏠 Portfolio Overview</div>
   <div class="ntab" onclick="sw('breadth',this)">📊 Market Breadth</div>
-  <div class="ntab" onclick="sw('open',this)">Open Trades <span class="nbadge">7</span></div>
-  <div class="ntab" onclick="sw('closed',this)">Closed Trades <span class="nbadge">25</span></div>
+  <div class="ntab" onclick="sw('open',this)">Open Trades <span class="nbadge" id="badge-open">—</span></div>
+  <div class="ntab" onclick="sw('closed',this)">Closed Trades <span class="nbadge" id="badge-closed">—</span></div>
   <div class="ntab" onclick="sw('filter',this)">✦ Stock Filter <span class="nbadge">48</span></div>
 </nav>
 
@@ -1287,13 +1290,17 @@ async function renderOpen(){
 
   if (error || !trades || trades.length === 0) {
     c.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted)">No open trades yet.</div>';
-    // Update summary strip
+    // Update badge and header
+    const ob = document.getElementById('badge-open');
+    if(ob) ob.textContent = '0';
     document.getElementById('hdr-deployed').textContent = '₹0';
     document.getElementById('hdr-pnl').textContent = '—';
     return;
   }
 
-  // Calculate summary numbers
+  // Update nav badge with real count
+  const ob = document.getElementById('badge-open');
+  if(ob) ob.textContent = trades.length;
   let totalDeployed=0, totalPnl=0;
   trades.forEach(t=>{
     const invested = t.entry_price * t.quantity;
@@ -1394,10 +1401,14 @@ async function renderClosed(){
 
   if (error || !trades || trades.length === 0) {
     c.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted)">No closed trades yet.</div>';
+    const cb = document.getElementById('badge-closed');
+    if(cb) cb.textContent = '0';
     return;
   }
 
-  // Update closed trades summary strip
+  // Update nav badge with real count
+  const cb = document.getElementById('badge-closed');
+  if(cb) cb.textContent = trades.length;
   const wins   = trades.filter(t => t.realised_pnl > 0);
   const losses  = trades.filter(t => t.realised_pnl <= 0);
   const totalPnl = trades.reduce((s,t) => s + (t.realised_pnl||0), 0);
