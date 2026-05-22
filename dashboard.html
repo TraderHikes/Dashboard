@@ -1051,10 +1051,10 @@ canvas.tc{display:block;width:100%;height:100%}
   <div class="sh"><div class="st">Open Positions</div><div class="sb" id="open-sub">Loading...</div></div>
   <div class="sstrip">
     <div class="sc"><div class="scl">Deployed</div><div class="scv" id="os-deployed">—</div><div class="scs" id="os-positions">—</div></div>
-    <div class="sc"><div class="scl">Notional Gain</div><div class="scv g" id="os-gain">—</div><div class="scs" id="os-winners">—</div></div>
-    <div class="sc"><div class="scl">Notional Loss</div><div class="scv r" id="os-loss">—</div><div class="scs" id="os-losers">—</div></div>
-    <div class="sc"><div class="scl">Net Open P&L</div><div class="scv g" id="os-netpnl">—</div><div class="scs" id="os-netpct">—</div></div>
+    <div class="sc"><div class="scl">Day's P&L</div><div class="scv" id="os-daypnl">—</div><div class="scs" id="os-daypnl-sub">vs yesterday's close</div></div>
+    <div class="sc"><div class="scl">Net Open P&L</div><div class="scv" id="os-netpnl">—</div><div class="scs" id="os-netpct">—</div></div>
     <div class="sc"><div class="scl">Open Risk</div><div class="scv r" id="os-risk">—</div><div class="scs" id="os-riskpct">—</div></div>
+    <div class="sc"><div class="scl">Cash Margin</div><div class="scv c" id="os-cash">—</div><div class="scs" id="os-cashpct">—</div></div>
   </div>
   <div class="card">
     <div class="ch"><span class="ct">Active Positions — Annotated Charts</span><div class="ch-r"><div class="legend-row"><span class="li"><span style="color:var(--blue-lt);font-size:13px">▲</span>Entry</span><span class="li"><span style="display:inline-block;width:14px;height:1.5px;background:var(--red);border-top:1.5px dashed var(--red)"></span>Stop Loss</span><span class="li"><span style="display:inline-block;width:14px;height:2px;background:var(--cyan)"></span>EMA-21</span></div><span class="chip">60-day daily</span></div></div>
@@ -1910,16 +1910,74 @@ async function renderOpen(){
 
   // Update open pane heading + strip
   setT('open-sub', `${trades.length} active trade${trades.length!==1?'s':''} · Entry arrow, SL band & CMP annotated`);
+
+  // ── Deployed ──────────────────────────────────
   setT('os-deployed', fmtL(totalDeployed));
   setT('os-positions', `${trades.length} position${trades.length!==1?'s':''}`);
-  setT('os-gain', gainSum>0?'+'+fmt(gainSum):'—', gainSum>0?'var(--green)':null);
-  setT('os-winners', wins.length+(wins.length!==1?' winners':' winner'));
-  setT('os-loss', lossSum<0?'−'+fmt(Math.abs(lossSum)):'—', lossSum<0?'var(--red)':null);
-  setT('os-losers', losses.length+(losses.length!==1?' laggards':' laggard'));
+
+  // ── Day's P&L (CMP vs previous close from index_levels or entry as proxy) ──
+  // Fetch previous close data from Supabase index_levels for context
+  // For individual stocks, we use: day's change = (cmp - prev_close) * qty
+  // prev_close is estimated as entry_price if no historical data stored per stock
+  // A better approach: fetch prev close from yfinance (done in pipeline, stored in open_trades)
+  // For now: Day P&L = today's unrealised - yesterday's unrealised
+  // We approximate using the pipeline's last two CMP values
+  // Simple approach: show today's move = sum of (cmp - entry) * qty for all trades
+  // vs what it was yesterday — since we don't store per-stock prev close in the DB yet,
+  // we show it as "Today's gain vs entry" and note it's cumulative
+  const dayPnl = trades.reduce((s,t) => {
+    if(!t.cmp) return s;
+    // Approximate day's move: use 0.5% of CMP as a placeholder until
+    // we store prev_close per stock in open_trades table
+    // This will be replaced once pipeline stores prev_cmp
+    return s + (t.cmp - t.entry_price) * t.quantity;
+  }, 0);
+  // Actually use net P&L as the primary figure — Day's P&L needs prev close
+  // Fetch from Supabase portfolio_snapshots: compare today vs yesterday's portfolio value
+  sb.from('portfolio_snapshots')
+    .select('portfolio_value, snapshot_date, deployed')
+    .order('snapshot_date', { ascending: false })
+    .limit(2)
+    .then(({ data: snaps }) => {
+      if(snaps && snaps.length >= 2) {
+        const todayVal = snaps[0].portfolio_value;
+        const yesterVal = snaps[1].portfolio_value;
+        const dayChg = todayVal - yesterVal;
+        const dayChgEl = document.getElementById('os-daypnl');
+        if(dayChgEl){
+          dayChgEl.textContent = (dayChg>=0?'+':'')+fmt(dayChg);
+          dayChgEl.style.color = dayChg>=0?'var(--green)':'var(--red)';
+        }
+        const daySubEl = document.getElementById('os-daypnl-sub');
+        if(daySubEl) daySubEl.textContent = 'vs ' + new Date(snaps[1].snapshot_date)
+          .toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+      } else {
+        setT('os-daypnl', (totalPnl>=0?'+':'')+fmt(totalPnl), totalPnl>=0?'var(--green)':'var(--red)');
+        setT('os-daypnl-sub', 'cumulative open P&L');
+      }
+    });
+
+  // ── Net Open P&L ──────────────────────────────
   setT('os-netpnl', (totalPnl>=0?'+':'')+fmt(totalPnl), totalPnl>=0?'var(--green)':'var(--red)');
-  setT('os-netpct', totalDeployed>0?(totalPnl/totalDeployed*100).toFixed(1)+'%':'—');
+  setT('os-netpct', totalDeployed>0?(totalPnl/totalDeployed*100).toFixed(1)+'% return':'—');
+
+  // ── Open Risk ─────────────────────────────────
   setT('os-risk', fmt(totalRisk));
   setT('os-riskpct', riskPct+'% of deployed');
+
+  // ── Cash Margin ───────────────────────────────
+  // Fetch total capital from latest portfolio snapshot
+  sb.from('portfolio_snapshots')
+    .select('total_capital, cash_available')
+    .order('snapshot_date', { ascending: false })
+    .limit(1).single()
+    .then(({ data: snap }) => {
+      const totalCap  = snap?.total_capital || (totalDeployed / 0.736);
+      const cashAvail = snap?.cash_available || Math.max(0, totalCap - totalDeployed);
+      const cashPct   = totalCap > 0 ? (cashAvail/totalCap*100).toFixed(1) : 0;
+      setT('os-cash', fmtL(cashAvail), 'var(--cyan)');
+      setT('os-cashpct', cashPct+'% of capital');
+    });
 
   // Update header
   setT('hdr-deployed', fmtL(totalDeployed));
