@@ -213,30 +213,73 @@ def fetch_cmp_for_open_trades():
 
 
 # ════════════════════════════════════════════════════════════
-# STEP 2 — Fetch index levels
+# STEP 2 — Fetch all index levels + save to Supabase
 # ════════════════════════════════════════════════════════════
 def fetch_index_levels():
     print("📊 Step 2: Fetching index levels...")
 
+    # Full list of indices to fetch and store
     indices = {
-        "nifty50":   "^NSEI",
-        "sensex":    "^BSESN",
-        "nifty500":  "^CRSLDX",
-        "banknifty": "^NSEBANK",
-        "niftyit":   "^CNXIT",
-        "india_vix": "^INDIAVIX",
+        "nifty50":      "^NSEI",
+        "sensex":       "^BSESN",
+        "nifty500":     "^CRSLDX",
+        "nifty_midcap": "^NSEMDCP50",
+        "nifty_it":     "^CNXIT",
+        "nifty_bank":   "^NSEBANK",
+        "nifty_pharma": "^CNXPHARMA",
+        "nifty_auto":   "^CNXAUTO",
+        "nifty_psubank":"^CNXPSUBANK",
+        "nifty_metal":  "^CNXMETAL",
+        "nifty_realty": "^CNXREALTY",
+        "nifty_fmcg":   "^CNXFMCG",
+        "india_vix":    "^INDIAVIX",
     }
 
-    levels = {}
+    levels = {}      # current close
+    prev   = {}      # previous close (for day change)
+
     for name, sym in indices.items():
         try:
-            hist = yf.Ticker(sym).history(period="2d", interval="1d")
-            if not hist.empty:
-                level = round(float(hist["Close"].iloc[-1]), 2)
-                levels[name] = level
-                print(f"   ✓ {name.upper():12s}: {level:>12,.2f}")
+            hist = yf.Ticker(sym).history(period="5d", interval="1d")
+            if hist.empty:
+                print(f"   ⚠️  No data for {name}")
+                continue
+
+            # Get last two valid closes
+            closes = hist["Close"].dropna()
+            if len(closes) >= 1:
+                levels[name] = round(float(closes.iloc[-1]), 2)
+            if len(closes) >= 2:
+                prev[name]   = round(float(closes.iloc[-2]), 2)
+
+            chg = levels.get(name,0) - prev.get(name,0)
+            pct = chg / prev[name] * 100 if prev.get(name) else 0
+            print(f"   ✓ {name.upper():16s}: {levels[name]:>10,.2f}  "
+                  f"({'+'if chg>=0 else ''}{chg:,.2f}, {pct:+.2f}%)")
+
         except Exception as e:
             print(f"   ⚠️  {name}: {e}")
+
+    # Save to index_levels table
+    if levels:
+        row = {"snapshot_date": TODAY_STR}
+        for key, val in levels.items():
+            if key != "india_vix":
+                row[key] = val
+        for key, val in prev.items():
+            if key != "india_vix":
+                row[f"{key}_prev"] = val
+        # india_vix goes into market_breadth table (already done)
+        # but store it in levels dict for other steps to use
+        levels["india_vix"] = levels.get("india_vix", None)
+
+        try:
+            sb.table("index_levels").upsert(
+                row, on_conflict="snapshot_date"
+            ).execute()
+            print(f"   ✓ All index levels saved to Supabase for {TODAY_STR}")
+        except Exception as e:
+            print(f"   ⚠️  Could not save index levels: {e}")
 
     print()
     return levels
