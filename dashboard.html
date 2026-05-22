@@ -843,8 +843,14 @@ canvas.tc{display:block;width:100%;height:100%}
      TAB 3 — OPEN TRADES
 ══════════════════════════════════════ -->
 <div class="pane" id="pane-open">
-  <div class="sh"><div class="st">Open Positions</div><div class="sb">7 active trades · Entry arrow, stop-loss band &amp; CMP annotated on chart</div></div>
-  <div class="sstrip"><div class="sc"><div class="scl">Deployed</div><div class="scv">₹18.4L</div><div class="scs">7 positions</div></div><div class="sc"><div class="scl">Notional Gain</div><div class="scv g">+₹2,10,340</div><div class="scs">5 winners</div></div><div class="sc"><div class="scl">Notional Loss</div><div class="scv r">−₹14,200</div><div class="scs">2 laggards</div></div><div class="sc"><div class="scl">Net Open P&L</div><div class="scv g">+₹1,96,140</div><div class="scs">+10.7%</div></div><div class="sc"><div class="scl">Open Risk</div><div class="scv r">₹54,200</div><div class="scs">2.9% of cap</div></div></div>
+  <div class="sh"><div class="st">Open Positions</div><div class="sb" id="open-sub">Loading...</div></div>
+  <div class="sstrip">
+    <div class="sc"><div class="scl">Deployed</div><div class="scv" id="os-deployed">—</div><div class="scs" id="os-positions">—</div></div>
+    <div class="sc"><div class="scl">Notional Gain</div><div class="scv g" id="os-gain">—</div><div class="scs" id="os-winners">—</div></div>
+    <div class="sc"><div class="scl">Notional Loss</div><div class="scv r" id="os-loss">—</div><div class="scs" id="os-losers">—</div></div>
+    <div class="sc"><div class="scl">Net Open P&L</div><div class="scv g" id="os-netpnl">—</div><div class="scs" id="os-netpct">—</div></div>
+    <div class="sc"><div class="scl">Open Risk</div><div class="scv r" id="os-risk">—</div><div class="scs" id="os-riskpct">—</div></div>
+  </div>
   <div class="card">
     <div class="ch"><span class="ct">Active Positions — Annotated Charts</span><div class="ch-r"><div class="legend-row"><span class="li"><span style="color:var(--blue-lt);font-size:13px">▲</span>Entry</span><span class="li"><span style="display:inline-block;width:14px;height:1.5px;background:var(--red);border-top:1.5px dashed var(--red)"></span>Stop Loss</span><span class="li"><span style="display:inline-block;width:14px;height:2px;background:var(--cyan)"></span>EMA-21</span></div><span class="chip">60-day daily</span></div></div>
     <div id="ot-container"></div>
@@ -856,7 +862,13 @@ canvas.tc{display:block;width:100%;height:100%}
 ══════════════════════════════════════ -->
 <div class="pane" id="pane-closed">
   <div class="sh"><div class="st">Trade Journal</div><div class="sb">Closed positions · Entry, partial profit booking &amp; final exit annotated on chart</div></div>
-  <div class="sstrip"><div class="sc"><div class="scl">Realised P&L</div><div class="scv g">+₹1,42,800</div><div class="scs">30-day period</div></div><div class="sc"><div class="scl">Wins</div><div class="scv g">17</div><div class="scs">Avg +14.2%</div></div><div class="sc"><div class="scl">Losses</div><div class="scv r">8</div><div class="scs">Avg −4.1%</div></div><div class="sc"><div class="scl">Win Rate</div><div class="scv b">68%</div><div class="scs">17/25</div></div><div class="sc"><div class="scl">Profit Factor</div><div class="scv g">3.47×</div><div class="scs">Gross ratio</div></div></div>
+  <div class="sstrip">
+    <div class="sc"><div class="scl">Realised P&L</div><div class="scv g" id="cs-pnl">—</div><div class="scs" id="cs-pnl-sub">—</div></div>
+    <div class="sc"><div class="scl">Wins</div><div class="scv g" id="cs-wins">—</div><div class="scs" id="cs-wins-sub">—</div></div>
+    <div class="sc"><div class="scl">Losses</div><div class="scv r" id="cs-losses">—</div><div class="scs" id="cs-losses-sub">—</div></div>
+    <div class="sc"><div class="scl">Win Rate</div><div class="scv b" id="cs-wr">—</div><div class="scs" id="cs-wr-sub">—</div></div>
+    <div class="sc"><div class="scl">Profit Factor</div><div class="scv g" id="cs-pf">—</div><div class="scs">Gross ratio</div></div>
+  </div>
   <div class="card">
     <div class="ch"><span class="ct">Closed Trades — Full Journey</span><div class="ch-r"><div class="legend-row"><span class="li"><span style="color:var(--blue-lt);font-size:13px">▲</span>Entry</span><span class="li"><span style="color:var(--amber);font-size:13px">◆</span>Partial</span><span class="li"><span style="color:var(--red);font-size:13px">▼</span>Exit</span></div><span class="chip">Full duration</span></div></div>
     <div id="ct-container"></div>
@@ -1526,35 +1538,41 @@ async function renderOpen(){
   // Update nav badge with real count
   const ob = document.getElementById('badge-open');
   if(ob) ob.textContent = trades.length;
+
+  // Calculate summary numbers
+  const fmt  = (n) => '₹' + Math.abs(n).toLocaleString('en-IN',{maximumFractionDigits:0});
+  const fmtL = (n) => '₹' + (n/100000).toFixed(2) + 'L';
+  const setT = (id,v,col) => { const e=document.getElementById(id); if(e){e.textContent=v; if(col)e.style.color=col;} };
+
   let totalDeployed=0, totalPnl=0;
   trades.forEach(t=>{
-    const invested = t.entry_price * t.quantity;
-    totalDeployed += invested;
+    totalDeployed += t.entry_price * t.quantity;
     if(t.cmp) totalPnl += (t.cmp - t.entry_price) * t.quantity;
   });
 
-  // Update header stats
-  document.getElementById('hdr-deployed').textContent =
-    '₹' + (totalDeployed/100000).toFixed(1) + 'L';
-  const pnlEl = document.getElementById('hdr-pnl');
-  pnlEl.textContent = (totalPnl>=0?'+':'') + '₹' +
-    Math.abs(totalPnl).toLocaleString('en-IN',{maximumFractionDigits:0});
-  pnlEl.style.color = totalPnl>=0 ? 'var(--green)' : 'var(--red)';
-
-  // Update open trades summary strip
-  const wins = trades.filter(t=>t.cmp && t.cmp>t.entry_price);
-  const losses = trades.filter(t=>t.cmp && t.cmp<t.entry_price);
+  const wins   = trades.filter(t=>t.cmp && t.cmp>t.entry_price);
+  const losses  = trades.filter(t=>t.cmp && t.cmp<t.entry_price);
   const gainSum = wins.reduce((s,t)=>(s+(t.cmp-t.entry_price)*t.quantity),0);
   const lossSum = losses.reduce((s,t)=>(s+(t.cmp-t.entry_price)*t.quantity),0);
-  const totalRisk = trades.reduce((s,t)=>(s+(t.entry_price-t.sl_price)*t.quantity),0);
+  const totalRisk = trades.reduce((s,t)=>(s+Math.max(0,(t.entry_price-t.sl_price)*t.quantity)),0);
+  const riskPct = totalDeployed>0?(totalRisk/totalDeployed*100).toFixed(1):0;
 
-  // Update the sstrip in open pane
-  const ss = document.querySelectorAll('#pane-open .sc');
-  if(ss[0]) ss[0].querySelector('.scv').textContent = '₹'+(totalDeployed/100000).toFixed(1)+'L';
-  if(ss[1]) { ss[1].querySelector('.scv').textContent = '+₹'+gainSum.toLocaleString('en-IN',{maximumFractionDigits:0}); ss[1].querySelector('.scs').textContent = wins.length+' winners'; }
-  if(ss[2]) { ss[2].querySelector('.scv').textContent = '−₹'+Math.abs(lossSum).toLocaleString('en-IN',{maximumFractionDigits:0}); ss[2].querySelector('.scs').textContent = losses.length+' laggards'; }
-  if(ss[3]) { ss[3].querySelector('.scv').textContent = (totalPnl>=0?'+':'')+'₹'+Math.abs(totalPnl).toLocaleString('en-IN',{maximumFractionDigits:0}); }
-  if(ss[4]) ss[4].querySelector('.scv').textContent = '₹'+totalRisk.toLocaleString('en-IN',{maximumFractionDigits:0});
+  // Update open pane heading + strip
+  setT('open-sub', `${trades.length} active trade${trades.length!==1?'s':''} · Entry arrow, SL band & CMP annotated`);
+  setT('os-deployed', fmtL(totalDeployed));
+  setT('os-positions', `${trades.length} position${trades.length!==1?'s':''}`);
+  setT('os-gain', gainSum>0?'+'+fmt(gainSum):'—', gainSum>0?'var(--green)':null);
+  setT('os-winners', wins.length+(wins.length!==1?' winners':' winner'));
+  setT('os-loss', lossSum<0?'−'+fmt(Math.abs(lossSum)):'—', lossSum<0?'var(--red)':null);
+  setT('os-losers', losses.length+(losses.length!==1?' laggards':' laggard'));
+  setT('os-netpnl', (totalPnl>=0?'+':'')+fmt(totalPnl), totalPnl>=0?'var(--green)':'var(--red)');
+  setT('os-netpct', totalDeployed>0?(totalPnl/totalDeployed*100).toFixed(1)+'%':'—');
+  setT('os-risk', fmt(totalRisk));
+  setT('os-riskpct', riskPct+'% of deployed');
+
+  // Update header
+  setT('hdr-deployed', fmtL(totalDeployed));
+  setT('hdr-pnl', (totalPnl>=0?'+':'')+fmt(totalPnl), totalPnl>=0?'var(--green)':'var(--red)');
 
   c.innerHTML='';
   trades.forEach(t=>{
@@ -1625,15 +1643,28 @@ async function renderClosed(){
     .order('exit_date', { ascending: false });
 
   if (error || !trades || trades.length === 0) {
-    c.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted)">No closed trades yet.</div>';
+    c.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted)">No closed trades yet. Trades will appear here once you close a position from the admin panel.</div>';
     const cb = document.getElementById('badge-closed');
     if(cb) cb.textContent = '0';
+    // Clear the summary strip
+    ['cs-pnl','cs-wins','cs-losses','cs-wr','cs-pf'].forEach(id=>{
+      const e=document.getElementById(id); if(e){e.textContent='—'; e.style.color='';}
+    });
+    const setT0=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+    setT0('cs-pnl-sub','No closed trades');
+    setT0('cs-wins-sub','—');
+    setT0('cs-losses-sub','—');
+    setT0('cs-wr-sub','—');
     return;
   }
 
   // Update nav badge with real count
   const cb = document.getElementById('badge-closed');
   if(cb) cb.textContent = trades.length;
+
+  const fmt2 = (n) => '₹' + Math.abs(n).toLocaleString('en-IN',{maximumFractionDigits:0});
+  const setT2 = (id,v,col) => { const e=document.getElementById(id); if(e){e.textContent=v; if(col)e.style.color=col;} };
+
   const wins   = trades.filter(t => t.realised_pnl > 0);
   const losses  = trades.filter(t => t.realised_pnl <= 0);
   const totalPnl = trades.reduce((s,t) => s + (t.realised_pnl||0), 0);
@@ -1644,12 +1675,16 @@ async function renderClosed(){
   const pf = grossLoss > 0 ? (grossWin/grossLoss).toFixed(2) : '∞';
   const winRate = trades.length ? Math.round((wins.length/trades.length)*100) : 0;
 
-  const ss = document.querySelectorAll('#pane-closed .sc');
-  if(ss[0]){ ss[0].querySelector('.scv').textContent=(totalPnl>=0?'+':'')+'₹'+Math.abs(totalPnl).toLocaleString('en-IN',{maximumFractionDigits:0}); }
-  if(ss[1]){ ss[1].querySelector('.scv').textContent=wins.length; ss[1].querySelector('.scs').textContent='Avg +'+avgWin.toFixed(1)+'%'; }
-  if(ss[2]){ ss[2].querySelector('.scv').textContent=losses.length; ss[2].querySelector('.scs').textContent='Avg '+avgLoss.toFixed(1)+'%'; }
-  if(ss[3]){ ss[3].querySelector('.scv').textContent=winRate+'%'; ss[3].querySelector('.scs').textContent=wins.length+'/'+trades.length; }
-  if(ss[4]){ ss[4].querySelector('.scv').textContent=pf+'×'; }
+  // Update closed pane strip with IDs
+  setT2('cs-pnl', (totalPnl>=0?'+':'')+fmt2(totalPnl), totalPnl>=0?'var(--green)':'var(--red)');
+  setT2('cs-pnl-sub', trades.length+' closed trade'+(trades.length!==1?'s':''));
+  setT2('cs-wins', wins.length, 'var(--green)');
+  setT2('cs-wins-sub', 'Avg +'+(avgWin.toFixed(1))+'%');
+  setT2('cs-losses', losses.length, losses.length>0?'var(--red)':'var(--muted)');
+  setT2('cs-losses-sub', losses.length>0?'Avg '+avgLoss.toFixed(1)+'%':'No losses');
+  setT2('cs-wr', winRate+'%', 'var(--blue-lt)');
+  setT2('cs-wr-sub', wins.length+'/'+trades.length);
+  setT2('cs-pf', pf+'×', parseFloat(pf)>=2?'var(--green)':parseFloat(pf)>=1?'var(--amber)':'var(--red)');
 
   c.innerHTML='';
   trades.forEach(t=>{
