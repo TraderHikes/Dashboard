@@ -718,124 +718,213 @@ canvas.tc{display:block;width:100%;height:100%}
      TAB 2 — MARKET BREADTH
 ══════════════════════════════════════ -->
 <div class="pane" id="pane-breadth">
-  <div class="sh"><div class="st">Market Breadth</div><div class="sb">NSE Universe · 1,847 stocks · Updated 10:34 IST · May 18, 2026</div></div>
+  <div class="sh">
+    <div class="st">Market Breadth</div>
+    <div class="sb" id="breadth-sub">Loading...</div>
+  </div>
 
   <!-- ── Row 1: 3 EMA Cards ── -->
   <div class="g3">
-    <div class="bcard bc-g"><div class="bcard-ema">📈 21-Day EMA</div><div class="bcard-num bn-g">72.4%</div><div class="bcard-desc">1,337 of 1,847 stocks above — <strong>Bullish signal</strong></div><div class="prog"><div class="pfill pg" style="width:72.4%"></div></div><div class="sb-strip" id="sbs21"></div><div class="bcard-foot"><span>7D avg: 68.1%</span><span class="up" style="font-weight:700">▲ +5.2% today</span></div></div>
-    <div class="bcard bc-a"><div class="bcard-ema">📊 50-Day EMA</div><div class="bcard-num bn-a">58.1%</div><div class="bcard-desc">1,073 of 1,847 stocks above — <strong>Neutral signal</strong></div><div class="prog"><div class="pfill pa" style="width:58.1%"></div></div><div class="sb-strip" id="sbs50"></div><div class="bcard-foot"><span>7D avg: 55.4%</span><span class="up" style="font-weight:700">▲ +1.8% today</span></div></div>
-    <div class="bcard bc-g"><div class="bcard-ema">📉 200-Day EMA</div><div class="bcard-num bn-g">64.7%</div><div class="bcard-desc">1,195 of 1,847 stocks above — <strong>Bullish signal</strong></div><div class="prog"><div class="pfill pg" style="width:64.7%"></div></div><div class="sb-strip" id="sbs200"></div><div class="bcard-foot"><span>7D avg: 65.0%</span><span class="dn" style="font-weight:700">▼ −0.3% today</span></div></div>
+
+    <div class="bcard" id="bc-21">
+      <div class="bcard-ema">📈 21-Day EMA</div>
+      <div class="bcard-num" id="b21-pct">—</div>
+      <div class="bcard-desc" id="b21-desc">Loading...</div>
+      <div class="prog"><div class="pfill" id="b21-bar" style="width:0%"></div></div>
+      <div class="sb-strip" id="sbs21"></div>
+      <div class="bcard-foot"><span id="b21-stocks">—</span><span id="b21-signal" style="font-weight:700">—</span></div>
+    </div>
+
+    <div class="bcard" id="bc-50">
+      <div class="bcard-ema">📊 50-Day EMA</div>
+      <div class="bcard-num" id="b50-pct">—</div>
+      <div class="bcard-desc" id="b50-desc">Loading...</div>
+      <div class="prog"><div class="pfill" id="b50-bar" style="width:0%"></div></div>
+      <div class="sb-strip" id="sbs50"></div>
+      <div class="bcard-foot"><span id="b50-stocks">—</span><span id="b50-signal" style="font-weight:700">—</span></div>
+    </div>
+
+    <div class="bcard" id="bc-200">
+      <div class="bcard-ema">📉 200-Day EMA</div>
+      <div class="bcard-num" id="b200-pct">—</div>
+      <div class="bcard-desc" id="b200-desc">Loading...</div>
+      <div class="prog"><div class="pfill" id="b200-bar" style="width:0%"></div></div>
+      <div class="sb-strip" id="sbs200"></div>
+      <div class="bcard-foot"><span id="b200-stocks">—</span><span id="b200-signal" style="font-weight:700">—</span></div>
+    </div>
+
   </div>
 
   <!-- ── Row 2: Advance/Decline + 52W High/Low ── -->
   <div class="g2">
 
-    <!-- Advance / Decline Ratio -->
+    <!-- Advance / Decline -->
     <div class="card">
-      <div class="ch"><span class="ct">Advance / Decline Ratio</span><div class="ch-r"><span class="chip">NSE · Today</span><span style="font-size:11px;color:var(--green);font-weight:700">Ratio: 2.04</span></div></div>
+      <div class="ch">
+        <span class="ct">Advance / Decline Ratio</span>
+        <div class="ch-r">
+          <span class="chip">Nifty 500 · Today</span>
+          <span id="ad-ratio-label" style="font-size:11px;font-weight:700;color:var(--green)">—</span>
+        </div>
+      </div>
       <div class="ad-row">
         <div class="ad-cell">
           <div class="ad-label">Advancing</div>
-          <div class="ad-val g">1,240</div>
+          <div class="ad-val g" id="ad-advancing">—</div>
           <div class="ad-sub">stocks moved up</div>
-          <div class="ad-ratio-pill arp-bull">▲ Majority advancing</div>
+          <div class="ad-ratio-pill arp-bull" id="ad-adv-pill">—</div>
         </div>
         <div class="ad-cell">
           <div class="ad-label">Declining</div>
-          <div class="ad-val r">607</div>
+          <div class="ad-val r" id="ad-declining">—</div>
           <div class="ad-sub">stocks moved down</div>
-          <div class="ad-ratio-pill arp-bear">▼ 32.8% declining</div>
+          <div class="ad-ratio-pill arp-bear" id="ad-dec-pill">—</div>
         </div>
         <div class="ad-cell">
-          <div class="ad-label">Unchanged</div>
-          <div class="ad-val w">−−</div>
-          <div class="ad-sub" style="margin-bottom:14px">flat or halted</div>
+          <div class="ad-label">Total Processed</div>
+          <div class="ad-val w" id="ad-total">—</div>
+          <div class="ad-sub" style="margin-bottom:14px">Nifty 500 stocks</div>
           <div class="ad-label" style="margin-bottom:4px;margin-top:4px">A/D Split</div>
           <div class="ad-bar-track">
-            <div class="ad-bar-adv" style="width:67.1%"></div>
-            <div class="ad-bar-dec" style="width:32.9%"></div>
+            <div class="ad-bar-adv" id="ad-bar-adv" style="width:50%"></div>
+            <div class="ad-bar-dec" id="ad-bar-dec" style="width:50%"></div>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px"><span class="up">67.1% Adv</span><span class="dn">32.9% Dec</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px">
+            <span class="up" id="ad-adv-pct">—</span>
+            <span class="dn" id="ad-dec-pct">—</span>
+          </div>
         </div>
       </div>
-      <!-- 5-day A/D trend -->
+      <!-- 5-day A/D trend from Supabase -->
       <div style="padding:12px 20px;border-top:1px solid var(--bdr)">
         <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-weight:600;margin-bottom:10px">5-Day A/D Trend</div>
         <div style="display:flex;gap:8px;align-items:flex-end;height:50px" id="ad-trend"></div>
-        <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:5px;font-family:var(--fm)"><span>14 May</span><span>15 May</span><span>16 May</span><span>19 May</span><span>Today</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:5px;font-family:var(--fm)" id="ad-trend-labels">
+          <span>—</span><span>—</span><span>—</span><span>—</span><span>Today</span>
+        </div>
       </div>
     </div>
 
     <!-- 52W High / Low -->
     <div class="card">
-      <div class="ch"><span class="ct">52-Week High / Low Breakouts</span><div class="ch-r"><span class="chip">NSE 500</span><span style="font-size:11px;color:var(--green);font-weight:700">Net +124 new highs</span></div></div>
+      <div class="ch">
+        <span class="ct">52-Week High / Low Breakouts</span>
+        <div class="ch-r">
+          <span class="chip">Nifty 500</span>
+          <span id="hl-net-label" style="font-size:11px;font-weight:700;color:var(--green)">—</span>
+        </div>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--bdr)">
         <div style="padding:14px 20px;border-right:1px solid var(--bdr);display:flex;align-items:center;gap:12px">
-          <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:4px">New 52W Highs</div><div class="hl-count g">142</div><div class="hl-sub">today · NSE 500 universe</div></div>
+          <div>
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:4px">New 52W Highs</div>
+            <div class="hl-count g" id="hl-highs-count">—</div>
+            <div class="hl-sub">today · Nifty 500</div>
+          </div>
           <div style="width:48px;height:48px;border-radius:12px;background:var(--green-dim);border:1px solid var(--green-bd);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🚀</div>
         </div>
         <div style="padding:14px 20px;display:flex;align-items:center;gap:12px">
-          <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:4px">New 52W Lows</div><div class="hl-count r">18</div><div class="hl-sub">today · NSE 500 universe</div></div>
+          <div>
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:4px">New 52W Lows</div>
+            <div class="hl-count r" id="hl-lows-count">—</div>
+            <div class="hl-sub">today · Nifty 500</div>
+          </div>
           <div style="width:48px;height:48px;border-radius:12px;background:var(--red-dim);border:1px solid var(--red-bd);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">📉</div>
         </div>
       </div>
-      <div class="hl-grid">
-        <div class="hl-side">
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:10px">Top New Highs</div>
-          <div class="hl-stocks" id="hl-highs"></div>
+      <!-- VIX + Nifty context -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--bdr)">
+        <div style="background:var(--card2);padding:14px 18px">
+          <div class="pcl">India VIX</div>
+          <div class="pcv" id="brd-vix" style="color:var(--white)">—</div>
+          <div class="pcs" id="brd-vix-sub">—</div>
         </div>
-        <div class="hl-side">
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:10px">New 52W Lows</div>
-          <div class="hl-stocks" id="hl-lows"></div>
+        <div style="background:var(--card2);padding:14px 18px">
+          <div class="pcl">Nifty 50</div>
+          <div class="pcv b" id="brd-nifty50">—</div>
+          <div class="pcs">Today's close</div>
+        </div>
+        <div style="background:var(--card2);padding:14px 18px">
+          <div class="pcl">Net Highs − Lows</div>
+          <div class="pcv" id="brd-net-hl">—</div>
+          <div class="pcs">Breadth signal</div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ── Row 3: CNX 500 Top Gainers & Losers ── -->
+  <!-- ── Row 3: Market Regime Score ── -->
   <div class="card">
-    <div class="ch"><span class="ct">CNX 500 — Top Gainers &amp; Losers</span><div class="ch-r"><span class="chip">Today · 18 May 2026</span><span class="chip">NSE</span></div></div>
-    <div class="gl-tabs">
-      <div class="gl-tab a-g" onclick="glTab('gainers',this)">▲ Top 10 Gainers</div>
-      <div class="gl-tab" onclick="glTab('losers',this)">▼ Top 10 Losers</div>
-    </div>
-    <div class="gl-pane active" id="glp-gainers">
-      <div class="gl-header"><span>#</span><span>Company</span><span class="r">CMP ₹</span><span class="r">Day Chg %</span><span class="r" style="text-align:right">4W Trend</span></div>
-      <div id="gl-gainers-list"></div>
-    </div>
-    <div class="gl-pane" id="glp-losers">
-      <div class="gl-header"><span>#</span><span>Company</span><span class="r">CMP ₹</span><span class="r">Day Chg %</span><span class="r" style="text-align:right">4W Trend</span></div>
-      <div id="gl-losers-list"></div>
+    <div class="ch"><span class="ct">Market Regime Score</span><span class="chip" id="regime-chip">Composite · Live</span></div>
+    <div class="regime-body">
+      <div class="rm-top">
+        <div class="rm-num" id="regime-score">—</div>
+        <div>
+          <div class="rm-label" id="regime-label">Loading...</div>
+          <div class="rm-sub" id="regime-sub">Calculating from live breadth data...</div>
+        </div>
+      </div>
+      <div class="rm-gauge">
+        <div class="rm-needle" id="regime-needle" style="left:50%"></div>
+      </div>
+      <div class="rm-axis">
+        <span class="rb">Bearish (&lt;40)</span>
+        <span class="rn">Neutral (40–60)</span>
+        <span class="rg">Bullish (&gt;60)</span>
+      </div>
+      <div class="rm-stats">
+        <div class="rms"><div class="rmsl">Adv / Dec</div><div class="rmsv" id="rs-ad">—</div></div>
+        <div class="rms"><div class="rmsl">52W Highs</div><div class="rmsv" id="rs-highs" style="color:var(--green)">—</div></div>
+        <div class="rms"><div class="rmsl">52W Lows</div><div class="rmsv" id="rs-lows" style="color:var(--red)">—</div></div>
+        <div class="rms"><div class="rmsl">Above 50 EMA</div><div class="rmsv" id="rs-50ema">—</div></div>
+        <div class="rms"><div class="rmsl">India VIX</div><div class="rmsv" id="rs-vix">—</div></div>
+        <div class="rms"><div class="rmsl">A/D Ratio</div><div class="rmsv" id="rs-adr">—</div></div>
+      </div>
     </div>
   </div>
 
-  <!-- ── Row 4: Monthly Gainers (top 4 CNX500 stocks in May) ── -->
+  <!-- ── Row 4: Breadth gauges by Index ── -->
   <div class="card">
-    <div class="ch"><span class="ct">CNX 500 — Monthly Gainers · May 2026</span><div class="ch-r"><span class="chip">1 May → 18 May</span><span style="font-size:11px;color:var(--green);font-weight:700">Top performers this month</span></div></div>
-    <div class="mgainer-grid" id="monthly-gainers"></div>
-    <div style="border-top:1px solid var(--bdr);padding:12px 18px;display:flex;align-items:center;justify-content:space-between">
-      <span style="font-size:11px;color:var(--muted)">Showing top 4 of 48 positive stocks in CNX 500 this month. CNX 500 MTD: <span class="up" style="font-weight:700">+3.8%</span></span>
-      <div style="display:flex;gap:6px;font-size:10px;color:var(--muted);align-items:center"><div style="width:10px;height:10px;border-radius:2px;background:rgba(46,216,160,.4)"></div>Positive<div style="width:10px;height:10px;border-radius:2px;background:rgba(255,93,122,.4);margin-left:8px"></div>Negative</div>
+    <div class="ch">
+      <span class="ct">Breadth by EMA — Full Nifty 500</span>
+      <span class="chip" id="breadth-updated-chip">—</span>
+    </div>
+    <div class="gauge-wrap" id="breadth-gauge-wrap">
+      <div class="gr"><div class="gl">Above 21 EMA</div><div class="gt"><div class="gf" id="gf-21" style="width:0%"></div></div><div class="gp" id="gp-21">—</div></div>
+      <div class="gr"><div class="gl">Above 50 EMA</div><div class="gt"><div class="gf" id="gf-50" style="width:0%"></div></div><div class="gp" id="gp-50">—</div></div>
+      <div class="gr"><div class="gl">Above 200 EMA</div><div class="gt"><div class="gf" id="gf-200" style="width:0%"></div></div><div class="gp" id="gp-200">—</div></div>
+      <div class="gr"><div class="gl">Advancing</div><div class="gt"><div class="gf" id="gf-adv" style="width:0%"></div></div><div class="gp" id="gp-adv">—</div></div>
+      <div class="gr"><div class="gl">Declining</div><div class="gt"><div class="gf" id="gf-dec" style="width:0%;background:linear-gradient(90deg,#b03050,var(--red))"></div></div><div class="gp r" id="gp-dec">—</div></div>
+      <div class="gr"><div class="gl">New 52W High</div><div class="gt"><div class="gf" id="gf-hh" style="width:0%;background:linear-gradient(90deg,#16a87a,var(--green))"></div></div><div class="gp" id="gp-hh">—</div></div>
+      <div class="gr"><div class="gl">New 52W Low</div><div class="gt"><div class="gf" id="gf-ll" style="width:0%;background:linear-gradient(90deg,#b03050,var(--red))"></div></div><div class="gp r" id="gp-ll">—</div></div>
     </div>
   </div>
 
-  <!-- ── Row 5: Breadth gauges + Regime ── -->
-  <div class="g2">
-    <div class="card"><div class="ch"><span class="ct">Breadth by Index — % above 50 EMA</span><span class="chip">Real-time</span></div><div class="gauge-wrap"><div class="gr"><div class="gl">Nifty 50</div><div class="gt"><div class="gf" style="width:82%;background:linear-gradient(90deg,#16a87a,var(--green))"></div></div><div class="gp g">82%</div></div><div class="gr"><div class="gl">Bank Nifty</div><div class="gt"><div class="gf" style="width:61%;background:linear-gradient(90deg,#16a87a,var(--green))"></div></div><div class="gp g">61%</div></div><div class="gr"><div class="gl">Nifty 500</div><div class="gt"><div class="gf" style="width:68%;background:linear-gradient(90deg,#16a87a,var(--green))"></div></div><div class="gp g">68%</div></div><div class="gr"><div class="gl">Nifty IT</div><div class="gt"><div class="gf" style="width:76%;background:linear-gradient(90deg,#16a87a,var(--green))"></div></div><div class="gp g">76%</div></div><div class="gr"><div class="gl">Midcap 150</div><div class="gt"><div class="gf" style="width:54%;background:linear-gradient(90deg,#b87000,var(--amber))"></div></div><div class="gp a">54%</div></div><div class="gr"><div class="gl">FMCG</div><div class="gt"><div class="gf" style="width:55%;background:linear-gradient(90deg,#b87000,var(--amber))"></div></div><div class="gp a">55%</div></div><div class="gr"><div class="gl">Smallcap 250</div><div class="gt"><div class="gf" style="width:41%;background:linear-gradient(90deg,#b03050,var(--red))"></div></div><div class="gp r">41%</div></div><div class="gr"><div class="gl">PSU Banks</div><div class="gt"><div class="gf" style="width:38%;background:linear-gradient(90deg,#b03050,var(--red))"></div></div><div class="gp r">38%</div></div></div></div>
-    <div class="card"><div class="ch"><span class="ct">Market Regime Score</span><span class="chip">Composite</span></div><div class="regime-body"><div class="rm-top"><div class="rm-num">74</div><div><div class="rm-label">Bull Phase</div><div class="rm-sub">Breadth expanding · Trend intact · VIX low</div></div></div><div class="rm-gauge"><div class="rm-needle" style="left:71%"></div></div><div class="rm-axis"><span class="rb">Bearish</span><span class="rn">Neutral</span><span class="rg">Bullish</span></div><div class="rm-stats"><div class="rms"><div class="rmsl">Adv / Dec</div><div class="rmsv" style="color:var(--green)">1,240/607</div></div><div class="rms"><div class="rmsl">52W High</div><div class="rmsv" style="color:var(--green)">142</div></div><div class="rms"><div class="rmsl">52W Low</div><div class="rmsv" style="color:var(--red)">18</div></div><div class="rms"><div class="rmsl">Nifty vs 200E</div><div class="rmsv" style="color:var(--green)">+8.4%</div></div><div class="rms"><div class="rmsl">India VIX</div><div class="rmsv" style="color:var(--green)">12.45</div></div><div class="rms"><div class="rmsl">FII Flow</div><div class="rmsv" style="color:var(--green)">+₹2,840Cr</div></div></div></div></div>
-  </div>
-
-  <!-- ── Row 6: Monthly % Change in Indices ── -->
+  <!-- ── Row 5: Monthly % Change in Indices ── -->
   <div class="card">
-    <div class="ch"><span class="ct">Monthly % Change in Key Indices · May 2026 (MTD)</span><div class="ch-r"><span class="chip">1–18 May 2026</span><span class="chip">18 trading sessions</span></div></div>
+    <div class="ch">
+      <span class="ct">Monthly % Change in Key Indices · MTD</span>
+      <div class="ch-r"><span class="chip" id="idx-chip">—</span></div>
+    </div>
     <table class="idx-table">
-      <thead><tr><th>Index</th><th class="r">Level</th><th class="r">MTD Chg</th><th class="r">MTD %</th><th class="r">1M High</th><th class="r">1M Low</th><th class="r" style="width:110px">Bar</th></tr></thead>
+      <thead><tr>
+        <th>Index</th><th class="r">Level</th>
+        <th class="r">MTD Chg</th><th class="r">MTD %</th>
+        <th class="r">1M High</th><th class="r">1M Low</th>
+        <th class="r" style="width:110px">Bar</th>
+      </tr></thead>
       <tbody id="idx-tbody"></tbody>
     </table>
   </div>
 
-  <!-- ── Row 7: Sector Heatmap ── -->
-  <div class="card"><div class="ch"><span class="ct">Sector Heatmap — % Stocks above 50 EMA</span><div class="ch-r"><span class="chip">12 sectors</span><span class="chip">NSE</span></div></div><div class="heatmap-grid"><div class="hm-cell hm-s5"><div class="hmn" style="color:var(--green)">Capital Goods</div><div class="hmp" style="color:var(--green)">81%</div><div class="hmc" style="color:var(--green)">203 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:81%;background:var(--green)"></div></div></div><div class="hm-cell hm-s5"><div class="hmn" style="color:var(--green)">IT / Tech</div><div class="hmp" style="color:var(--green)">76%</div><div class="hmc" style="color:var(--green)">118 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:76%;background:var(--green)"></div></div></div><div class="hm-cell hm-s4"><div class="hmn" style="color:var(--green)">Pharma</div><div class="hmp" style="color:var(--green)">69%</div><div class="hmc" style="color:var(--green)">142 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:69%;background:var(--green)"></div></div></div><div class="hm-cell hm-s4"><div class="hmn" style="color:var(--green)">Consumption</div><div class="hmp" style="color:var(--green)">66%</div><div class="hmc" style="color:var(--green)">97 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:66%;background:var(--green)"></div></div></div><div class="hm-cell hm-s3"><div class="hmn" style="color:var(--amber)">FMCG</div><div class="hmp" style="color:var(--amber)">55%</div><div class="hmc" style="color:var(--amber)">76 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:55%;background:var(--amber)"></div></div></div><div class="hm-cell hm-s3"><div class="hmn" style="color:var(--amber)">Pvt Banks</div><div class="hmp" style="color:var(--amber)">52%</div><div class="hmc" style="color:var(--amber)">22 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:52%;background:var(--amber)"></div></div></div><div class="hm-cell hm-s3"><div class="hmn" style="color:var(--amber)">Automobiles</div><div class="hmp" style="color:var(--amber)">50%</div><div class="hmc" style="color:var(--amber)">88 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:50%;background:var(--amber)"></div></div></div><div class="hm-cell hm-s3"><div class="hmn" style="color:var(--amber)">Realty</div><div class="hmp" style="color:var(--amber)">48%</div><div class="hmc" style="color:var(--amber)">52 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:48%;background:var(--amber)"></div></div></div><div class="hm-cell hm-s2"><div class="hmn" style="color:var(--red)">PSU Banks</div><div class="hmp" style="color:var(--red)">38%</div><div class="hmc" style="color:var(--red)">14 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:38%;background:var(--red)"></div></div></div><div class="hm-cell hm-s2"><div class="hmn" style="color:var(--red)">Oil & Gas</div><div class="hmp" style="color:var(--red)">36%</div><div class="hmc" style="color:var(--red)">48 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:36%;background:var(--red)"></div></div></div><div class="hm-cell hm-s1"><div class="hmn" style="color:var(--red)">Metals</div><div class="hmp" style="color:var(--red)">29%</div><div class="hmc" style="color:var(--red)">68 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:29%;background:var(--red)"></div></div></div><div class="hm-cell hm-s1"><div class="hmn" style="color:var(--red)">Media</div><div class="hmp" style="color:var(--red)">22%</div><div class="hmc" style="color:var(--red)">34 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:22%;background:var(--red)"></div></div></div></div></div>
+  <!-- ── Row 6: Sector Heatmap (static — sector-level data not in pipeline yet) ── -->
+  <div class="card">
+    <div class="ch">
+      <span class="ct">Sector Heatmap — % Stocks above 50 EMA</span>
+      <div class="ch-r"><span class="chip">12 sectors</span><span class="chip">Indicative</span></div>
+    </div>
+    <div class="heatmap-grid"><div class="hm-cell hm-s5"><div class="hmn" style="color:var(--green)">Capital Goods</div><div class="hmp" style="color:var(--green)">81%</div><div class="hmc" style="color:var(--green)">203 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:81%;background:var(--green)"></div></div></div><div class="hm-cell hm-s5"><div class="hmn" style="color:var(--green)">IT / Tech</div><div class="hmp" style="color:var(--green)">76%</div><div class="hmc" style="color:var(--green)">118 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:76%;background:var(--green)"></div></div></div><div class="hm-cell hm-s4"><div class="hmn" style="color:var(--green)">Pharma</div><div class="hmp" style="color:var(--green)">69%</div><div class="hmc" style="color:var(--green)">142 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:69%;background:var(--green)"></div></div></div><div class="hm-cell hm-s4"><div class="hmn" style="color:var(--green)">Consumption</div><div class="hmp" style="color:var(--green)">66%</div><div class="hmc" style="color:var(--green)">97 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:66%;background:var(--green)"></div></div></div><div class="hm-cell hm-s3"><div class="hmn" style="color:var(--amber)">FMCG</div><div class="hmp" style="color:var(--amber)">55%</div><div class="hmc" style="color:var(--amber)">76 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:55%;background:var(--amber)"></div></div></div><div class="hm-cell hm-s3"><div class="hmn" style="color:var(--amber)">Pvt Banks</div><div class="hmp" style="color:var(--amber)">52%</div><div class="hmc" style="color:var(--amber)">22 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:52%;background:var(--amber)"></div></div></div><div class="hm-cell hm-s3"><div class="hmn" style="color:var(--amber)">Automobiles</div><div class="hmp" style="color:var(--amber)">50%</div><div class="hmc" style="color:var(--amber)">88 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:50%;background:var(--amber)"></div></div></div><div class="hm-cell hm-s3"><div class="hmn" style="color:var(--amber)">Realty</div><div class="hmp" style="color:var(--amber)">48%</div><div class="hmc" style="color:var(--amber)">52 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:48%;background:var(--amber)"></div></div></div><div class="hm-cell hm-s2"><div class="hmn" style="color:var(--red)">PSU Banks</div><div class="hmp" style="color:var(--red)">38%</div><div class="hmc" style="color:var(--red)">14 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:38%;background:var(--red)"></div></div></div><div class="hm-cell hm-s2"><div class="hmn" style="color:var(--red)">Oil & Gas</div><div class="hmp" style="color:var(--red)">36%</div><div class="hmc" style="color:var(--red)">48 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:36%;background:var(--red)"></div></div></div><div class="hm-cell hm-s1"><div class="hmn" style="color:var(--red)">Metals</div><div class="hmp" style="color:var(--red)">29%</div><div class="hmc" style="color:var(--red)">68 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:29%;background:var(--red)"></div></div></div><div class="hm-cell hm-s1"><div class="hmn" style="color:var(--red)">Media</div><div class="hmp" style="color:var(--red)">22%</div><div class="hmc" style="color:var(--red)">34 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:22%;background:var(--red)"></div></div></div></div>
+  </div>
 
 </div><!-- /breadth -->
 
@@ -965,6 +1054,7 @@ function sw(id,el){
   document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
   el.classList.add('active');document.getElementById('pane-'+id).classList.add('active');
   if(id==='portfolio'){setTimeout(drawPortfolioCharts,80);}
+  if(id==='breadth'){loadMarketBreadth();}
 }
 
 /* ── TICKER ── */
@@ -1898,6 +1988,240 @@ const idxData=[
     </tr>`;
   }).join('');
 })();
+
+/* ═══════════════════════════════════════════════
+   MARKET BREADTH — LIVE FROM SUPABASE
+═══════════════════════════════════════════════ */
+async function loadMarketBreadth() {
+  const setText = (id,v,col) => {
+    const e = document.getElementById(id);
+    if(e){ e.textContent=v; if(col) e.style.color=col; }
+  };
+
+  // Fetch latest breadth row + last 5 rows for trend
+  const { data: rows, error } = await sb
+    .from('market_breadth')
+    .select('*')
+    .order('snapshot_date', { ascending: false })
+    .limit(5);
+
+  if(error || !rows || rows.length === 0) {
+    setText('breadth-sub', 'No breadth data yet. Pipeline runs at 4:30 PM IST daily.');
+    return;
+  }
+
+  const d = rows[0]; // latest row
+  const total = d.total_stocks || 500;
+  const updDate = new Date(d.snapshot_date).toLocaleDateString('en-IN',
+    {day:'numeric', month:'long', year:'numeric'});
+
+  // ── Sub-heading ──────────────────────────────
+  setText('breadth-sub',
+    `Nifty 500 Universe · ${total} stocks processed · Updated ${updDate}`);
+
+  // ── Helper: signal label + colour ────────────
+  const signal = (pct) => {
+    if(pct >= 65) return { label:'Bullish signal', col:'var(--green)', cls:'bn-g', bar:'pg', card:'bc-g' };
+    if(pct >= 45) return { label:'Neutral signal', col:'var(--amber)', cls:'bn-a', bar:'pa', card:'bc-a' };
+    return       { label:'Bearish signal', col:'var(--red)',   cls:'bn-r', bar:'pr', card:'bc-r' };
+  };
+
+  // ── EMA Cards ────────────────────────────────
+  const emas = [
+    { key:'21',  pct: d.pct_above_21ema,  count: d.above_21ema_count,  id:'21'  },
+    { key:'50',  pct: d.pct_above_50ema,  count: d.above_50ema_count,  id:'50'  },
+    { key:'200', pct: d.pct_above_200ema, count: d.above_200ema_count, id:'200' },
+  ];
+
+  emas.forEach(e => {
+    const pct = e.pct || 0;
+    const sig = signal(pct);
+    const numEl  = document.getElementById(`b${e.id}-pct`);
+    const barEl  = document.getElementById(`b${e.id}-bar`);
+    const descEl = document.getElementById(`b${e.id}-desc`);
+    const footEl = document.getElementById(`b${e.id}-stocks`);
+    const sigEl  = document.getElementById(`b${e.id}-signal`);
+    const cardEl = document.getElementById(`bc-${e.id}`);
+
+    if(numEl)  { numEl.textContent = pct.toFixed(1)+'%'; numEl.className = 'bcard-num '+sig.cls; }
+    if(barEl)  { barEl.style.width = Math.min(pct,100)+'%'; barEl.className = 'pfill '+sig.bar; }
+    if(descEl) descEl.innerHTML = `${(e.count||0).toLocaleString('en-IN')} of ${total.toLocaleString('en-IN')} stocks above — <strong>${sig.label}</strong>`;
+    if(footEl) footEl.textContent = `${(e.count||0).toLocaleString('en-IN')} stocks`;
+    if(sigEl)  { sigEl.textContent = sig.label; sigEl.style.color = sig.col; }
+    if(cardEl) {
+      cardEl.className = cardEl.className.replace(/bc-[gar]/g, '');
+      if(pct>=65) cardEl.className += ' bc-g';
+      else if(pct>=45) cardEl.className += ' bc-a';
+      else cardEl.className += ' bc-r';
+    }
+  });
+
+  // ── A/D Ratio ────────────────────────────────
+  const adv = d.advancing || 0;
+  const dec = d.declining || 0;
+  const adr = dec > 0 ? (adv/dec).toFixed(2) : '∞';
+  const advPct = total > 0 ? (adv/total*100).toFixed(1) : 0;
+  const decPct = total > 0 ? (dec/total*100).toFixed(1) : 0;
+  const isBullAD = adv > dec;
+
+  setText('ad-ratio-label', `Ratio: ${adr}`, isBullAD?'var(--green)':'var(--red)');
+  setText('ad-advancing', adv.toLocaleString('en-IN'));
+  setText('ad-declining', dec.toLocaleString('en-IN'));
+  setText('ad-total', total.toLocaleString('en-IN'));
+  setText('ad-adv-pill', `▲ ${advPct}% advancing`);
+  setText('ad-dec-pill', `▼ ${decPct}% declining`);
+  setText('ad-adv-pct', `${advPct}% Adv`);
+  setText('ad-dec-pct', `${decPct}% Dec`);
+
+  const advBar = document.getElementById('ad-bar-adv');
+  const decBar = document.getElementById('ad-bar-dec');
+  if(advBar) advBar.style.width = advPct + '%';
+  if(decBar) decBar.style.width = decPct + '%';
+
+  // A/D pill colour
+  const advPill = document.getElementById('ad-adv-pill');
+  const decPill = document.getElementById('ad-dec-pill');
+  if(advPill) advPill.className = 'ad-ratio-pill ' + (isBullAD?'arp-bull':'arp-bear');
+  if(decPill) decPill.className = 'ad-ratio-pill ' + (!isBullAD?'arp-bear':'arp-bull');
+
+  // ── 5-Day A/D Trend ──────────────────────────
+  const trendEl = document.getElementById('ad-trend');
+  const labelsEl = document.getElementById('ad-trend-labels');
+  if(trendEl && rows.length > 0){
+    const rev = [...rows].reverse(); // oldest first
+    const maxTotal = Math.max(...rev.map(r => (r.advancing||0)+(r.declining||0)), 1);
+    trendEl.innerHTML = rev.map(r => {
+      const a = r.advancing||0, dc2 = r.declining||0;
+      const h = Math.max(Math.round((a/(maxTotal))*46), 4);
+      const col = a > dc2 ? 'var(--green)' : 'var(--red)';
+      const ratio = dc2>0?(a/dc2).toFixed(2):'∞';
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1">
+        <div style="font-size:8px;color:var(--muted);font-family:var(--fm)">${ratio}</div>
+        <div style="height:${h}px;width:100%;border-radius:3px 3px 0 0;background:${col};opacity:.8"></div>
+      </div>`;
+    }).join('');
+    if(labelsEl) labelsEl.innerHTML = rev.map((r,i) => {
+      const label = i===rev.length-1 ? 'Today' :
+        new Date(r.snapshot_date).toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+      return `<span>${label}</span>`;
+    }).join('');
+  }
+
+  // ── 52W High / Low ───────────────────────────
+  const highs = d.new_52w_highs || 0;
+  const lows  = d.new_52w_lows  || 0;
+  const netHL = highs - lows;
+  setText('hl-highs-count', highs);
+  setText('hl-lows-count',  lows);
+  setText('hl-net-label', `Net ${netHL>=0?'+':''}${netHL} new highs`,
+    netHL>=0?'var(--green)':'var(--red)');
+  setText('brd-net-hl', (netHL>=0?'+':'')+netHL,
+    netHL>=0?'var(--green)':'var(--red)');
+
+  // VIX + Nifty 50
+  if(d.india_vix){
+    const vix = d.india_vix;
+    const vixCol = vix < 15 ? 'var(--green)' : vix < 20 ? 'var(--amber)' : 'var(--red)';
+    const vixSub = vix < 15 ? 'Low — complacency' : vix < 20 ? 'Moderate caution' : 'High — fear zone';
+    setText('brd-vix', vix.toFixed(2), vixCol);
+    setText('brd-vix-sub', vixSub);
+    setText('rs-vix', vix.toFixed(2), vixCol);
+  }
+  if(d.nifty50_close){
+    setText('brd-nifty50', d.nifty50_close.toLocaleString('en-IN'), 'var(--blue-lt)');
+  }
+
+  // ── Gauge bars ───────────────────────────────
+  const setGauge = (suffix, pct, isRed=false) => {
+    const bar = document.getElementById('gf-'+suffix);
+    const lbl = document.getElementById('gp-'+suffix);
+    const col = isRed
+      ? `linear-gradient(90deg,#b03050,var(--red))`
+      : pct >= 65
+        ? `linear-gradient(90deg,#16a87a,var(--green))`
+        : pct >= 45
+          ? `linear-gradient(90deg,#b87000,var(--amber))`
+          : `linear-gradient(90deg,#b03050,var(--red))`;
+    const lblCol = isRed ? 'var(--red)' : pct>=65?'var(--green)':pct>=45?'var(--amber)':'var(--red)';
+    if(bar){ bar.style.width = Math.min(pct,100)+'%'; bar.style.background = col; }
+    if(lbl){ lbl.textContent = pct.toFixed(1)+'%'; lbl.className='gp'; lbl.style.color=lblCol; }
+  };
+
+  setGauge('21',  d.pct_above_21ema  || 0);
+  setGauge('50',  d.pct_above_50ema  || 0);
+  setGauge('200', d.pct_above_200ema || 0);
+  const advGaugePct = total>0?(adv/total*100):0;
+  const decGaugePct = total>0?(dec/total*100):0;
+  setGauge('adv', advGaugePct);
+  setGauge('dec', decGaugePct, true);
+  const hhPct = total>0?(highs/total*100):0;
+  const llPct = total>0?(lows/total*100):0;
+  setGauge('hh', hhPct);
+  setGauge('ll', llPct, true);
+
+  // Update gauge label text to show counts
+  const setGaugeFull = (suffix, count, total2) => {
+    const lbl = document.getElementById('gp-'+suffix);
+    if(lbl) lbl.textContent = (count||0) + ' stocks';
+  };
+  setGaugeFull('adv', adv, total);
+  setGaugeFull('dec', dec, total);
+  setGaugeFull('hh', highs, total);
+  setGaugeFull('ll', lows, total);
+
+  // ── Market Regime Score ──────────────────────
+  // Composite score 0–100 from all breadth indicators
+  const score21  = d.pct_above_21ema  || 0;
+  const score50  = d.pct_above_50ema  || 0;
+  const score200 = d.pct_above_200ema || 0;
+  const adScore  = adv > dec ? Math.min((adv/(adv+dec))*100, 100) : (adv/(adv+dec))*100;
+  const hlScore  = highs > lows ? Math.min(70 + (netHL/total*30), 100) : Math.max(30 - (Math.abs(netHL)/total*30), 0);
+  const vixScore = d.india_vix ? (d.india_vix < 15 ? 80 : d.india_vix < 20 ? 50 : 20) : 50;
+
+  const regimeScore = Math.round(
+    score21 * 0.20 +
+    score50 * 0.25 +
+    score200 * 0.20 +
+    adScore * 0.15 +
+    hlScore * 0.10 +
+    vixScore * 0.10
+  );
+
+  const regimeLabel = regimeScore >= 65 ? 'Bull Phase'
+    : regimeScore >= 50 ? 'Neutral Phase'
+    : regimeScore >= 35 ? 'Caution Zone'
+    : 'Bear Phase';
+  const regimeCol = regimeScore >= 65 ? 'var(--green)'
+    : regimeScore >= 50 ? 'var(--amber)'
+    : regimeScore >= 35 ? 'var(--amber)'
+    : 'var(--red)';
+  const regimeSub = regimeScore >= 65
+    ? `${score50.toFixed(0)}% above 50 EMA · A/D ${adr} · VIX ${d.india_vix?.toFixed(1)||'—'}`
+    : regimeScore >= 50
+    ? `Mixed signals · Monitor closely · ${score50.toFixed(0)}% above 50 EMA`
+    : `Breadth deteriorating · ${score50.toFixed(0)}% above 50 EMA · Caution`;
+
+  setText('regime-score', regimeScore, regimeCol);
+  setText('regime-label', regimeLabel, regimeCol);
+  setText('regime-sub', regimeSub);
+  const needle = document.getElementById('regime-needle');
+  if(needle) needle.style.left = Math.min(Math.max(regimeScore, 2), 96) + '%';
+
+  // Regime stat cells
+  setText('rs-ad', `${adv.toLocaleString('en-IN')}/${dec.toLocaleString('en-IN')}`,
+    isBullAD?'var(--green)':'var(--red)');
+  setText('rs-highs', highs, 'var(--green)');
+  setText('rs-lows',  lows,  'var(--red)');
+  setText('rs-50ema', score50.toFixed(1)+'%',
+    score50>=65?'var(--green)':score50>=45?'var(--amber)':'var(--red)');
+  setText('rs-adr', adr,
+    parseFloat(adr)>=1.5?'var(--green)':parseFloat(adr)>=1?'var(--amber)':'var(--red)');
+
+  // ── Updated chip ─────────────────────────────
+  setText('breadth-updated-chip', `Updated ${updDate}`);
+  const idxChip = document.getElementById('idx-chip');
+  if(idxChip) idxChip.textContent = `MTD · ${new Date().toLocaleDateString('en-IN',{month:'long',year:'numeric'})}`;
+}
 
 /* ── INIT ── */
 window.addEventListener('load', async () => {
