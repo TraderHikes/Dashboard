@@ -1093,9 +1093,104 @@ function sw(id,el){
   if(id==='breadth'){loadMarketBreadth();}
 }
 
-/* ── TICKER ── */
-const td=[{n:'NIFTY 50',v:'24,612',c:'+1.24%',u:1},{n:'BANKNIFTY',v:'52,340',c:'−0.38%',u:0},{n:'MIDCAP',v:'17,891',c:'+0.92%',u:1},{n:'VIX',v:'12.45',c:'−4.1%',u:0},{n:'SENSEX',v:'81,450',c:'+1.18%',u:1},{n:'USD/INR',v:'83.42',c:'+0.08%',u:1},{n:'NIFTY IT',v:'39,880',c:'+1.8%',u:1},{n:'GOLD',v:'₹71,240',c:'+0.4%',u:1},{n:'PHARMA',v:'18,340',c:'+0.6%',u:1},{n:'PSU BANK',v:'6,142',c:'−0.9%',u:0}];
-(function(){const t=document.getElementById('ticker');const arr=[...td,...td];t.innerHTML=arr.map(d=>`<div class="ti"><span class="tin">${d.n}</span><span class="tiv">${d.v}</span><span class="tic ${d.u?'up':'dn'}">${d.u?'▲':'▼'} ${d.c}</span></div>`).join('');})();
+/* ── TICKER — LIVE DATA ── */
+const TICKER_SYMBOLS = [
+  { n:'NIFTY 50',   sym:'^NSEI'     },
+  { n:'SENSEX',     sym:'^BSESN'    },
+  { n:'BANKNIFTY',  sym:'^NSEBANK'  },
+  { n:'MIDCAP',     sym:'^NSEMDCP50'},
+  { n:'NIFTY IT',   sym:'^CNXIT'    },
+  { n:'VIX',        sym:'^INDIAVIX' },
+  { n:'NIFTY PHARMA',sym:'NIFTY_PHARMA.NS'},
+  { n:'PSU BANK',   sym:'^CNXPSUBANK'},
+  { n:'NIFTY AUTO', sym:'^CNXAUTO'  },
+  { n:'GOLD',       sym:'GC=F'      },
+];
+
+function buildTicker(data) {
+  const t = document.getElementById('ticker');
+  if(!t) return;
+  const arr = [...data, ...data]; // duplicate for seamless loop
+  t.innerHTML = arr.map(d => `
+    <div class="ti">
+      <span class="tin">${d.n}</span>
+      <span class="tiv">${d.v}</span>
+      <span class="tic ${d.u?'up':'dn'}">${d.u?'▲':'▼'} ${d.c}</span>
+    </div>`).join('');
+}
+
+// Start with placeholder data while live loads
+buildTicker([
+  {n:'NIFTY 50',v:'—',c:'—%',u:1},
+  {n:'SENSEX',v:'—',c:'—%',u:1},
+  {n:'BANKNIFTY',v:'—',c:'—%',u:1},
+  {n:'MIDCAP',v:'—',c:'—%',u:1},
+  {n:'VIX',v:'—',c:'—%',u:0},
+  {n:'NIFTY IT',v:'—',c:'—%',u:1},
+]);
+
+async function fetchLiveTicker() {
+  try {
+    // Use Yahoo Finance v8 API (no key needed, CORS-friendly)
+    const symbols = TICKER_SYMBOLS.map(s => s.sym).join(',');
+    const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols}&fields=regularMarketPrice,regularMarketChange,regularMarketChangePercent,regularMarketPreviousClose`;
+
+    const res = await fetch(url, {
+      headers: { 'Accept': 'application/json' }
+    });
+
+    if(!res.ok) throw new Error('API error');
+    const json = await res.json();
+    const quotes = json?.quoteResponse?.result;
+    if(!quotes || quotes.length === 0) throw new Error('No data');
+
+    const liveData = quotes.map((q, i) => {
+      const name  = TICKER_SYMBOLS[i]?.n || q.symbol;
+      const price = q.regularMarketPrice;
+      const chg   = q.regularMarketChangePercent;
+      const isUp  = chg >= 0;
+
+      // Format price
+      let priceStr;
+      if(price >= 10000) priceStr = price.toLocaleString('en-IN', {maximumFractionDigits:0});
+      else if(price >= 100) priceStr = price.toLocaleString('en-IN', {maximumFractionDigits:1});
+      else priceStr = price.toFixed(2);
+
+      const chgStr = (isUp?'+':'') + Math.abs(chg).toFixed(2) + '%';
+      return { n: name, v: priceStr, c: chgStr, u: isUp ? 1 : 0 };
+    }).filter(Boolean);
+
+    buildTicker(liveData);
+    console.log('Ticker updated with live data');
+
+  } catch(err) {
+    // On error fall back to last Supabase breadth data for Nifty
+    console.warn('Ticker live fetch failed, using fallback:', err.message);
+    // Try fetching from our own Supabase market_breadth table
+    try {
+      const { data: bd } = await sb
+        .from('market_breadth')
+        .select('nifty50_close, india_vix, snapshot_date')
+        .order('snapshot_date', { ascending: false })
+        .limit(1)
+        .single();
+
+      if(bd) {
+        buildTicker([
+          { n:'NIFTY 50', v: bd.nifty50_close?.toLocaleString('en-IN',{maximumFractionDigits:0})||'—', c:'EOD', u:1 },
+          { n:'INDIA VIX', v: bd.india_vix?.toFixed(2)||'—', c:'EOD', u:0 },
+          { n:'Updated',   v: bd.snapshot_date||'—', c:'4:30 PM', u:1 },
+        ]);
+      }
+    } catch(e2) {
+      // Leave placeholder data as is
+    }
+  }
+}
+
+// Fetch immediately on load, then every 5 minutes
+fetchLiveTicker();
+setInterval(fetchLiveTicker, 5 * 60 * 1000);
 
 /* ── SECTOR BARS ── */
 function buildSBS(id,vals){const el=document.getElementById(id);if(!el)return;el.innerHTML=vals.map(v=>{const c=v>.65?`rgba(30,201,147,${v*.85})`:v<.45?`rgba(240,82,114,${v*.85+.15})`:`rgba(245,166,35,${v*.8+.1})`;return`<div class="sbs" style="height:${Math.round(v*100)}%;background:${c}"></div>`;}).join('');}
