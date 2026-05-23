@@ -1731,17 +1731,19 @@ async function renderTVChart(tradeId, symbol, entryPrice, slPrice, cmp, entryDat
         borderColor:     'rgba(255,255,255,.08)',
         timeVisible:     true,
         secondsVisible:  false,
-        barSpacing:      8,
-        rightOffset:     5,
+        barSpacing:      7,
+        rightOffset:     8,
         fixLeftEdge:     true,
+        fixRightEdge:    true,
+        lockVisibleTimeRangeOnResize: true,
         tickMarkFormatter: (time) => {
           const d = new Date(time * 1000);
           const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
           return `${d.getDate()} ${months[d.getMonth()]}`;
         },
       },
-      handleScale:  { mouseWheel: false, pinch: false },
-      handleScroll: { mouseWheel: false, pressedMouseMove: false },
+      handleScale:  { mouseWheel: false, pinch: false, axisPressedMouseMove: false },
+      handleScroll: { mouseWheel: false, pressedMouseMove: false, horzTouchDrag: false, vertTouchDrag: false },
     });
 
     // ── Candlestick series ─────────────────────────
@@ -1895,7 +1897,7 @@ async function renderTVChart(tradeId, symbol, entryPrice, slPrice, cmp, entryDat
     markers.sort((a, b) => a.time - b.time);
     if(markers.length > 0) candleSeries.setMarkers(markers);
     const totalCandles = ohlcData.length;
-    const showFrom = Math.max(0, totalCandles - 90);
+    const showFrom = Math.max(0, totalCandles - 65);
     chart.timeScale().setVisibleRange({
       from: ohlcData[showFrom].time,
       to:   ohlcData[totalCandles - 1].time,
