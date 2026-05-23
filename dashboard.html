@@ -1754,6 +1754,8 @@ async function renderTVChart(tradeId, symbol, entryPrice, slPrice, cmp, entryDat
       borderDownColor:  '#ff5d7a',
       wickUpColor:      'rgba(46,216,160,.6)',
       wickDownColor:    'rgba(255,93,122,.6)',
+      priceLineVisible:  false,
+      lastValueVisible:  false,
     });
 
     // Format candle data for TradingView
@@ -1767,62 +1769,14 @@ async function renderTVChart(tradeId, symbol, entryPrice, slPrice, cmp, entryDat
 
     candleSeries.setData(ohlcData);
 
-    // ── Volume series (bottom) ─────────────────────
-    const volSeries = chart.addHistogramSeries({
-      priceFormat:    { type: 'volume' },
-      priceScaleId:  'volume',
-      color:         'rgba(92,111,251,.25)',
-    });
-    chart.priceScale('volume').applyOptions({
-      scaleMargins: { top: 0.88, bottom: 0 },
-    });
-    const volData = candles.map(c => ({
-      time:  Math.floor(new Date(c.date).getTime() / 1000),
-      value: c.volume || 0,
-      color: c.close >= c.open
-        ? 'rgba(46,216,160,.2)'
-        : 'rgba(255,93,122,.2)',
-    }));
-    volSeries.setData(volData);
-
-    // ── EMA-21 line ────────────────────────────────
-    const ema21Series = chart.addLineSeries({
-      color:       '#2ed8a0',
-      lineWidth:   1.5,
-      lineStyle:   LightweightCharts.LineStyle.Solid,
-      priceLineVisible: false,
-      lastValueVisible: false,
-      crosshairMarkerVisible: false,
-    });
-    // Calculate EMA-21 from close prices
-    const closes   = candles.map(c => c.close);
-    const ema21Vals = calcEMA(closes, 21);
-    const ema21Data = candles
-      .slice(20) // EMA needs at least 21 points
-      .map((c, i) => ({
-        time:  Math.floor(new Date(c.date).getTime() / 1000),
-        value: ema21Vals[i + 20],
-      }));
-    ema21Series.setData(ema21Data);
-
-    // ── Entry price line — clean, no text label ─────
-    candleSeries.createPriceLine({
-      price:            entryPrice,
-      color:            '#5c6ffb',
-      lineWidth:        1.5,
-      lineStyle:        LightweightCharts.LineStyle.Solid,
-      axisLabelVisible: true,
-      title:            '',   // no text on chart
-    });
-
     // ── Stop Loss line — clean dashed, no text ──────
     candleSeries.createPriceLine({
       price:            slPrice,
       color:            '#ff5d7a',
       lineWidth:        1,
       lineStyle:        LightweightCharts.LineStyle.Dashed,
-      axisLabelVisible: true,
-      title:            '',   // no text on chart
+      axisLabelVisible: false,
+      title:            '',
     });
 
     // ── CMP line (if different from last candle) ────
@@ -1852,7 +1806,7 @@ async function renderTVChart(tradeId, symbol, entryPrice, slPrice, cmp, entryDat
         position: 'belowBar',
         color:    '#5c6ffb',
         shape:    'arrowUp',
-        text:     'Entry',
+        text:     '',
         size:     1.5,
       });
     }
@@ -1869,7 +1823,7 @@ async function renderTVChart(tradeId, symbol, entryPrice, slPrice, cmp, entryDat
           position: 'belowBar',
           color:    '#8fa3ff',
           shape:    'arrowUp',
-          text:     'Add',
+          text:     '',
           size:     1,
         });
       });
@@ -1887,7 +1841,7 @@ async function renderTVChart(tradeId, symbol, entryPrice, slPrice, cmp, entryDat
           position: 'aboveBar',
           color:    '#ffb340',
           shape:    'arrowDown',
-          text:     'Partial',
+          text:     '',
           size:     1,
         });
       });
