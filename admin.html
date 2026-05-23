@@ -990,21 +990,48 @@ function calcPositionSize() {
   const capital = parseFloat(document.getElementById('nt-capital')?.value) || 0;
   const sl      = parseFloat(document.getElementById('nt-sl')?.value) || 0;
 
-  const amount  = price * qty;
-  const risk    = Math.max(0, (price - sl)) * qty;
-  const posPct  = capital > 0 ? (amount / capital * 100) : 0;
-
   const amtEl  = document.getElementById('nt-amount');
   const posEl  = document.getElementById('nt-possize');
   const riskEl = document.getElementById('nt-risk');
 
-  if(amtEl)  amtEl.value  = amount > 0 ? '₹' + amount.toLocaleString('en-IN', {maximumFractionDigits:0}) : '';
-  if(posEl) {
-    posEl.value = posPct > 0 ? posPct.toFixed(2) + '%' : '';
-    posEl.style.color = posPct > 15 ? 'var(--amber)' : posPct > 0 ? 'var(--green)' : '';
+  if(price > 0 && qty > 0) {
+    const amount = price * qty;
+    if(amtEl) amtEl.value = '₹' + amount.toLocaleString('en-IN', {maximumFractionDigits:0});
+
+    if(capital > 0) {
+      const posPct = (amount / capital * 100);
+      if(posEl) {
+        posEl.value = posPct.toFixed(2) + '%';
+        posEl.style.color = posPct > 15 ? 'var(--amber)' : 'var(--green)';
+      }
+    } else {
+      if(posEl) { posEl.value = 'Enter capital →'; posEl.style.color = 'var(--muted)'; }
+    }
+
+    if(sl > 0 && price > sl) {
+      const risk = (price - sl) * qty;
+      if(riskEl) riskEl.value = '₹' + risk.toLocaleString('en-IN', {maximumFractionDigits:0});
+    } else {
+      if(riskEl) riskEl.value = '';
+    }
+  } else {
+    if(amtEl)  amtEl.value  = '';
+    if(posEl)  posEl.value  = '';
+    if(riskEl) riskEl.value = '';
   }
-  if(riskEl) riskEl.value = risk > 0 ? '₹' + risk.toLocaleString('en-IN', {maximumFractionDigits:0}) : '';
 }
+
+// Attach listeners after DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+  ['nt-entry-price','nt-quantity','nt-sl','nt-capital'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) {
+      el.addEventListener('input',  calcPositionSize);
+      el.addEventListener('change', calcPositionSize);
+      el.addEventListener('keyup',  calcPositionSize);
+    }
+  });
+});
 
 // ════════════════════════════════════════════
 // PYRAMID (ADD ENTRY) FUNCTIONS
