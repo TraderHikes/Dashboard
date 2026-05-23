@@ -323,7 +323,7 @@ body{
 .trades-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:4px 0}
 .trade-card{display:flex;flex-direction:column;border:1px solid var(--bdr);border-radius:12px;overflow:hidden;background:var(--card);transition:border-color .15s,transform .12s}
 .trade-card:hover{border-color:rgba(92,111,251,.3);transform:translateY(-1px)}
-.chart-col{width:100%;height:180px;background:var(--card);position:relative;overflow:hidden;flex-shrink:0}
+.chart-col{width:100%;height:220px;background:var(--card);position:relative;overflow:hidden;flex-shrink:0}
 .tv-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--muted);flex-direction:column;gap:6px}
 canvas.tc{display:block;width:100%;height:100%}
 .info-col{padding:12px 14px;display:flex;flex-direction:column;gap:0}
@@ -1706,7 +1706,7 @@ async function renderTVChart(tradeId, symbol, entryPrice, slPrice, cmp, entryDat
     // ── Create TradingView chart ────────────────────
     const chart = LightweightCharts.createChart(container, {
       width:  container.offsetWidth  || 400,
-      height: container.offsetHeight || 180,
+      height: container.offsetHeight || 220,
       layout: {
         background: { type: 'solid', color: '#0e1528' },
         textColor:  '#6478a0',
@@ -1723,24 +1723,27 @@ async function renderTVChart(tradeId, symbol, entryPrice, slPrice, cmp, entryDat
         horzLine: { color: 'rgba(255,255,255,.25)', width: 1, style: 1, labelBackgroundColor: '#1a2540' },
       },
       rightPriceScale: {
-        borderColor: 'rgba(255,255,255,.08)',
-        textColor:   '#6478a0',
-        scaleMargins: { top: 0.08, bottom: 0.12 },
+        borderVisible: false,       // no border line
+        borderColor:  'transparent',
+        textColor:    'rgba(100,120,160,.7)',
+        scaleMargins: { top: 0.08, bottom: 0.05 },
+        mode:         0,            // normal mode
+        entireTextOnly: true,
+        ticksVisible: false,        // no tick marks
+      },
+      overlayPriceScales: {
+        borderVisible: false,
       },
       timeScale: {
-        borderColor:     'rgba(255,255,255,.08)',
-        timeVisible:     true,
+        borderColor:     'transparent',
+        timeVisible:     false,   // no date labels
         secondsVisible:  false,
         barSpacing:      7,
         rightOffset:     8,
         fixLeftEdge:     true,
         fixRightEdge:    true,
         lockVisibleTimeRangeOnResize: true,
-        tickMarkFormatter: (time) => {
-          const d = new Date(time * 1000);
-          const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-          return `${d.getDate()} ${months[d.getMonth()]}`;
-        },
+        visible:         false,   // hide entire time axis bar
       },
       handleScale:  { mouseWheel: false, pinch: false, axisPressedMouseMove: false },
       handleScroll: { mouseWheel: false, pressedMouseMove: false, horzTouchDrag: false, vertTouchDrag: false },
