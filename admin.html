@@ -319,17 +319,23 @@
             </div>
             <div class="form-group">
               <label class="form-label">Entry Price ₹ *</label>
-              <input class="form-input" type="number" name="entry_price" step="0.05" placeholder="11240" required>
+              <input class="form-input" type="number" name="entry_price"
+                id="nt-entry-price" step="0.05" placeholder="11240" required
+                oninput="calcPositionSize()">
             </div>
             <div class="form-group">
               <label class="form-label">Quantity *</label>
-              <input class="form-input" type="number" name="quantity" placeholder="20" required>
+              <input class="form-input" type="number" name="quantity"
+                id="nt-quantity" placeholder="20" required
+                oninput="calcPositionSize()">
             </div>
           </div>
           <div class="form-grid" style="margin-bottom:14px">
             <div class="form-group">
               <label class="form-label">Stop Loss ₹ *</label>
-              <input class="form-input" type="number" name="sl_price" step="0.05" placeholder="10600" required>
+              <input class="form-input" type="number" name="sl_price"
+                id="nt-sl" step="0.05" placeholder="10600" required
+                oninput="calcPositionSize()">
             </div>
             <div class="form-group">
               <label class="form-label">CMP ₹ (current price)</label>
@@ -979,10 +985,10 @@ function showAlert(id, msg, type = 'success') {
 // POSITION SIZE CALCULATOR (new trade form)
 // ════════════════════════════════════════════
 function calcPositionSize() {
-  const price   = parseFloat(document.querySelector('[name="entry_price"]')?.value) || 0;
-  const qty     = parseFloat(document.querySelector('[name="quantity"]')?.value) || 0;
+  const price   = parseFloat(document.getElementById('nt-entry-price')?.value) || 0;
+  const qty     = parseFloat(document.getElementById('nt-quantity')?.value) || 0;
   const capital = parseFloat(document.getElementById('nt-capital')?.value) || 0;
-  const sl      = parseFloat(document.querySelector('[name="sl_price"]')?.value) || 0;
+  const sl      = parseFloat(document.getElementById('nt-sl')?.value) || 0;
 
   const amount  = price * qty;
   const risk    = Math.max(0, (price - sl)) * qty;
@@ -992,16 +998,13 @@ function calcPositionSize() {
   const posEl  = document.getElementById('nt-possize');
   const riskEl = document.getElementById('nt-risk');
 
-  if(amtEl)  amtEl.value  = amount > 0 ? amount.toFixed(2) : '';
-  if(posEl)  posEl.value  = posPct > 0 ? posPct.toFixed(2) + '%' : '';
-  if(riskEl) riskEl.value = risk > 0   ? risk.toFixed(2) : '';
+  if(amtEl)  amtEl.value  = amount > 0 ? '₹' + amount.toLocaleString('en-IN', {maximumFractionDigits:0}) : '';
+  if(posEl) {
+    posEl.value = posPct > 0 ? posPct.toFixed(2) + '%' : '';
+    posEl.style.color = posPct > 15 ? 'var(--amber)' : posPct > 0 ? 'var(--green)' : '';
+  }
+  if(riskEl) riskEl.value = risk > 0 ? '₹' + risk.toLocaleString('en-IN', {maximumFractionDigits:0}) : '';
 }
-
-// Auto-calc when price/qty/sl changes
-['entry_price','quantity','sl_price'].forEach(name => {
-  const el = document.querySelector(`[name="${name}"]`);
-  if(el) el.addEventListener('input', calcPositionSize);
-});
 
 // ════════════════════════════════════════════
 // PYRAMID (ADD ENTRY) FUNCTIONS
@@ -1412,9 +1415,12 @@ document.getElementById('form-open-trade').addEventListener('submit', async e =>
     total_quantity:    parseInt(fd.get('quantity')),
     remaining_qty:     parseInt(fd.get('quantity')),
     capital_at_entry:  fd.get('capital_at_entry') ? parseFloat(fd.get('capital_at_entry')) : null,
-    position_size_pct: fd.get('position_size_pct')
-      ? parseFloat(fd.get('position_size_pct').replace('%',''))
-      : null,
+    position_size_pct: (() => {
+      const capital = parseFloat(fd.get('capital_at_entry')) || 0;
+      const price   = parseFloat(fd.get('entry_price')) || 0;
+      const qty     = parseInt(fd.get('quantity')) || 0;
+      return capital > 0 ? parseFloat((price * qty / capital * 100).toFixed(2)) : null;
+    })(),
   };
 
   const { error } = await sb.from('open_trades').insert(payload);
