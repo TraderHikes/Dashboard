@@ -1648,10 +1648,10 @@ async function renderTVChart(tradeId, symbol, entryPrice, slPrice, cmp, entryDat
     const partialExits   = partialRes.data || [];
 
     if(!candles || candles.length < 5) {
-      // Fallback: show simulated data notice
       container.innerHTML = `<div class="tv-loading" style="flex-direction:column;gap:6px">
         <div style="font-size:20px">📊</div>
-        <div style="font-size:11px;color:var(--muted)">Chart data loads after 4:30 PM pipeline</div>
+        <div style="font-size:11px;color:var(--white)">Run pipeline to load chart</div>
+        <div style="font-size:9px;color:var(--muted)">GitHub → Actions → Run workflow (full_eod)</div>
         <div style="font-size:10px;color:var(--muted);opacity:.6">${symbol}</div>
       </div>`;
       return;
@@ -2381,18 +2381,15 @@ async function renderOpen(){
             <div style="font-size:20px;font-weight:800;letter-spacing:-.5px;line-height:1;color:${pct!==null?(pct>=0?'var(--green)':'var(--red)'):'var(--muted)'}">
               ${pct!==null?(pct>=0?'+':'')+pct.toFixed(1)+'%':'—'}
             </div>
-            <div style="font-size:9px;color:${pnl!==null?(pnl>=0?'var(--green)':'var(--red)'):'var(--muted)'};margin-top:1px;font-family:var(--fm)">
-              ${pnl!==null?(pnl>=0?'+':'')+'\u20B9'+Math.abs(pnl).toLocaleString('en-IN',{maximumFractionDigits:0}):'—'}
-            </div>
             ${rrRatio!==null?`<div style="font-size:9px;font-weight:700;color:${rrRatio>=2?'var(--green)':rrRatio>=1?'var(--amber)':'var(--red)'};margin-top:1px">${(rrRatio>=0?'+':'')+rrRatio.toFixed(1)}R</div>`:''}
           </div>
         </div>
 
         ${t.trade_notes ? `<div style="font-size:9px;color:var(--white);opacity:.75;font-style:italic;padding:3px 7px;background:rgba(255,255,255,.02);border-radius:4px;border-left:2px solid var(--bdr2);margin:4px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">"${t.trade_notes}"</div>` : ''}
 
-        <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--white);padding:5px 0;border-top:1px solid var(--bdr);border-bottom:1px solid var(--bdr);margin:4px 0">
-          <span>Entry <b style="color:var(--white);font-family:var(--fm)">\u20B9${Number(t.entry_price).toLocaleString('en-IN')}</b></span>
-          ${t.avg_entry_price && t.avg_entry_price !== t.entry_price ? `<span>Avg <b style="color:var(--blue-lt);font-family:var(--fm)">\u20B9${Number(avgEntry).toLocaleString('en-IN')}</b></span>` : ''}
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);padding:5px 0;border-top:1px solid var(--bdr);border-bottom:1px solid var(--bdr);margin:4px 0">
+          <span>Entry <b style="color:var(--green);font-family:var(--fm)">\u20B9${Number(t.entry_price).toLocaleString('en-IN')}</b></span>
+          ${t.avg_entry_price && t.avg_entry_price !== t.entry_price ? `<span>Avg <b style="color:var(--amber);font-family:var(--fm)">\u20B9${Number(avgEntry).toLocaleString('en-IN')}</b></span>` : ''}
           <span>CMP <b style="color:${pp?'var(--green)':'var(--red)'};font-family:var(--fm)">${t.cmp?'\u20B9'+Number(t.cmp).toLocaleString('en-IN'):'—'}</b></span>
           <span>SL <b style="color:var(--red);font-family:var(--fm)">\u20B9${Number(t.sl_price).toLocaleString('en-IN')}</b></span>
         </div>
@@ -2405,7 +2402,7 @@ async function renderOpen(){
           </div>
           <div class="tc-met">
             <div class="tc-met-l">Qty (Rem / Total)</div>
-            <div class="tc-met-v">${remQty}<span style="color:var(--white);font-size:9px"> /${t.total_quantity||t.quantity}</span></div>
+            <div class="tc-met-v" style="color:#a78bfa">${remQty}<span style="color:#a78bfa;opacity:.7;font-size:9px"> /${t.total_quantity||t.quantity}</span></div>
             <div style="font-size:8px;color:var(--white);margin-top:1px">${t.entry_date}</div>
           </div>
           <div class="tc-met">
@@ -2414,16 +2411,16 @@ async function renderOpen(){
             <div style="font-size:8px;color:var(--white);margin-top:1px">${riskPct.toFixed(1)}% of pos</div>
           </div>
           <div class="tc-met">
-            <div class="tc-met-l">R:R Ratio</div>
-            <div class="tc-met-v" style="color:${rrRatio!==null?(rrRatio>=2?'var(--green)':rrRatio>=1?'var(--amber)':'var(--red)'):'var(--muted)'}">${rrRatio!==null?(rrRatio>=0?'+':'')+rrRatio.toFixed(2)+'R':'—'}</div>
-            <div style="font-size:8px;color:var(--white);margin-top:1px">${rrRatio!==null&&rrRatio>=0?'reward/risk':'at SL'}</div>
+            <div class="tc-met-l">Notional P&L</div>
+            <div class="tc-met-v" style="color:${pnl!==null?(pnl>=0?'var(--green)':'var(--red)'):'var(--muted)'}">${pnl!==null?(pnl>=0?'+':''+'\u20B9'+Math.abs(pnl).toLocaleString('en-IN',{maximumFractionDigits:0})):'—'}</div>
+            <div style="font-size:8px;color:var(--white);margin-top:1px">${pct!==null?(pct>=0?'+':'')+pct.toFixed(2)+'% return':'—'}</div>
           </div>
         </div>
 
         <!-- Holding Period + Legend (replaces risk bar) -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding-top:6px;border-top:1px solid var(--bdr)">
           <div style="display:flex;align-items:center;gap:5px">
-            <span style="font-size:8px;color:var(--white);text-transform:uppercase;letter-spacing:.5px;min-width:44px">Held ${holdingDays}d</span>
+            <span style="font-size:8px;color:var(--white);text-transform:uppercase;letter-spacing:.5px;min-width:44px">Holding: ${holdingDays}d</span>
             <div style="display:flex;gap:2px;align-items:center">
               ${Array.from({length:Math.min(Math.ceil(holdingDays/7),16)}, (_,i) =>
                 '<div style="width:5px;height:5px;border-radius:1px;background:var(--blue-lt);opacity:'+(1-(i/Math.min(Math.ceil(holdingDays/7),16))*0.5)+'"></div>'
