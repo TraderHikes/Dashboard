@@ -1660,31 +1660,44 @@ async function renderTVChart(tradeId, symbol, entryPrice, slPrice, cmp, entryDat
   if(tvCharts[tradeId]) return;
 
   try {
-    // Fetch candle data + pyramid entries + partial exits in parallel
-    const [candleRes, pyramidRes, partialRes] = await Promise.all([
-      sb.from('trade_candles').select('date,open,high,low,close,volume')
-        .eq('symbol', symbol).order('date', { ascending: true }).limit(180),
-      hasPyramid
-        ? sb.from('trade_entries').select('entry_date,entry_price').eq('open_trade_id', tradeId)
-        : Promise.resolve({ data: [] }),
-      hasPartial
-        ? sb.from('partial_exits').select('exit_date,exit_price').eq('open_trade_id', tradeId)
-        : Promise.resolve({ data: [] }),
-    ]);
+    // ── Step 1: Fetch candles (simple, independent query) ──
+    const candleRes = await sb
+      .from('trade_candles')
+      .select('date,open,high,low,close,volume')
+      .eq('symbol', symbol)
+      .order('date', { ascending: true })
+      .limit(180);
 
-    const candles       = candleRes.data;
-    const pyramidEntries = pyramidRes.data || [];
-    const partialExits   = partialRes.data || [];
+    const candles = candleRes.data;
+    const candleErr = candleRes.error;
+
+    console.log(`[TV] ${symbol}: ${candles?.length||0} candles, error:`, candleErr);
 
     if(!candles || candles.length < 5) {
-      console.warn('No candles for', symbol, 'count:', candles?.length, 'err:', candleRes.error);
       container.innerHTML = `<div class="tv-loading" style="flex-direction:column;gap:6px">
-        <div style="font-size:20px">📊</div>
-        <div style="font-size:11px;color:var(--white)">Chart data loading...</div>
-        <div style="font-size:9px;color:var(--muted)">Count: ${candles?.length||0} candles found for ${symbol}</div>
-        ${candleRes.error ? '<div style="font-size:9px;color:var(--red)">'+JSON.stringify(candleRes.error)+'</div>' : ''}
+        <div style="font-size:16px">📊</div>
+        <div style="font-size:11px;color:var(--white)">${candles?.length||0} candles found</div>
+        <div style="font-size:9px;color:var(--muted)">Run pipeline → full_eod to load chart data</div>
+        ${candleErr ? `<div style="font-size:9px;color:var(--red);max-width:200px;word-break:break-all">${candleErr.message}</div>` : ''}
       </div>`;
       return;
+    }
+
+    // ── Step 2: Fetch pyramid/partial data (optional, non-blocking) ──
+    let pyramidEntries = [], partialExits = [];
+    try {
+      if(hasPyramid) {
+        const { data } = await sb.from('trade_entries')
+          .select('entry_date,entry_price').eq('open_trade_id', tradeId);
+        pyramidEntries = data || [];
+      }
+      if(hasPartial) {
+        const { data } = await sb.from('partial_exits')
+          .select('exit_date,exit_price').eq('open_trade_id', tradeId);
+        partialExits = data || [];
+      }
+    } catch(e) {
+      console.warn('Could not load trade events for markers:', e);
     }
 
     // Clear loading state
