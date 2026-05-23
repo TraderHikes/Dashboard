@@ -1107,7 +1107,7 @@ canvas.tc{display:block;width:100%;height:100%}
     </div>
   </div>
   <div class="card">
-    <div class="ch"><span class="ct">Active Positions — Annotated Charts</span><div class="ch-r"><div class="legend-row"><span class="li"><span style="color:var(--blue-lt);font-size:13px">▲</span>Entry</span><span class="li"><span style="display:inline-block;width:14px;height:1.5px;background:var(--red);border-top:1.5px dashed var(--red)"></span>Stop Loss</span><span class="li"><span style="display:inline-block;width:14px;height:2px;background:var(--cyan)"></span>EMA-21</span></div><span class="chip">60-day daily</span></div></div>
+    <div class="ch"><span class="ct">Active Positions — Annotated Charts</span><div class="ch-r"><span class="chip">60-day daily</span></div></div>
     <div id="ot-container" class="trades-grid"></div>
   </div>
 </div>
@@ -2411,7 +2411,7 @@ async function renderOpen(){
 
         ${t.trade_notes ? `<div style="font-size:9px;color:var(--white);opacity:.75;font-style:italic;padding:3px 7px;background:rgba(255,255,255,.02);border-radius:4px;border-left:2px solid var(--bdr2);margin:4px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">"${t.trade_notes}"</div>` : ''}
 
-        <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);padding:5px 0;border-top:1px solid var(--bdr);border-bottom:1px solid var(--bdr);margin:4px 0">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);padding:6px 0;border-top:1px solid var(--bdr);border-bottom:1px solid var(--bdr);margin:4px 0">
           <span>Entry <b style="color:var(--green);font-family:var(--fm)">\u20B9${Number(t.entry_price).toLocaleString('en-IN')}</b></span>
           ${t.avg_entry_price && t.avg_entry_price !== t.entry_price ? `<span>Avg <b style="color:var(--amber);font-family:var(--fm)">\u20B9${Number(avgEntry).toLocaleString('en-IN')}</b></span>` : ''}
           <span>CMP <b style="color:${pp?'var(--green)':'var(--red)'};font-family:var(--fm)">${t.cmp?'\u20B9'+Number(t.cmp).toLocaleString('en-IN'):'—'}</b></span>
