@@ -2,12 +2,11 @@ name: TraderHikes Daily Data Pipeline
 
 on:
   schedule:
-    # All times in UTC. IST = UTC + 5:30
-    - cron: '30 4 * * 1-5'   # 10:00 AM IST — intraday update
-    - cron: '31 6 * * 1-5'   # 12:01 PM IST — intraday update
-    - cron: '30 8 * * 1-5'   #  2:00 PM IST — intraday update
-    - cron: '0 11 * * 1-5'   #  4:30 PM IST — full EOD run
-    - cron: '0 14 * * 1-5'   #  7:30 PM IST — FII/DII fetch
+    - cron: '30 4 * * 1-5'   # 10:00 AM IST
+    - cron: '31 6 * * 1-5'   # 12:01 PM IST
+    - cron: '30 8 * * 1-5'   #  2:00 PM IST
+    - cron: '0 11 * * 1-5'   #  4:30 PM IST — full EOD
+    - cron: '0 14 * * 1-5'   #  7:30 PM IST — FII/DII
 
   workflow_dispatch:
     inputs:
@@ -15,6 +14,9 @@ on:
         description: 'Run mode (intraday / full_eod / fii_dii)'
         required: false
         default: 'full_eod'
+
+permissions:
+  contents: read
 
 jobs:
   update-dashboard:
@@ -25,6 +27,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -46,9 +50,7 @@ jobs:
 
       - name: Done
         if: success()
-        run: |
-          echo "✅ Pipeline complete"
-          echo "   $(TZ='Asia/Kolkata' date '+%d %b %Y · %I:%M %p IST')"
+        run: echo "✅ Pipeline complete — $(TZ='Asia/Kolkata' date '+%d %b %Y · %I:%M %p IST')"
 
       - name: Failed
         if: failure()
