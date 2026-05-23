@@ -1839,8 +1839,8 @@ async function renderTVChart(tradeId, symbol, entryPrice, slPrice, cmp, entryDat
     const markers = [];
 
     // Initial entry arrow (blue, up)
-    if(t.entry_date) {
-      const entryTime = Math.floor(new Date(t.entry_date).getTime() / 1000);
+    if(entryDate) {
+      const entryTime = Math.floor(new Date(entryDate).getTime() / 1000);
       // Find closest candle time
       const closest = ohlcData.reduce((prev, curr) =>
         Math.abs(curr.time - entryTime) < Math.abs(prev.time - entryTime) ? curr : prev
@@ -1856,7 +1856,7 @@ async function renderTVChart(tradeId, symbol, entryPrice, slPrice, cmp, entryDat
     }
 
     // Pyramid entries (blue, smaller arrow)
-    if(t.has_pyramid && pyramidEntries && pyramidEntries.length > 0) {
+    if(hasPyramid && pyramidEntries && pyramidEntries.length > 0) {
       pyramidEntries.forEach(pe => {
         const peTime = Math.floor(new Date(pe.entry_date).getTime() / 1000);
         const closest = ohlcData.reduce((prev, curr) =>
@@ -1874,7 +1874,7 @@ async function renderTVChart(tradeId, symbol, entryPrice, slPrice, cmp, entryDat
     }
 
     // Partial exits (amber, down arrow)
-    if(t.has_partial_exit && partialExits && partialExits.length > 0) {
+    if(hasPartial && partialExits && partialExits.length > 0) {
       partialExits.forEach(px => {
         const pxTime = Math.floor(new Date(px.exit_date).getTime() / 1000);
         const closest = ohlcData.reduce((prev, curr) =>
@@ -1970,7 +1970,7 @@ function drawEquityCurve(){
   const vMin=Math.min(...allV)*.995,vMax=Math.max(...allV)*1.005;
   const PL=12,PR=16,PT=14,PB=28;
   const cW=W-PL-PR,cH=220-PT-PB;
-  const xc=i=>PL+i*(cW/(dd.length-1));
+  const xc=i=>PL+i*(cW/(n-1));
   const yp=v=>PT+cH*(1-(v-vMin)/(vMax-vMin));
 
   // Grid
