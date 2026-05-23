@@ -336,8 +336,8 @@ canvas.tc{display:block;width:100%;height:100%}
 /* Compact metrics strip inside card */
 .tc-metrics{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
 .tc-met{background:var(--card2);border-radius:6px;padding:6px 8px}
-.tc-met-l{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
-.tc-met-v{font-size:12px;font-weight:700;font-family:var(--fm);color:var(--white)}
+.tc-met-l{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.tc-met-v{font-size:16px;font-weight:700;font-family:var(--fm);color:var(--white);letter-spacing:-.3px}
 /* Risk bar compact */
 .tc-riskbar{margin-top:8px;display:flex;align-items:center;gap:6px}
 .tc-riskbar-track{flex:1;height:3px;background:var(--card2);border-radius:2px;overflow:hidden}
@@ -1653,7 +1653,7 @@ async function renderTVChart(tradeId, symbol, entryPrice, slPrice, cmp, entryDat
         <div style="font-size:20px">📊</div>
         <div style="font-size:11px;color:var(--white)">Chart data loading...</div>
         <div style="font-size:9px;color:var(--muted)">Count: ${candles?.length||0} candles found for ${symbol}</div>
-        ${candleRes.error ? `<div style="font-size:9px;color:var(--red)">${JSON.stringify(candleRes.error)}</div>` : ''}
+        ${candleRes.error ? '<div style="font-size:9px;color:var(--red)">'+JSON.stringify(candleRes.error)+'</div>' : ''}
       </div>`;
       return;
     }
@@ -1928,6 +1928,7 @@ function drawEquityCurve(){
   const vMin=Math.min(...allV)*.995,vMax=Math.max(...allV)*1.005;
   const PL=12,PR=16,PT=14,PB=28;
   const cW=W-PL-PR,cH=220-PT-PB;
+  const n=dd.length;
   const xc=i=>PL+i*(cW/(n-1));
   const yp=v=>PT+cH*(1-(v-vMin)/(vMax-vMin));
 
