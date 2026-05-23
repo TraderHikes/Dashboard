@@ -2073,8 +2073,8 @@ async function renderOpen(){
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
               <div class="tnm">${t.company_name}</div>
               <span class="badge ${bc}" style="font-size:10px">${badgeLabel}</span>
-              ${t.has_pyramid ? '<span style="background:rgba(92,111,251,.15);border:1px solid rgba(92,111,251,.3);color:var(--blue-lt);padding:2px 7px;border-radius:100px;font-size:9px;font-weight:700;letter-spacing:.5px">PYR</span>' : ''}
-              ${t.has_partial_exit ? '<span style="background:var(--amber-dim);border:1px solid var(--amber-bd);color:var(--amber);padding:2px 7px;border-radius:100px;font-size:9px;font-weight:700;letter-spacing:.5px">PARTIAL EXIT</span>' : ''}
+              ${t.has_pyramid ? '<span style="background:rgba(92,111,251,.15);border:1px solid rgba(92,111,251,.3);color:var(--blue-lt);padding:2px 8px;border-radius:100px;font-size:10px;font-weight:700;letter-spacing:.3px">Pyramided</span>' : ''}
+              ${t.has_partial_exit ? '<span style="background:var(--amber-dim);border:1px solid var(--amber-bd);color:var(--amber);padding:2px 8px;border-radius:100px;font-size:10px;font-weight:700;letter-spacing:.3px">Reduced</span>' : ''}
             </div>
             <div class="tsc" style="margin-top:3px">NSE:${t.symbol} · ${t.sector||'Capital Goods'}</div>
           </div>
