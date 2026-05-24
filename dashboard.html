@@ -929,10 +929,10 @@ canvas.tc{display:block;width:100%;height:100%}
           <div class="ad-ratio-pill arp-bear" id="ad-dec-pill">—</div>
         </div>
         <div class="ad-cell">
-          <div class="ad-label">Total Processed</div>
-          <div class="ad-val w" id="ad-total">—</div>
-          <div class="ad-sub" style="margin-bottom:14px">Nifty 500 stocks</div>
-          <div class="ad-label" style="margin-bottom:4px;margin-top:4px">A/D Split</div>
+          <div class="ad-label">Net A/D</div>
+          <div class="ad-val" id="ad-net" style="font-size:32px;font-weight:800;letter-spacing:-1px">—</div>
+          <div class="ad-sub" id="ad-net-sub">Advancing minus Declining</div>
+          <div class="ad-label" style="margin-bottom:4px;margin-top:14px">A/D Split</div>
           <div class="ad-bar-track">
             <div class="ad-bar-adv" id="ad-bar-adv" style="width:50%"></div>
             <div class="ad-bar-dec" id="ad-bar-dec" style="width:50%"></div>
@@ -960,8 +960,8 @@ canvas.tc{display:block;width:100%;height:100%}
               <th style="padding:6px 10px;text-align:left;color:var(--muted);font-weight:600">Date</th>
               <th style="padding:6px 10px;text-align:right;color:var(--green);font-weight:600">Advancing</th>
               <th style="padding:6px 10px;text-align:right;color:var(--red);font-weight:600">Declining</th>
+              <th style="padding:6px 10px;text-align:right;color:var(--muted);font-weight:600">Net A/D</th>
               <th style="padding:6px 10px;text-align:right;color:var(--muted);font-weight:600">A/D Ratio</th>
-              <th style="padding:6px 10px;text-align:right;color:var(--muted);font-weight:600">Signal</th>
             </tr></thead>
             <tbody id="ad-hist-body">
               <tr><td colspan="5" style="text-align:center;padding:14px;color:var(--muted)">Loading...</td></tr>
@@ -999,18 +999,43 @@ canvas.tc{display:block;width:100%;height:100%}
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--bdr)">
         <div style="background:var(--card2);padding:12px 18px">
           <div class="pcl">India VIX</div>
-          <div class="pcv" id="brd-vix" style="color:var(--white)">—</div>
+          <div class="pcv" id="brd-vix" style="color:var(--white);font-size:20px;font-weight:800">—</div>
           <div class="pcs" id="brd-vix-sub">—</div>
         </div>
         <div style="background:var(--card2);padding:12px 18px">
           <div class="pcl">Nifty 50</div>
-          <div class="pcv b" id="brd-nifty50">—</div>
+          <div class="pcv" id="brd-nifty50" style="color:var(--white);font-size:20px;font-weight:800">—</div>
           <div class="pcs">Today's close</div>
         </div>
         <div style="background:var(--card2);padding:12px 18px">
           <div class="pcl">Sensex</div>
-          <div class="pcv" id="brd-sensex" style="color:var(--blue-lt)">—</div>
+          <div class="pcv" id="brd-sensex" style="color:var(--white);font-size:20px;font-weight:800">—</div>
           <div class="pcs">Today's close</div>
+        </div>
+      </div>
+      <!-- 52W History toggle -->
+      <div style="padding:10px 20px;border-top:1px solid var(--bdr)">
+        <button onclick="toggle52WHistory()" id="btn-52w-history"
+          style="width:100%;padding:6px 12px;background:var(--card3);
+            border:1px solid var(--bdr);border-radius:6px;color:var(--muted);
+            font-size:10px;font-weight:600;cursor:pointer;font-family:var(--fm);
+            letter-spacing:.3px;transition:all .15s">
+          ▼ Show 12-Month 52W Breakout History
+        </button>
+        <div id="hw52-history-panel" style="display:none;margin-top:6px;
+          max-height:240px;overflow-y:auto;border-radius:6px;
+          border:1px solid var(--bdr);background:var(--card2)">
+          <table style="width:100%;border-collapse:collapse;font-size:10px">
+            <thead><tr style="background:var(--card3);position:sticky;top:0;z-index:1">
+              <th style="padding:6px 12px;text-align:left;color:var(--muted);font-weight:600">Date</th>
+              <th style="padding:6px 12px;text-align:right;color:var(--green);font-weight:600">52W Highs</th>
+              <th style="padding:6px 12px;text-align:right;color:var(--red);font-weight:600">52W Lows</th>
+              <th style="padding:6px 12px;text-align:right;color:var(--muted);font-weight:600">Net H/L</th>
+            </tr></thead>
+            <tbody id="hw52-hist-body">
+              <tr><td colspan="4" style="text-align:center;padding:14px;color:var(--muted)">Loading...</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -2913,6 +2938,7 @@ async function loadADHistory() {
         </td>
         <td style="padding:6px 10px;text-align:right;color:var(--green);font-family:var(--fm);font-weight:700">${adv}</td>
         <td style="padding:6px 10px;text-align:right;color:var(--red);font-family:var(--fm);font-weight:700">${dec}</td>
+        <td style="padding:6px 10px;text-align:right;font-family:var(--fm);font-weight:700;color:${isBull?'var(--green)':'var(--red)'}">${adv-dec>=0?'+':''}${adv-dec}</td>
         <td style="padding:6px 10px;text-align:right">
           <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px">
             <div style="width:60px;height:5px;background:var(--card3);border-radius:3px;overflow:hidden;display:flex">
@@ -2922,14 +2948,88 @@ async function loadADHistory() {
             <span style="font-family:var(--fm);font-weight:700;color:${ratioCol};min-width:28px;text-align:right">${ratio}</span>
           </div>
         </td>
-        <td style="padding:6px 10px;text-align:right">
-          <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:100px;
-            background:${sigCol};color:${ratioCol}">${sig}</span>
-        </td>
       </tr>`;
     }).join('');
   } catch(e) {
     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:12px;color:var(--muted)">Error loading history.</td></tr>';
+  }
+}
+
+/* ── 52W HIGH/LOW HISTORY ── */
+let hw52Loaded = false;
+
+async function toggle52WHistory() {
+  const panel = document.getElementById('hw52-history-panel');
+  const btn   = document.getElementById('btn-52w-history');
+  if(!panel || !btn) return;
+  const isOpen = panel.style.display !== 'none';
+  if(isOpen) {
+    panel.style.display = 'none';
+    btn.innerHTML = '▼ Show 12-Month 52W Breakout History';
+    btn.style.color = 'var(--muted)';
+  } else {
+    panel.style.display = 'block';
+    btn.innerHTML = '▲ Hide History';
+    btn.style.color = 'var(--text2)';
+    if(!hw52Loaded) { await load52WHistory(); hw52Loaded = true; }
+  }
+}
+
+async function load52WHistory() {
+  const tbody = document.getElementById('hw52-hist-body');
+  if(!tbody) return;
+  try {
+    const { data: rows } = await sb.from('market_breadth')
+      .select('snapshot_date,new_52w_highs,new_52w_lows,total_stocks')
+      .order('snapshot_date', {ascending: false})
+      .limit(90);
+
+    if(!rows || rows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:14px;color:var(--muted)">No history yet.</td></tr>';
+      return;
+    }
+    const validRows = rows.filter(r => (r.total_stocks || 0) >= 450);
+    if(validRows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:14px;color:var(--muted)">Only today\'s data so far.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = validRows.map((r, i) => {
+      const highs  = r.new_52w_highs || 0;
+      const lows   = r.new_52w_lows  || 0;
+      const net    = highs - lows;
+      const netCol = net >= 0 ? 'var(--green)' : 'var(--red)';
+      const bgRow  = i === 0 ? 'background:rgba(255,255,255,.04);' : '';
+      const dt     = new Date(r.snapshot_date).toLocaleDateString('en-IN',
+        {day:'numeric', month:'short', year:'2-digit'});
+      // Mini bar for highs vs lows
+      const maxVal = Math.max(highs, lows, 1);
+      const hiW = Math.round(highs/maxVal * 70);
+      const loW = Math.round(lows/maxVal * 70);
+
+      return `<tr style="border-bottom:1px solid var(--bdr);${bgRow}">
+        <td style="padding:7px 12px;color:${i===0?'var(--white)':'var(--text2)'};font-size:10px;white-space:nowrap">
+          ${i===0?'<b>Today</b> &nbsp;':''}${dt}
+        </td>
+        <td style="padding:7px 12px;text-align:right">
+          <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px">
+            <div style="width:${hiW}px;height:5px;background:var(--green);border-radius:3px;opacity:.7"></div>
+            <span style="font-family:var(--fm);font-weight:700;color:var(--green);min-width:24px;text-align:right">${highs}</span>
+          </div>
+        </td>
+        <td style="padding:7px 12px;text-align:right">
+          <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px">
+            <div style="width:${loW}px;height:5px;background:var(--red);border-radius:3px;opacity:.7"></div>
+            <span style="font-family:var(--fm);font-weight:700;color:var(--red);min-width:24px;text-align:right">${lows}</span>
+          </div>
+        </td>
+        <td style="padding:7px 12px;text-align:right;font-family:var(--fm);font-weight:700;color:${netCol}">
+          ${net >= 0 ? '+' : ''}${net}
+        </td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:12px;color:var(--muted)">Error loading history.</td></tr>';
   }
 }
 
@@ -3025,21 +3125,7 @@ async function loadEmaHistory(emaId) {
    MARKET BREADTH — DATA & RENDER FUNCTIONS
 ═══════════════════════════════════════════════ */
 
-/* ── A/D 5-day trend ── */
-const adTrend=[{a:1180,d:667},{a:1050,d:797},{a:1320,d:527},{a:980,d:867},{a:1240,d:607}];
-(function buildADTrend(){
-  const el=document.getElementById('ad-trend');if(!el||true)return; // replaced by collapsible history
-  const maxTotal=Math.max(...adTrend.map(d=>d.a+d.d));
-  el.innerHTML=adTrend.map((d,i)=>{
-    const h=Math.round(((d.a)/(maxTotal))*46)+4;
-    const ratio=(d.a/d.d).toFixed(2);
-    const col=d.a>d.d?'var(--green)':'var(--red)';
-    return`<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1">
-      <div style="font-size:8px;color:var(--muted);font-family:var(--fm)">${ratio}</div>
-      <div style="height:${h}px;width:100%;border-radius:3px 3px 0 0;background:${col};opacity:.8"></div>
-    </div>`;
-  }).join('');
-})();
+/* A/D trend replaced by collapsible history */
 
 /* ── 52W High / Low stocks ── */
 const hlHighs=[
@@ -3341,7 +3427,7 @@ async function loadMarketBreadth() {
     }
   });
 
-  // ── A/D Ratio ────────────────────────────────
+  // ── A/D Ratio ─────────────────────────────────
   const adv = d.advancing || 0;
   const dec = d.declining || 0;
   const adr = dec > 0 ? (adv/dec).toFixed(2) : '∞';
@@ -3349,10 +3435,19 @@ async function loadMarketBreadth() {
   const decPct = total > 0 ? (dec/total*100).toFixed(1) : 0;
   const isBullAD = adv > dec;
 
+  // ── Net A/D ───────────────────────────────────
+  const netAD = adv - dec;
+  const netADEl = document.getElementById('ad-net');
+  if(netADEl) {
+    netADEl.textContent = (netAD >= 0 ? '+' : '') + netAD.toLocaleString('en-IN');
+    netADEl.style.color = netAD >= 0 ? 'var(--green)' : 'var(--red)';
+  }
+  setText('ad-net-sub', `${adv.toLocaleString('en-IN')} − ${dec.toLocaleString('en-IN')}`);
+
+  // ── A/D Ratio label ───────────────────────────
   setText('ad-ratio-label', `Ratio: ${adr}`, isBullAD?'var(--green)':'var(--red)');
   setText('ad-advancing', adv.toLocaleString('en-IN'));
   setText('ad-declining', dec.toLocaleString('en-IN'));
-  setText('ad-total', total.toLocaleString('en-IN'));
   setText('ad-adv-pill', `▲ ${advPct}% advancing`);
   setText('ad-dec-pill', `▼ ${decPct}% declining`);
   setText('ad-adv-pct', `${advPct}% Adv`);
@@ -3413,8 +3508,21 @@ async function loadMarketBreadth() {
     setText('rs-vix', vix.toFixed(2), vixCol);
   }
   if(d.nifty50_close){
-    setText('brd-nifty50', d.nifty50_close.toLocaleString('en-IN',{maximumFractionDigits:0}), 'var(--blue-lt)');
+    setText('brd-nifty50', d.nifty50_close.toLocaleString('en-IN',{maximumFractionDigits:0}), 'var(--white)');
   }
+
+  // Fetch Sensex from index_levels table
+  sb.from('index_levels')
+    .select('sensex')
+    .order('snapshot_date', {ascending: false})
+    .limit(1).single()
+    .then(({ data: idx }) => {
+      if(idx?.sensex) {
+        setText('brd-sensex',
+          idx.sensex.toLocaleString('en-IN',{maximumFractionDigits:0}),
+          'var(--blue-lt)');
+      }
+    });
 
   // ── Sensex from index_levels ──────────────────
   sb.from('index_levels').select('sensex').order('snapshot_date',{ascending:false}).limit(1).single()
