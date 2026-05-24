@@ -791,9 +791,9 @@ canvas.tc{display:block;width:100%;height:100%}
       <div class="prog"><div class="pfill" id="b21-bar" style="width:0%"></div></div>
       <div class="sb-strip" id="sbs21"></div>
       <div class="bcard-foot" style="align-items:center">
-        <span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:100px;
+        <span id="badge-term-21" style="font-size:9px;font-weight:700;padding:3px 10px;border-radius:100px;
           background:var(--card3);border:1px solid var(--bdr2);color:var(--muted);
-          letter-spacing:.3px">Short Term</span>
+          letter-spacing:.3px;transition:all .3s">Short Term</span>
         <span id="b21-signal" style="font-weight:700">—</span>
       </div>
       <!-- History toggle button -->
@@ -830,9 +830,9 @@ canvas.tc{display:block;width:100%;height:100%}
       <div class="prog"><div class="pfill" id="b50-bar" style="width:0%"></div></div>
       <div class="sb-strip" id="sbs50"></div>
       <div class="bcard-foot" style="align-items:center">
-        <span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:100px;
+        <span id="badge-term-50" style="font-size:9px;font-weight:700;padding:3px 10px;border-radius:100px;
           background:var(--card3);border:1px solid var(--bdr2);color:var(--muted);
-          letter-spacing:.3px">Medium Term</span>
+          letter-spacing:.3px;transition:all .3s">Medium Term</span>
         <span id="b50-signal" style="font-weight:700">—</span>
       </div>
       <!-- History toggle button -->
@@ -869,9 +869,9 @@ canvas.tc{display:block;width:100%;height:100%}
       <div class="prog"><div class="pfill" id="b200-bar" style="width:0%"></div></div>
       <div class="sb-strip" id="sbs200"></div>
       <div class="bcard-foot" style="align-items:center">
-        <span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:100px;
+        <span id="badge-term-200" style="font-size:9px;font-weight:700;padding:3px 10px;border-radius:100px;
           background:var(--card3);border:1px solid var(--bdr2);color:var(--muted);
-          letter-spacing:.3px">Long Term</span>
+          letter-spacing:.3px;transition:all .3s">Long Term</span>
         <span id="b200-signal" style="font-weight:700">—</span>
       </div>
       <!-- History toggle button -->
@@ -2862,36 +2862,65 @@ async function toggleEmaHistory(emaId) {
 async function loadEmaHistory(emaId) {
   const tbody = document.getElementById('ema-hist-body-'+emaId);
   if(!tbody) return;
-  const pctField   = {21:'pct_above_21ema', 50:'pct_above_50ema', 200:'pct_above_200ema'}[parseInt(emaId)];
-  const countField = {21:'above_21ema_count', 50:'above_50ema_count', 200:'above_200ema_count'}[parseInt(emaId)];
+  const pctField   = {'21':'pct_above_21ema', '50':'pct_above_50ema', '200':'pct_above_200ema'}[emaId];
+  const countField = {'21':'above_21ema_count', '50':'above_50ema_count', '200':'above_200ema_count'}[emaId];
   try {
     const { data: rows } = await sb.from('market_breadth')
       .select('snapshot_date,'+pctField+','+countField+',total_stocks')
-      .order('snapshot_date',{ascending:false}).limit(60);
-    if(!rows||rows.length===0){
-      tbody.innerHTML='<tr><td colspan="4" style="text-align:center;padding:12px;color:var(--muted)">No history yet.</td></tr>';
+      .order('snapshot_date', {ascending: false})
+      .limit(90);  // fetch more to filter
+
+    if(!rows || rows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:14px;color:var(--muted)">No history yet. Runs daily at 4:30 PM IST.</td></tr>';
       return;
     }
-    tbody.innerHTML = rows.map((r,i) => {
-      const pct  = r[pctField]||0;
-      const cnt  = r[countField]||0;
-      const prev = rows[i+1]?.[pctField]||pct;
-      const chg  = pct-prev;
-      const col  = pct>=65?'var(--green)':pct>=45?'var(--amber)':'var(--red)';
-      const sig  = pct>=65?'Bullish':pct>=45?'Neutral':'Bearish';
-      const dt   = new Date(r.snapshot_date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'2-digit'});
-      return '<tr style="border-bottom:1px solid var(--bdr)'+( i===0?';background:rgba(255,255,255,.03)':'')+'">'
-        +'<td style="padding:6px 10px;color:'+(i===0?'var(--white)':'var(--text2)')+';font-family:var(--fm)">'+(i===0?'<b>Today</b> · ':'')+dt+'</td>'
-        +'<td style="padding:6px 10px;text-align:right;font-family:var(--fm);font-weight:700;color:'+col+'">'
-          +pct.toFixed(1)+'%'
-          +(i<rows.length-1?'<span style="font-size:8px;color:'+(chg>=0?'var(--green)':'var(--red)')+';margin-left:4px">'+(chg>=0?'▲':'▼')+Math.abs(chg).toFixed(1)+'</span>':'')
-        +'</td>'
-        +'<td style="padding:6px 10px;text-align:right;color:var(--muted)">'+cnt+'</td>'
-        +'<td style="padding:6px 10px;text-align:right"><span style="font-size:9px;font-weight:700;color:'+col+'">'+sig+'</span></td>'
-      +'</tr>';
+
+    // Filter only rows where total_stocks is close to 500 (our Nifty 500 pipeline)
+    // Exclude old stale data with wrong stock counts
+    const validRows = rows.filter(r => (r.total_stocks || 0) >= 450);
+
+    if(validRows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:14px;color:var(--muted)">Only today\'s data so far. History builds daily.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = validRows.map((r, i) => {
+      const pct   = r[pctField] || 0;
+      const cnt   = r[countField] || 0;
+      const pctR  = Math.round(pct);  // rounded, no decimals
+      const col   = pct >= 65 ? 'var(--green)' : pct >= 45 ? 'var(--amber)' : 'var(--red)';
+      const sig   = pct >= 65 ? 'Bullish' : pct >= 45 ? 'Neutral' : 'Bearish';
+      const bgRow = i === 0 ? 'background:rgba(255,255,255,.04);' : '';
+      const dt    = new Date(r.snapshot_date);
+      const dateStr = dt.toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'2-digit'});
+
+      // Bar visual — width proportional to %
+      const barW  = Math.round(pct);
+      const barCol = pct >= 65 ? '#2ed8a0' : pct >= 45 ? '#ffb340' : '#ff5d7a';
+
+      return `<tr style="border-bottom:1px solid var(--bdr);${bgRow}">
+        <td style="padding:7px 12px;color:${i===0?'var(--white)':'var(--text2)'};font-size:10px;white-space:nowrap">
+          ${i===0?'<b>Today</b> &nbsp;':''}${dateStr}
+        </td>
+        <td style="padding:7px 12px;text-align:right">
+          <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px">
+            <div style="width:80px;height:5px;background:var(--card3);border-radius:3px;overflow:hidden">
+              <div style="width:${barW}%;height:100%;background:${barCol};border-radius:3px"></div>
+            </div>
+            <span style="font-family:var(--fm);font-weight:700;color:${col};min-width:24px;text-align:right">${pctR}</span>
+          </div>
+        </td>
+        <td style="padding:7px 12px;text-align:right;color:var(--muted);font-family:var(--fm);font-size:10px">${cnt}</td>
+        <td style="padding:7px 12px;text-align:right">
+          <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:100px;
+            background:${pct>=65?'var(--green-dim)':pct>=45?'var(--amber-dim)':'var(--red-dim)'};
+            color:${col}">${sig}</span>
+        </td>
+      </tr>`;
     }).join('');
+
   } catch(e) {
-    tbody.innerHTML='<tr><td colspan="4" style="text-align:center;padding:12px;color:var(--muted)">Error.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:12px;color:var(--muted)">Error loading history.</td></tr>';
   }
 }
 
@@ -3186,6 +3215,27 @@ async function loadMarketBreadth() {
     if(descEl) descEl.innerHTML = `${(e.count||0).toLocaleString('en-IN')} of ${total.toLocaleString('en-IN')} stocks above ${e.id}-Day EMA`;
     if(footEl) footEl.textContent = ''; // removed — already in description
     if(sigEl)  { sigEl.textContent = sig.label; sigEl.style.color = sig.col; }
+
+    // ── Colour the term badge dynamically ──────────
+    const badgeEl = document.getElementById(`badge-term-${e.id}`);
+    if(badgeEl) {
+      if(pct >= 65) {
+        badgeEl.style.background = 'var(--green-dim)';
+        badgeEl.style.border     = '1px solid var(--green-bd)';
+        badgeEl.style.color      = 'var(--green)';
+        badgeEl.style.boxShadow  = '0 0 8px rgba(46,216,160,.2)';
+      } else if(pct >= 45) {
+        badgeEl.style.background = 'var(--amber-dim)';
+        badgeEl.style.border     = '1px solid var(--amber-bd)';
+        badgeEl.style.color      = 'var(--amber)';
+        badgeEl.style.boxShadow  = '0 0 8px rgba(255,179,64,.2)';
+      } else {
+        badgeEl.style.background = 'var(--red-dim)';
+        badgeEl.style.border     = '1px solid var(--red-bd)';
+        badgeEl.style.color      = 'var(--red)';
+        badgeEl.style.boxShadow  = '0 0 8px rgba(255,93,122,.2)';
+      }
+    }
     if(cardEl) {
       cardEl.className = cardEl.className.replace(/bc-[gar]/g, '');
       if(pct>=65) cardEl.className += ' bc-g';
