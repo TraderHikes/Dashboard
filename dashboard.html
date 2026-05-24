@@ -744,7 +744,7 @@ canvas.tc{display:block;width:100%;height:100%}
 
   <!-- Monthly Returns Heatmap -->
   <div class="card">
-    <div class="ch"><span class="ct">Monthly Returns — FY 2025–26</span><div class="ch-r"><span class="chip" id="heatmap-range">—</span><span id="heatmap-ytd" style="font-size:11px;color:var(--green);font-weight:700">—</span></div></div>
+    <div class="ch"><span class="ct">Monthly Returns — FY 2026–27</span><div class="ch-r"><span class="chip" id="heatmap-range">—</span><span id="heatmap-ytd" style="font-size:11px;color:var(--green);font-weight:700">—</span></div></div>
     <div class="monthly-grid" id="monthly-grid"></div>
     <div style="display:flex;align-items:center;gap:6px;padding:0 20px 14px;flex-wrap:wrap">
       <span style="font-size:10px;color:var(--muted)">Scale:</span>
@@ -759,15 +759,6 @@ canvas.tc{display:block;width:100%;height:100%}
     </div>
   </div>
 
-  <!-- P&L Distribution -->
-  <div class="card">
-    <div class="ch"><span class="ct">Trade P&L Distribution</span><div class="ch-r"><span class="chip" id="distrib-chip">—</span></div></div>
-    <div style="padding:16px 20px 4px;font-size:11px;color:var(--muted)" id="distrib-desc">
-      Returns bucketed by size.
-    </div>
-    <div class="distrib-row" id="distrib-row"></div>
-    <div class="distrib-labels"><span>&lt;−8%</span><span>−6%</span><span>−4%</span><span>−2%</span><span>0%</span><span>+2%</span><span>+5%</span><span>+8%</span><span>+12%</span><span>+16%</span><span>+20%</span><span>&gt;+20%</span></div>
-  </div>
 
 </div><!-- /portfolio -->
 
@@ -1749,9 +1740,9 @@ function buildMonthlyHeatmapLive(snaps,ytdReturn){
   snaps.forEach(s=>{ const d=new Date(s.snapshot_date),key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
     if(!months[key])months[key]=[];months[key].push(s.portfolio_value); });
   const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const fyM=['Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May'];
+  const fyM=['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
   const curY=new Date().getFullYear();
-  const fyKeys=fyM.map(m=>{ const mi=mNames.indexOf(m),yr=mi>=5?curY-1:curY; return`${yr}-${String(mi+1).padStart(2,'0')}`; });
+  const fyKeys=fyM.map(m=>{ const mi=mNames.indexOf(m),yr=mi>=3?2026:2027; return`${yr}-${String(mi+1).padStart(2,'0')}`; });
   const gc=r=>r===null?'mr-zero':r>6?'mr-hot3':r>3?'mr-hot2':r>0?'mr-hot1':r>-3?'mr-cold1':'mr-cold2';
   grid.innerHTML=fyKeys.map((key,i)=>{
     const d=months[key]; let ret=null,rs='—';
@@ -1761,7 +1752,7 @@ function buildMonthlyHeatmapLive(snaps,ytdReturn){
   const ytdEl=document.getElementById('heatmap-ytd');
   if(ytdEl) ytdEl.textContent='YTD: '+(ytdReturn>=0?'+':'')+ytdReturn.toFixed(1)+'%';
   const rEl=document.getElementById('heatmap-range');
-  if(rEl) rEl.textContent='FY '+(curY-1)+'–'+String(curY).slice(2);
+  if(rEl) rEl.textContent='FY 2026–27';
 }
 
 /* ══════════════════════════════════════════════════
@@ -2287,45 +2278,55 @@ function drawMarginRing(){
   ctx.lineCap='butt';
 }
 
-function buildAllocList(){
-  const items=[
-    {name:'Dixon Tech',pct:12.5,c:'#5c6ffb'},{name:'HDFC Bank',pct:9.2,c:'#4da8ff'},
-    {name:'Tata Elxsi',pct:11.4,c:'#7b8bfc'},{name:'ABB India',pct:5.8,c:'#7c4dff'},
-    {name:'Polycab',pct:7.3,c:'#00d4c8'},{name:'BPCL',pct:5.7,c:'#f5a623'},
-    {name:'Zomato',pct:5.2,c:'#1ec993'},{name:'Cash',pct:42.9,c:'rgba(60,70,100,.8)'},
-  ];
+async function buildAllocList(){
   const el=document.getElementById('alloc-list');if(!el)return;
-  el.innerHTML=items.map(i=>`
+  // Fetch live open trades
+  const { data: trades } = await sb.from('open_trades')
+    .select('symbol,avg_entry_price,remaining_qty,capital_at_entry,position_size_pct')
+    .order('capital_at_entry', {ascending:false});
+
+  if(!trades||trades.length===0){
+    el.innerHTML='<div style="padding:12px;color:var(--muted);font-size:11px">No open positions.</div>';
+    return;
+  }
+
+  const colours=['#5c6ffb','#00d4c8','#7b8bfc','#f5a623','#1ec993','#4da8ff','#7c4dff','#f05272'];
+  const totalCap = trades[0]?.capital_at_entry || 2500000;
+  const deployed = trades.reduce((s,t)=>{
+    const ae = t.avg_entry_price||0;
+    const rq = t.remaining_qty||0;
+    return s + ae*rq;
+  }, 0);
+  const cashPct = totalCap > 0 ? Math.max(0, (totalCap-deployed)/totalCap*100) : 0;
+
+  const items = trades.map((t,i) => {
+    const ae  = t.avg_entry_price||0;
+    const rq  = t.remaining_qty||0;
+    const val = ae*rq;
+    const pct = t.position_size_pct
+      ? parseFloat(t.position_size_pct)
+      : (totalCap>0 ? val/totalCap*100 : 0);
+    return { name:t.symbol, pct:parseFloat(pct.toFixed(1)), c:colours[i%colours.length] };
+  });
+
+  // Add cash
+  items.push({ name:'Cash', pct:parseFloat(cashPct.toFixed(1)), c:'rgba(60,70,100,.8)' });
+
+  el.innerHTML = items.map(i=>`
     <div class="alloc-item">
       <div class="alloc-dot" style="background:${i.c}"></div>
       <div class="alloc-name">${i.name}</div>
-      <div class="alloc-bar-wrap"><div class="alloc-bar-fill" style="width:${i.pct*2}%;background:${i.c}"></div></div>
+      <div class="alloc-bar-wrap"><div class="alloc-bar-fill" style="width:${Math.min(i.pct*2,100)}%;background:${i.c}"></div></div>
       <div class="alloc-pct">${i.pct}%</div>
     </div>`).join('');
 }
 
-function buildDistrib(){
-  const el=document.getElementById('distrib-row');if(!el)return;
-  // [bucket_count, is_positive]
-  const buckets=[
-    {n:1,p:false},{n:2,p:false},{n:2,p:false},{n:1,p:false},
-    {n:0,p:false},{n:1,p:true},{n:2,p:true},{n:3,p:true},
-    {n:4,p:true},{n:5,p:true},{n:3,p:true},{n:1,p:true}
-  ];
-  const maxN=Math.max(...buckets.map(b=>b.n));
-  el.innerHTML=buckets.map(b=>{
-    if(b.n===0)return`<div class="db" style="height:4px;background:var(--card3)"></div>`;
-    const h=b.n===0?4:Math.round((b.n/maxN)*80);
-    const col=b.p?'rgba(30,201,147,.7)':'rgba(240,82,114,.6)';
-    return`<div class="db" style="height:${h}px;background:${col}" title="${b.n} trades"></div>`;
-  }).join('');
-}
 
 function drawPortfolioCharts(){
   drawEquityCurve();
   // Use live drawdown data if available, otherwise simulate
   drawDrawdown(window._ddSeries || null);
-  drawDonut();drawMarginRing();buildAllocList();buildDistrib();
+  drawDonut();drawMarginRing();buildAllocList();
 }
 
 /* ── CHART THEME ── */
