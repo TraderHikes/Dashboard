@@ -1116,18 +1116,14 @@ canvas.tc{display:block;width:100%;height:100%}
      TAB 4 — CLOSED TRADES
 ══════════════════════════════════════ -->
 <div class="pane" id="pane-closed">
-  <div class="sh"><div class="st">Trade Journal</div><div class="sb">Closed positions · Entry, partial profit booking &amp; final exit annotated on chart</div></div>
-  <div class="sstrip">
-    <div class="sc"><div class="scl">Realised P&L</div><div class="scv g" id="cs-pnl">—</div><div class="scs" id="cs-pnl-sub">—</div></div>
-    <div class="sc"><div class="scl">Wins</div><div class="scv g" id="cs-wins">—</div><div class="scs" id="cs-wins-sub">—</div></div>
-    <div class="sc"><div class="scl">Losses</div><div class="scv r" id="cs-losses">—</div><div class="scs" id="cs-losses-sub">—</div></div>
-    <div class="sc"><div class="scl">Win Rate</div><div class="scv b" id="cs-wr">—</div><div class="scs" id="cs-wr-sub">—</div></div>
-    <div class="sc"><div class="scl">Profit Factor</div><div class="scv g" id="cs-pf">—</div><div class="scs">Gross ratio</div></div>
+  <div class="sh"><div class="st">Trade Journal</div><div class="sb">Full journey — Entry → Partial Exits → Final Exit · Realised P&L</div></div>
+  <div class="sstrip" id="ct-strip" style="margin-bottom:20px">
+    <div class="sc"><div class="scl">Total Realised P&L</div><div class="scv" id="cs-pnl">—</div><div class="scs">All closed trades</div><div class="sc-badge info" id="cs-pnl-badge">—</div></div>
+    <div class="sc"><div class="scl">Win Rate</div><div class="scv" id="cs-wr">—</div><div class="scs" id="cs-wr-sub">—</div><div class="sc-badge info" id="cs-wr-badge">—</div></div>
+    <div class="sc"><div class="scl">Profit Factor</div><div class="scv" id="cs-pf">—</div><div class="scs">Gross win / loss</div><div class="sc-badge info" id="cs-pf-badge">—</div></div>
+    <div class="sc"><div class="scl">Avg Return</div><div class="scv" id="cs-avg">—</div><div class="scs">Per closed trade</div><div class="sc-badge info">Per trade</div></div>
   </div>
-  <div class="card">
-    <div class="ch"><span class="ct">Closed Trades — Full Journey</span><div class="ch-r"><div class="legend-row"><span class="li"><span style="color:var(--blue-lt);font-size:13px">▲</span>Entry</span><span class="li"><span style="color:var(--amber);font-size:13px">◆</span>Partial</span><span class="li"><span style="color:var(--red);font-size:13px">▼</span>Exit</span></div><span class="chip">Full duration</span></div></div>
-    <div id="ct-container"></div>
-  </div>
+  <div id="ct-container"></div>
 </div>
 
 <!-- ══════════════════════════════════════
@@ -1650,7 +1646,88 @@ function buildMonthlyHeatmapLive(snaps,ytdReturn){
 }
 
 /* ══════════════════════════════════════════════════
-   TRADINGVIEW LIGHTWEIGHT CHARTS — REAL CANDLESTICKS
+   TRADE LOG — entries + partial exits per open trade
+══════════════════════════════════════════════════ */
+async function loadTradeLog(t) {
+  const el = document.getElementById('tlog_' + t.id);
+  if(!el) return;
+
+  try {
+    const [entryRes, partialRes] = await Promise.all([
+      t.has_pyramid
+        ? sb.from('trade_entries').select('*').eq('open_trade_id', t.id).order('entry_date')
+        : Promise.resolve({ data: [] }),
+      t.has_partial_exit
+        ? sb.from('partial_exits').select('*').eq('open_trade_id', t.id).order('exit_date')
+        : Promise.resolve({ data: [] }),
+    ]);
+
+    const entries  = entryRes.data  || [];
+    const partials = partialRes.data || [];
+
+    // Calculate locked profit from partial exits
+    const lockedPnl = partials.reduce((s, p) => s + (p.realised_pnl || 0), 0);
+
+    let html = `<div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Trade Log</div>`;
+
+    // Initial entry
+    html += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:9px">
+      <span style="color:var(--blue-lt);font-weight:700;min-width:14px">▲</span>
+      <span style="color:var(--muted);min-width:72px">${t.entry_date}</span>
+      <span style="color:var(--white)">Entry</span>
+      <span style="color:var(--text2);font-family:var(--fm)">₹${Number(t.entry_price).toLocaleString('en-IN')} × ${t.quantity} shares</span>
+      ${t.position_size_pct ? `<span style="color:var(--blue-lt);margin-left:auto">${t.position_size_pct}% of capital</span>` : ''}
+    </div>`;
+
+    // Pyramid entries
+    entries.forEach(en => {
+      html += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:9px;padding-left:8px">
+        <span style="color:#8fa3ff;font-weight:700;min-width:14px">▲</span>
+        <span style="color:var(--muted);min-width:72px">${en.entry_date}</span>
+        <span style="color:var(--white)">Added</span>
+        <span style="color:var(--text2);font-family:var(--fm)">₹${Number(en.entry_price).toLocaleString('en-IN')} × ${en.quantity} shares</span>
+        ${en.position_size_pct ? `<span style="color:#8fa3ff;margin-left:auto">${en.position_size_pct}% of capital</span>` : ''}
+      </div>`;
+    });
+
+    // Partial exits
+    partials.forEach(px => {
+      const pnlCol = px.realised_pnl >= 0 ? 'var(--green)' : 'var(--red)';
+      html += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:9px;padding-left:8px">
+        <span style="color:var(--amber);font-weight:700;min-width:14px">◆</span>
+        <span style="color:var(--muted);min-width:72px">${px.exit_date}</span>
+        <span style="color:var(--amber)">Partial Exit</span>
+        <span style="color:var(--text2);font-family:var(--fm)">₹${Number(px.exit_price).toLocaleString('en-IN')} × ${px.quantity} shares</span>
+        <span style="color:${pnlCol};font-family:var(--fm);font-weight:700;margin-left:auto">
+          ${px.realised_pnl >= 0 ? '+' : ''}₹${Math.abs(px.realised_pnl).toLocaleString('en-IN',{maximumFractionDigits:0})}
+          (${px.return_pct >= 0 ? '+' : ''}${Number(px.return_pct).toFixed(2)}%)
+        </span>
+      </div>`;
+    });
+
+    // Locked profit summary (if any partial exits)
+    if(lockedPnl !== 0) {
+      const lCol = lockedPnl >= 0 ? 'var(--green)' : 'var(--red)';
+      html += `<div style="display:flex;align-items:center;justify-content:space-between;
+        margin-top:6px;padding:5px 8px;background:${lockedPnl>=0?'var(--green-dim)':'var(--red-dim)'};
+        border:1px solid ${lockedPnl>=0?'var(--green-bd)':'var(--red-bd)'};border-radius:6px">
+        <span style="font-size:9px;font-weight:700;color:${lCol}">🔒 Locked Profit</span>
+        <span style="font-size:11px;font-weight:800;color:${lCol};font-family:var(--fm)">
+          ${lockedPnl >= 0 ? '+' : ''}₹${Math.abs(lockedPnl).toLocaleString('en-IN',{maximumFractionDigits:0})}
+        </span>
+      </div>`;
+    }
+
+    el.innerHTML = html;
+
+  } catch(err) {
+    el.innerHTML = '';  // silent fail — not critical
+    console.warn('Trade log error:', err);
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   TRADINGVIEW LIGHTWEIGHT CHARTS
 ══════════════════════════════════════════════════ */
 const tvCharts = {}; // store chart instances to avoid re-render
 
@@ -2441,31 +2518,25 @@ async function renderOpen(){
           </div>
         </div>
 
-        <!-- Holding Period + Legend (replaces risk bar) -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding-top:6px;border-top:1px solid var(--bdr)">
-          <div style="display:flex;align-items:center;gap:5px">
-            <span style="font-size:8px;color:var(--white);text-transform:uppercase;letter-spacing:.5px;min-width:44px">Holding: ${holdingDays}d</span>
-            <div style="display:flex;gap:2px;align-items:center">
-              ${Array.from({length:Math.min(Math.ceil(holdingDays/7),16)}, (_,i) =>
-                '<div style="width:5px;height:5px;border-radius:1px;background:var(--blue-lt);opacity:'+(1-(i/Math.min(Math.ceil(holdingDays/7),16))*0.5)+'"></div>'
-              ).join('')}
-            </div>
+        <!-- Holding Period bar -->
+        <div style="display:flex;align-items:center;gap:5px;margin-top:8px;padding-top:6px;border-top:1px solid var(--bdr)">
+          <span style="font-size:8px;color:var(--white);text-transform:uppercase;letter-spacing:.5px;min-width:60px">Holding: ${holdingDays}d</span>
+          <div style="display:flex;gap:2px;align-items:center">
+            ${Array.from({length:Math.min(Math.ceil(holdingDays/7),16)}, (_,i) =>
+              '<div style="width:5px;height:5px;border-radius:1px;background:var(--blue-lt);opacity:'+(1-(i/Math.min(Math.ceil(holdingDays/7),16))*0.5)+'"></div>'
+            ).join('')}
           </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <span style="display:flex;align-items:center;gap:3px;font-size:8px;color:var(--white)">
-              <span style="display:inline-block;width:12px;height:2px;background:#5c6ffb;border-radius:1px"></span>Entry
-            </span>
-            <span style="display:flex;align-items:center;gap:3px;font-size:8px;color:var(--white)">
-              <span style="display:inline-block;width:12px;height:0;border-top:2px dashed #ff5d7a"></span>SL
-            </span>
-            <span style="display:flex;align-items:center;gap:3px;font-size:8px;color:var(--white)">
-              <span style="display:inline-block;width:12px;height:1px;background:var(--green);border-radius:1px"></span>EMA21
-            </span>
-          </div>
+        </div>
+
+        <!-- Trade Log (loaded async) -->
+        <div id="tlog_${t.id}" style="margin-top:8px;padding-top:6px;border-top:1px solid var(--bdr)">
+          <div style="font-size:9px;color:var(--muted)">Loading trade log...</div>
         </div>
       </div>`;
     c.appendChild(el);
 
+    // Load trade log and render TV chart in parallel
+    loadTradeLog(t);
     requestAnimationFrame(() => {
       renderTVChart(t.id, t.symbol, avgEntry, t.sl_price, t.cmp || avgEntry,
         t.entry_date, t.has_pyramid, t.has_partial_exit);
@@ -2478,6 +2549,176 @@ async function renderOpen(){
 async function renderClosed(){
   const c=document.getElementById('ct-container');
   c.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted)">Loading trade history...</div>';
+
+  const{data:trades,error}=await sb.from('closed_trades')
+    .select('*').order('exit_date',{ascending:false});
+
+  if(error||!trades||trades.length===0){
+    c.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted)">No closed trades yet.</div>';
+    return;
+  }
+
+  // ── Summary strip ────────────────────────────────
+  const wins    = trades.filter(t=>t.realised_pnl>0);
+  const losses  = trades.filter(t=>t.realised_pnl<=0);
+  const totalPnl= trades.reduce((s,t)=>s+(t.realised_pnl||0),0);
+  const winRate = trades.length>0?(wins.length/trades.length*100).toFixed(0):0;
+  const grossW  = wins.reduce((s,t)=>s+(t.realised_pnl||0),0);
+  const grossL  = Math.abs(losses.reduce((s,t)=>s+(t.realised_pnl||0),0));
+  const pf      = grossL>0?(grossW/grossL).toFixed(2):'∞';
+
+  const sstrip = document.getElementById('ct-strip');
+  if(sstrip) sstrip.innerHTML=`
+    <div class="sc"><div class="scl">Total Realised P&L</div>
+      <div class="scv ${totalPnl>=0?'g':'r'}">${totalPnl>=0?'+':''}₹${Math.abs(totalPnl).toLocaleString('en-IN',{maximumFractionDigits:0})}</div>
+      <div class="scs">${trades.length} closed trade${trades.length!==1?'s':''}</div>
+      <div class="sc-badge ${totalPnl>=0?'up':'dn'}">${totalPnl>=0?'▲':'▼'} All time</div>
+    </div>
+    <div class="sc"><div class="scl">Win Rate</div>
+      <div class="scv ${winRate>=50?'g':'r'}">${winRate}%</div>
+      <div class="scs">${wins.length}W · ${losses.length}L</div>
+      <div class="sc-badge ${winRate>=50?'up':'dn'}">${wins.length} of ${trades.length} trades</div>
+    </div>
+    <div class="sc"><div class="scl">Profit Factor</div>
+      <div class="scv ${pf>=1?'g':'r'}">${pf}</div>
+      <div class="scs">Gross win / gross loss</div>
+      <div class="sc-badge ${pf>=1.5?'up':pf>=1?'info':'dn'}">${pf>=1.5?'Strong':pf>=1?'Positive':'Negative'}</div>
+    </div>
+    <div class="sc"><div class="scl">Avg Return</div>
+      <div class="scv">${trades.length>0?((trades.reduce((s,t)=>s+(t.return_pct||0),0)/trades.length).toFixed(1)):'—'}%</div>
+      <div class="scs">Per closed trade</div>
+      <div class="sc-badge info">Per trade avg</div>
+    </div>`;
+
+  // ── Trade cards ──────────────────────────────────
+  c.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.style.cssText = 'display:flex;flex-direction:column;gap:12px';
+  c.appendChild(grid);
+
+  for(const t of trades) {
+    // Fetch partial exits for this trade
+    const{data:partials}=await sb.from('partial_exits')
+      .select('*').eq('symbol', t.symbol)
+      .gte('exit_date', t.entry_date)
+      .lte('exit_date', t.exit_date)
+      .order('exit_date');
+
+    const pxList   = partials || [];
+    const lockedPnl= pxList.reduce((s,p)=>s+(p.realised_pnl||0),0);
+    const finalPnl = (t.realised_pnl||0) - lockedPnl;  // final leg only
+    const totalPnlT= t.realised_pnl||0;
+    const isWin    = totalPnlT >= 0;
+    const pnlCol   = isWin ? 'var(--green)' : 'var(--red)';
+
+    const card = document.createElement('div');
+    card.style.cssText = `background:var(--card);border:1px solid var(--bdr);
+      border-radius:12px;overflow:hidden;
+      border-left:3px solid ${isWin?'var(--green)':'var(--red)'}`;
+
+    card.innerHTML = `
+      <!-- Header -->
+      <div style="display:flex;justify-content:space-between;align-items:center;
+        padding:14px 18px;border-bottom:1px solid var(--bdr)">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+            <span style="font-size:15px;font-weight:800;color:var(--white)">${t.symbol}</span>
+            <span style="font-size:9px;padding:2px 7px;border-radius:100px;font-weight:700;
+              background:${isWin?'var(--green-dim)':'var(--red-dim)'};
+              border:1px solid ${isWin?'var(--green-bd)':'var(--red-bd)'};
+              color:${pnlCol}">${isWin?'Winner':'Loss'}</span>
+            ${pxList.length>0?`<span style="font-size:9px;padding:2px 7px;border-radius:100px;font-weight:700;background:var(--amber-dim);border:1px solid var(--amber-bd);color:var(--amber)">Partial Exit</span>`:''}
+          </div>
+          <div style="font-size:11px;color:var(--muted)">${t.company_name||''} · ${t.sector||''}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:22px;font-weight:800;letter-spacing:-.5px;color:${pnlCol}">
+            ${totalPnlT>=0?'+':''}₹${Math.abs(totalPnlT).toLocaleString('en-IN',{maximumFractionDigits:0})}
+          </div>
+          <div style="font-size:11px;font-weight:700;color:${pnlCol}">
+            ${t.return_pct>=0?'+':''}${Number(t.return_pct).toFixed(2)}% · ${t.holding_days||0}d held
+          </div>
+        </div>
+      </div>
+
+      <!-- Key stats row -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--bdr)">
+        <div style="background:var(--card2);padding:10px 14px">
+          <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Avg Entry</div>
+          <div style="font-size:13px;font-weight:700;color:var(--white);font-family:var(--fm)">₹${Number(t.avg_entry_price||0).toLocaleString('en-IN')}</div>
+        </div>
+        <div style="background:var(--card2);padding:10px 14px">
+          <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Exit Price</div>
+          <div style="font-size:13px;font-weight:700;color:${pnlCol};font-family:var(--fm)">₹${Number(t.avg_exit_price||0).toLocaleString('en-IN')}</div>
+        </div>
+        <div style="background:var(--card2);padding:10px 14px">
+          <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Total Qty</div>
+          <div style="font-size:13px;font-weight:700;color:#a78bfa;font-family:var(--fm)">${t.quantity||0}</div>
+        </div>
+        <div style="background:var(--card2);padding:10px 14px">
+          <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Exit Reason</div>
+          <div style="font-size:11px;font-weight:700;color:var(--text2)">${t.exit_reason||'—'}</div>
+        </div>
+      </div>
+
+      <!-- Trade journey log -->
+      <div style="padding:12px 18px">
+        <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;
+          letter-spacing:.5px;margin-bottom:8px">Trade Journey</div>
+
+        <!-- Initial entry -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:10px">
+          <span style="color:var(--blue-lt);font-weight:700;min-width:14px">▲</span>
+          <span style="color:var(--muted);min-width:80px">${t.entry_date}</span>
+          <span style="color:var(--white);min-width:50px">Initial Entry</span>
+          <span style="color:var(--text2);font-family:var(--fm)">₹${Number(t.avg_entry_price||0).toLocaleString('en-IN')} × ${t.quantity||0} shares</span>
+          ${t.position_size_pct?`<span style="color:var(--blue-lt);margin-left:auto;font-size:9px">${t.position_size_pct}% of ₹${t.capital_at_entry?(t.capital_at_entry/100000).toFixed(0)+'L':'—'}</span>`:''}
+        </div>
+
+        <!-- Partial exits -->
+        ${pxList.map(px=>{
+          const pc = px.realised_pnl>=0?'var(--green)':'var(--red)';
+          return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:10px;padding-left:8px">
+            <span style="color:var(--amber);font-weight:700;min-width:14px">◆</span>
+            <span style="color:var(--muted);min-width:80px">${px.exit_date}</span>
+            <span style="color:var(--amber);min-width:50px">Partial Exit</span>
+            <span style="color:var(--text2);font-family:var(--fm)">₹${Number(px.exit_price).toLocaleString('en-IN')} × ${px.quantity} shares</span>
+            <span style="color:${pc};font-family:var(--fm);font-weight:700;margin-left:auto">
+              ${px.realised_pnl>=0?'+':''}₹${Math.abs(px.realised_pnl).toLocaleString('en-IN',{maximumFractionDigits:0})}
+              <span style="font-size:9px">(${px.return_pct>=0?'+':''}${Number(px.return_pct).toFixed(2)}%)</span>
+            </span>
+          </div>`;
+        }).join('')}
+
+        <!-- Final exit -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:10px">
+          <span style="color:var(--red);font-weight:700;min-width:14px">▼</span>
+          <span style="color:var(--muted);min-width:80px">${t.exit_date}</span>
+          <span style="color:var(--white);min-width:50px">Final Exit</span>
+          <span style="color:var(--text2);font-family:var(--fm)">₹${Number(t.avg_exit_price||0).toLocaleString('en-IN')} × ${(t.quantity||0)-(pxList.reduce((s,p)=>s+p.quantity,0))} shares</span>
+          <span style="color:${finalPnl>=0?'var(--green)':'var(--red)'};font-family:var(--fm);font-weight:700;margin-left:auto">
+            ${finalPnl>=0?'+':''}₹${Math.abs(finalPnl).toLocaleString('en-IN',{maximumFractionDigits:0})}
+          </span>
+        </div>
+
+        <!-- Divider + Total -->
+        <div style="border-top:1px solid var(--bdr);margin-top:8px;padding-top:8px;
+          display:flex;justify-content:space-between;align-items:center">
+          <div>
+            ${t.trade_notes?`<div style="font-size:9px;color:var(--muted);font-style:italic">"${t.trade_notes}"</div>`:''}
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:9px;color:var(--muted);margin-bottom:2px">Total Realised P&L</div>
+            <div style="font-size:16px;font-weight:800;color:${pnlCol};font-family:var(--fm)">
+              ${totalPnlT>=0?'+':''}₹${Math.abs(totalPnlT).toLocaleString('en-IN',{maximumFractionDigits:0})}
+            </div>
+          </div>
+        </div>
+      </div>`;
+
+    grid.appendChild(card);
+  }
+}
 
   const { data: trades, error } = await sb
     .from('closed_trades')
@@ -2527,59 +2768,6 @@ async function renderClosed(){
   setT2('cs-wr', winRate+'%', 'var(--blue-lt)');
   setT2('cs-wr-sub', wins.length+'/'+trades.length);
   setT2('cs-pf', pf+'×', parseFloat(pf)>=2?'var(--green)':parseFloat(pf)>=1?'var(--amber)':'var(--red)');
-
-  c.innerHTML='';
-  trades.forEach(t=>{
-    const pp = (t.realised_pnl||0) >= 0;
-    // Determine entry bar position based on holding days
-    const totalBars = Math.max((t.holding_days||20) + 10, 25);
-    const eb = 5;
-    const xb = Math.min(eb + (t.holding_days||20), totalBars - 2);
-    const p1b = t.partial_exit_date ? Math.round((eb + xb) / 2) : null;
-
-    const trend = pp ? 0.005 : -0.004;
-    const bars = gen(t.avg_entry_price * 0.97, totalBars, trend, 0.016);
-    if(bars.length > xb) bars[xb].c = t.avg_exit_price;
-
-    const el=document.createElement('div');
-    el.className='trade-card';
-    el.innerHTML=`
-      <div class="chart-col"><canvas class="tc" id="cc_${t.id}" width="400" height="160"></canvas></div>
-      <div class="info-col">
-        <div class="trade-top">
-          <div>
-            <div class="tnm">${t.company_name}</div>
-            <div class="tsc">NSE:${t.symbol} · ${t.sector||''}</div>
-            ${t.exit_reason ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">Exit: ${t.exit_reason}</div>` : ''}
-          </div>
-          <span class="badge ${pp?'bwin':'bloss'}">${pp?'Winner':'Stopped'}</span>
-        </div>
-        <div class="mgrid">
-          <div class="mg"><div class="mgl">Avg Entry ₹</div><div class="mgv">${Number(t.avg_entry_price).toLocaleString('en-IN')}</div></div>
-          <div class="mg"><div class="mgl">Wt. Avg Exit ₹</div><div class="mgv ${pp?'g':'r'}">${Number(t.avg_exit_price).toLocaleString('en-IN')}</div></div>
-          <div class="mg"><div class="mgl">Realised P&L</div><div class="mgv ${pp?'g':'r'}">${pp?'+':''}₹${Math.abs(t.realised_pnl||0).toLocaleString('en-IN',{maximumFractionDigits:0})}</div></div>
-          <div class="mg"><div class="mgl">Return %</div><div class="mgv ${pp?'g':'r'}">${pp?'+':''}${(t.return_pct||0).toFixed(1)}%</div></div>
-        </div>
-        <div class="atags">
-          <div class="atag at-e">▲ Entry ₹${Number(t.avg_entry_price).toLocaleString('en-IN')} · ${t.entry_date}</div>
-          ${t.partial_exit_date ? `<div class="atag at-p">◆ Partial Exit ₹${Number(t.partial_exit_price).toLocaleString('en-IN')} · ${t.partial_exit_pct}% sold · ${t.partial_exit_date}</div>` : ''}
-          <div class="atag at-x">▼ Final Exit ₹${Number(t.avg_exit_price).toLocaleString('en-IN')} · ${t.exit_date}</div>
-          <div class="atag at-d">⏱ ${t.holding_days||'?'} days held</div>
-        </div>
-        ${t.trade_notes ? `<div style="font-size:11px;color:var(--muted);margin-top:4px;font-style:italic;border-top:1px solid var(--bdr);padding-top:8px">"${t.trade_notes}"</div>` : ''}
-      </div>`;
-    c.appendChild(el);
-    requestAnimationFrame(()=>{
-      const cv=document.getElementById('cc_'+t.id);
-      if(cv){
-        cv.width=cv.offsetWidth||400;
-        cv.height=cv.offsetHeight||160;
-        drawClosed(cv,bars,t.avg_entry_price,t.avg_exit_price,t.sl_price,
-          eb, p1b, t.partial_exit_price, xb);
-      }
-    });
-  });
-}
 
 /* ─ RENDER RS ─ */
 function renderRS(){document.getElementById('rs-tbody').innerHTML=rsD.map(s=>{const pips=Array.from({length:10},(_,i)=>`<div class="rs-pip ${i<Math.round(s.rs/10)?(s.rs>=90?'elite':'on'):''}"></div>`).join('');const spark=s.sp.map(v=>`<div class="sp" style="height:${v}%;background:${v>70?'var(--green)':v>50?'var(--blue)':'var(--amber)'}"></div>`).join('');const vc=s.vol==='high'?'vh':s.vol==='med'?'vm':'vn';const vl=s.vol==='high'?`+${s.vc}% 🔥`:`+${s.vc}%`;return`<tr><td style="color:var(--muted);font-weight:700;font-family:var(--fm)">${s.r}</td><td><div class="sname">${s.name}</div><div class="ssec">NSE:${s.sym} · ${s.sec}</div></td><td class="r" style="font-weight:700;color:var(--white)">${s.cmp.toLocaleString('en-IN')}</td><td class="r" style="color:var(--muted)">${s.hi52.toLocaleString('en-IN')}</td><td class="r" style="color:var(--red);font-weight:600">${s.fh}%</td><td><div class="rs-wrap">${pips}<span class="rs-num ${s.rs>=90?'elite':''}">${s.rs}</span></div></td><td class="r"><span class="ema-tag ${s.e21?'et-on':'et-off'}">${s.e21?'✓ Above':'✗ Below'}</span></td><td class="r"><span class="ema-tag ${s.e50?'et-on':'et-off'}">${s.e50?'✓ Above':'✗ Below'}</span></td><td class="r"><span class="ema-tag ${s.e200?'et-on':'et-near'}">${s.e200?'✓ Above':'≈ Near'}</span></td><td><span class="vol-tag ${vc}">${vl}</span></td><td><span class="setup">${s.setup}</span></td><td><div class="spark">${spark}</div></td><td><span class="wl-s ${s.wl?'on':''}" onclick="this.classList.toggle('on')">★</span></td></tr>`;}).join('');}
