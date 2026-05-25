@@ -58,8 +58,8 @@
   --fm: 'DM Mono', monospace;
 }
 *{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{
+html{scroll-behavior:smooth;overflow-x:hidden}
+body{overflow-x:hidden;
   background:var(--bg);
   color:var(--text2);
   font-family:var(--f);
@@ -78,6 +78,7 @@ body{
 
 /* ═══ HEADER ═══ */
 .hdr{display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:62px;background:var(--bg2);border-bottom:1px solid var(--bdr);position:sticky;top:0;z-index:200;backdrop-filter:blur(20px)}
+.hdr-row1{display:flex;align-items:center;justify-content:space-between;width:100%;gap:0}
 .logo-wrap{display:flex;align-items:center;gap:12px}
 .logo-icon{
   width:42px;height:42px;border-radius:10px;
@@ -511,21 +512,163 @@ canvas.tc{display:block;width:100%;height:100%}
 
 @media(max-width:1100px){.port-stats{grid-template-columns:repeat(2,1fr)}.g2,.g3,.gauge-wrap,.heatmap-grid{grid-template-columns:1fr}.sstrip{grid-template-columns:repeat(3,1fr)}.alloc-row{grid-template-columns:1fr}.monthly-grid{grid-template-columns:repeat(6,1fr)}.perf-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:720px){.trade-card{grid-template-columns:1fr}.chart-col{height:140px}.mgrid{grid-template-columns:repeat(2,1fr)}.sstrip{grid-template-columns:1fr 1fr}}
+
+/* ══════════════════════════════════════════
+   MOBILE RESPONSIVE — ≤768px
+   Key fix: overflow-x:hidden stops horizontal scroll
+══════════════════════════════════════════ */
+@media(max-width:768px){
+
+  /* ── GLOBAL OVERFLOW GUARD ── */
+  *{max-width:100vw}
+  .wrap{padding:12px 10px;overflow-x:hidden}
+
+  /* ── HEADER: 2-row compact layout ── */
+  .hdr{
+    padding:0;
+    height:auto;
+    flex-direction:column;
+    align-items:stretch;
+    gap:0;
+  }
+  /* Row 1: Logo + Sign Out */
+  .hdr-row1{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:8px 14px;
+    border-bottom:1px solid var(--bdr);
+  }
+  /* Row 2: Stats strip */
+  .hdr-meta{
+    display:flex;
+    align-items:center;
+    overflow-x:auto;
+    scrollbar-width:none;
+    padding:6px 14px;
+    gap:0;
+    border-bottom:1px solid var(--bdr);
+  }
+  .hdr-meta::-webkit-scrollbar{display:none}
+  .hdr-stat{
+    padding:2px 12px;
+    border-right:1px solid var(--bdr);
+    flex-shrink:0;
+  }
+  .hdr-stat:last-child{border-right:none}
+  .hdr-stat-l{font-size:8px;letter-spacing:.5px}
+  .hdr-stat-v{font-size:11px}
+  .hdr-sep{display:none}
+  .regime-pill{font-size:10px;padding:3px 8px;flex-shrink:0}
+  .hdr-r{display:flex;align-items:center;gap:6px;flex-shrink:0}
+  .htime,.live-pill{display:none}
+  .btn-set{padding:5px 10px;font-size:10px;white-space:nowrap}
+
+  /* ── NAV: 2 rows of 3 on mobile ── */
+  .nav{
+    padding:0;
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    top:0;
+    position:relative;
+    border-bottom:1px solid var(--bdr);
+  }
+  .ntab{
+    padding:9px 6px;
+    font-size:10px;
+    text-align:center;
+    justify-content:center;
+    border-bottom:1px solid var(--bdr);
+    border-right:1px solid var(--bdr);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .ntab:nth-child(3n){border-right:none}
+  .ntab:nth-child(4),.ntab:nth-child(5),.ntab:nth-child(6){border-bottom:none}
+  .nbadge{font-size:9px;padding:1px 5px}
+
+  /* ── STAT STRIPS 3×2 ── */
+  #ct-strip,#os-sstrip{grid-template-columns:repeat(3,1fr)!important;border-radius:10px}
+  #ct-strip .sc,#os-sstrip .sc{
+    border-right:1px solid var(--bdr);
+    border-bottom:1px solid var(--bdr);
+    padding:10px 8px;
+  }
+  #ct-strip .sc:nth-child(3n),#os-sstrip .sc:nth-child(3n){border-right:none}
+  #ct-strip .sc:nth-child(4),#ct-strip .sc:nth-child(5),#ct-strip .sc:nth-child(6),
+  #os-sstrip .sc:nth-child(4),#os-sstrip .sc:nth-child(5),#os-sstrip .sc:nth-child(6){border-bottom:none}
+  #ct-strip .scl,#os-sstrip .scl{font-size:8px}
+  #ct-strip .scv,#os-sstrip .scv{font-size:14px;letter-spacing:-.5px}
+  #ct-strip .scs,#os-sstrip .scs{font-size:8px}
+  #ct-strip .sc-badge,#os-sstrip .sc-badge{font-size:8px;padding:2px 5px;margin-top:4px}
+
+  /* ── GRIDS ── */
+  .port-stats{grid-template-columns:1fr 1fr;gap:10px}
+  .g2,.g3{grid-template-columns:1fr}
+  .gauge-wrap{grid-template-columns:1fr}
+  .mgrid{grid-template-columns:repeat(2,1fr)}
+  .perf-grid{grid-template-columns:repeat(2,1fr)}
+  .alloc-row{grid-template-columns:1fr}
+  .monthly-grid{grid-template-columns:repeat(4,1fr)}
+
+  /* ── TABLES: horizontal scroll containers ── */
+  .idx-table-wrap,.fii-table-wrap,.rs-table-wrap,.closed-table-wrap{
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    width:100%;
+  }
+
+  /* ── SECTORAL ── */
+  .sb-bar{padding:10px 12px 8px;gap:8px;flex-wrap:wrap}
+  .sb-terrain{padding:12px 12px 6px}
+  .sb-grid{grid-template-columns:repeat(2,1fr);gap:8px}
+  .sb-tile{padding:10px 11px}
+  .sb-tname{font-size:9px}
+  .sb-snum{font-size:16px}
+  .sb-tw{padding:6px 10px 20px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .sb-tb{min-width:440px}
+  .sb-pan{width:100%!important;border-left:none}
+  .sb-pills{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}
+  .sb-pills::-webkit-scrollbar{display:none}
+  .sb-pill{flex-shrink:0}
+
+  /* ── OPEN TRADES chart ── */
+  .chart-col{height:160px}
+}
+
+/* ── PHONE PORTRAIT ≤480px ── */
+@media(max-width:480px){
+  .wrap{padding:10px 8px}
+  #ct-strip .scv,#os-sstrip .scv{font-size:12px}
+  .port-stats{grid-template-columns:1fr 1fr;gap:8px}
+  .monthly-grid{grid-template-columns:repeat(3,1fr)}
+  .sb-grid{grid-template-columns:repeat(2,1fr);gap:6px}
+}
 </style>
 </head>
 <body>
 
 <!-- HEADER -->
 <header class="hdr">
-  <div class="logo-wrap">
-    <div class="logo-icon">
-      <span class="logo-mb">MB</span>
+  <!-- Row 1: Logo + right controls (always visible) -->
+  <div class="hdr-row1">
+    <div class="logo-wrap">
+      <div class="logo-icon"><span class="logo-mb">MB</span></div>
+      <div class="logo-text-wrap">
+        <span class="logo-line1">Market</span>
+        <span class="logo-line2">Basecamp</span>
+      </div>
     </div>
-    <div class="logo-text-wrap">
-      <span class="logo-line1">Market</span>
-      <span class="logo-line2">Basecamp</span>
+    <div class="hdr-r">
+      <div class="live-pill"><div class="ldot"></div>LIVE NSE</div>
+      <div class="htime" id="clk">10:34:52 IST</div>
+      <button class="btn-set" id="btn-admin" style="display:none"
+        onclick="window.location.href='https://dashboard.traderhikes.com/admin.html'">⚙ Admin</button>
+      <button class="btn-set" id="btn-signout" onclick="signOut()">Sign Out</button>
     </div>
   </div>
+  <!-- Row 2: Stats (scrollable on mobile) -->
   <div class="hdr-meta">
     <div class="regime-pill" id="hdr-regime-pill"><div class="rp-dot" id="hdr-regime-dot"></div><span id="hdr-regime-text">Market Score</span></div>
     <div class="hdr-sep"></div>
@@ -537,23 +680,13 @@ canvas.tc{display:block;width:100%;height:100%}
     <div class="hdr-sep"></div>
     <div class="hdr-stat"><div class="hdr-stat-l">Signed in as</div><div class="hdr-stat-v" id="hdr-user" style="font-size:11px">—</div></div>
   </div>
-  <div class="hdr-r">
-    <div class="live-pill"><div class="ldot"></div>LIVE NSE</div>
-    <div class="htime" id="clk">10:34:52 IST</div>
-    <!-- Admin panel link — only shown to admin email -->
-    <button class="btn-set" id="btn-admin" style="display:none"
-      onclick="window.location.href='https://dashboard.traderhikes.com/admin.html'">
-      ⚙ Admin
-    </button>
-    <!-- Sign out — shown to all users -->
-    <button class="btn-set" id="btn-signout" onclick="signOut()">Sign Out</button>
-  </div>
 </header>
 
-<!-- NAV -->
-<nav class="nav">
+<!-- NAV — Desktop: tab bar | Mobile: 2-row compact -->
+<nav class="nav" id="main-nav">
   <div class="ntab active" onclick="sw('portfolio',this)">🏠 Portfolio Overview</div>
   <div class="ntab" onclick="sw('breadth',this)">📊 Market Breadth</div>
+  <div class="ntab" onclick="sw('sectoral',this)">⛰ Sectoral</div>
   <div class="ntab" onclick="sw('open',this)">Open Trades <span class="nbadge" id="badge-open">—</span></div>
   <div class="ntab" onclick="sw('closed',this)">Closed Trades <span class="nbadge" id="badge-closed">—</span></div>
   <div class="ntab" onclick="sw('filter',this)">✦ Stock Filter <span class="nbadge">48</span></div>
@@ -2767,20 +2900,12 @@ async function renderClosed(){
           </div>
           <div style="font-size:11px;color:var(--muted)">${t.company_name||''} · ${t.sector||''}</div>
         </div>
-        <div style="
-          background:${isWin
-            ?'linear-gradient(135deg,rgba(26,184,128,.18),rgba(0,230,118,.08))'
-            :'linear-gradient(135deg,rgba(255,93,122,.18),rgba(192,48,80,.08))'};
-          border:1px solid ${isWin?'var(--green-bd)':'var(--red-bd)'};
-          border-radius:10px;padding:10px 16px;text-align:right;
-          box-shadow:0 0 16px ${isWin?'rgba(0,230,118,.1)':'rgba(255,93,122,.1)'};
-          min-width:140px">
-          <div style="font-size:22px;font-weight:900;letter-spacing:-.5px;font-family:var(--fm);color:${pnlCol}">
+        <div style="text-align:right">
+          <div style="font-size:22px;font-weight:800;letter-spacing:-.5px;color:${pnlCol}">
             ${totalPnlT>=0?'+':''}₹${Math.abs(totalPnlT).toLocaleString('en-IN',{maximumFractionDigits:0})}
           </div>
-          <div style="font-size:11px;font-weight:700;color:${pnlCol};margin-top:2px">
-            ${t.return_pct>=0?'+':''}${Number(t.return_pct).toFixed(2)}%
-            <span style="color:var(--muted);font-weight:400"> · ${t.holding_days||0}d held</span>
+          <div style="font-size:11px;font-weight:700;color:${pnlCol}">
+            ${t.return_pct>=0?'+':''}${Number(t.return_pct).toFixed(2)}% · ${t.holding_days||0}d held
           </div>
         </div>
       </div>
@@ -2845,10 +2970,19 @@ async function renderClosed(){
           </span>
         </div>
 
-        <!-- Divider + Notes only (P&L already shown in header badge) -->
-        ${t.trade_notes?`<div style="border-top:1px solid var(--bdr);margin-top:8px;padding-top:8px">
-          <div style="font-size:9px;color:var(--muted);font-style:italic">"${t.trade_notes}"</div>
-        </div>`:''+'<div style="margin-top:4px"></div>'}
+        <!-- Divider + Total -->
+        <div style="border-top:1px solid var(--bdr);margin-top:8px;padding-top:8px;
+          display:flex;justify-content:space-between;align-items:center">
+          <div>
+            ${t.trade_notes?`<div style="font-size:9px;color:var(--muted);font-style:italic">"${t.trade_notes}"</div>`:''}
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:9px;color:var(--muted);margin-bottom:2px">Total Realised P&L</div>
+            <div style="font-size:16px;font-weight:800;color:${pnlCol};font-family:var(--fm)">
+              ${totalPnlT>=0?'+':''}₹${Math.abs(totalPnlT).toLocaleString('en-IN',{maximumFractionDigits:0})}
+            </div>
+          </div>
+        </div>
       </div>`;
 
     grid.appendChild(card);
