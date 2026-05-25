@@ -78,7 +78,6 @@ body{overflow-x:hidden;
 
 /* ═══ HEADER ═══ */
 .hdr{display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:62px;background:var(--bg2);border-bottom:1px solid var(--bdr);position:sticky;top:0;z-index:200;backdrop-filter:blur(20px)}
-.hdr-row1{display:contents}/* desktop: transparent wrapper — children flow inline */
 .logo-wrap{display:flex;align-items:center;gap:12px}
 .logo-icon{
   width:42px;height:42px;border-radius:10px;
@@ -515,34 +514,41 @@ canvas.tc{display:block;width:100%;height:100%}
 
 /* ══ MOBILE ≤768px ══ */
 @media(max-width:768px){
-  *{max-width:100vw;box-sizing:border-box}
-  /* Header — switch to 2-row on mobile */
+  *{box-sizing:border-box}
+  /* Header: wrap to 2 rows on mobile using flex-wrap */
   .hdr{
-    flex-direction:column;
-    align-items:stretch;
-    padding:0;
+    flex-wrap:wrap;
+    padding:0 12px;
     height:auto;
+    gap:0;
     border-bottom:none;
   }
-  .hdr-row1{
-    display:flex!important;
+  /* Row 1: logo (left) + hdr-r (right) — full width */
+  .logo-wrap{order:1;padding:8px 0;flex-shrink:0}
+  .hdr-r{order:2;margin-left:auto;padding:8px 0;flex-shrink:0}
+  /* Row 2: hdr-meta spans full width below */
+  .hdr-meta{
+    order:3;
+    width:100%;
+    display:flex;
     align-items:center;
     justify-content:space-between;
-    padding:8px 12px;
+    padding:5px 0 6px;
+    border-top:1px solid var(--bdr);
     border-bottom:1px solid var(--bdr);
+    gap:0;
+    overflow:visible;
+    flex-wrap:nowrap;
   }
-  .logo-line1,.logo-line2{font-size:11px}
-  .logo-icon{width:30px;height:30px;font-size:11px}
-  /* Header stats row: only Market Score (left) + Signed in as (right) */
-  .hdr-meta{display:flex;align-items:center;justify-content:space-between;padding:5px 12px;border-bottom:1px solid var(--bdr);gap:0;overflow:visible}
   .hdr-sep{display:none}
-  /* Hide Total Capital, Deployed, Open P&L on mobile */
+  /* Hide Total Capital, Deployed, Open P&L on mobile — show only Market Score + Signed in as */
   .hdr-stat{display:none}
-  /* Show only the last hdr-stat — "Signed in as" */
-  .hdr-stat:last-of-type{display:flex;flex-direction:column;margin-left:auto}
+  .hdr-stat:last-of-type{display:flex;flex-direction:column}
   .hdr-stat-l{font-size:8px}
   .hdr-stat-v{font-size:11px}
   .regime-pill{font-size:10px;padding:4px 10px;flex-shrink:0}
+  .logo-line1,.logo-line2{font-size:11px}
+  .logo-icon{width:30px;height:30px;font-size:11px}
   .htime,.live-pill{display:none}
   .hdr-r{gap:6px}
   .btn-set{padding:5px 10px;font-size:10px}
@@ -602,24 +608,13 @@ canvas.tc{display:block;width:100%;height:100%}
 
 <!-- HEADER -->
 <header class="hdr">
-  <!-- Row 1: Logo + controls -->
-  <div class="hdr-row1">
-    <div class="logo-wrap">
-      <div class="logo-icon"><span class="logo-mb">MB</span></div>
-      <div class="logo-text-wrap">
-        <span class="logo-line1">Market</span>
-        <span class="logo-line2">Basecamp</span>
-      </div>
-    </div>
-    <div class="hdr-r">
-      <div class="live-pill"><div class="ldot"></div>LIVE NSE</div>
-      <div class="htime" id="clk">10:34:52 IST</div>
-      <button class="btn-set" id="btn-admin" style="display:none"
-        onclick="window.location.href='https://dashboard.traderhikes.com/admin.html'">⚙ Admin</button>
-      <button class="btn-set" id="btn-signout" onclick="signOut()">Sign Out</button>
+  <div class="logo-wrap">
+    <div class="logo-icon"><span class="logo-mb">MB</span></div>
+    <div class="logo-text-wrap">
+      <span class="logo-line1">Market</span>
+      <span class="logo-line2">Basecamp</span>
     </div>
   </div>
-  <!-- Row 2: Stats bar -->
   <div class="hdr-meta">
     <div class="regime-pill" id="hdr-regime-pill"><div class="rp-dot" id="hdr-regime-dot"></div><span id="hdr-regime-text">Market Score</span></div>
     <div class="hdr-sep"></div>
@@ -630,6 +625,13 @@ canvas.tc{display:block;width:100%;height:100%}
     <div class="hdr-stat"><div class="hdr-stat-l">Open P&L</div><div class="hdr-stat-v" id="hdr-pnl" style="color:var(--green)">—</div></div>
     <div class="hdr-sep"></div>
     <div class="hdr-stat"><div class="hdr-stat-l">Signed in as</div><div class="hdr-stat-v" id="hdr-user" style="font-size:11px">—</div></div>
+  </div>
+  <div class="hdr-r">
+    <div class="live-pill"><div class="ldot"></div>LIVE NSE</div>
+    <div class="htime" id="clk">10:34:52 IST</div>
+    <button class="btn-set" id="btn-admin" style="display:none"
+      onclick="window.location.href='https://dashboard.traderhikes.com/admin.html'">⚙ Admin</button>
+    <button class="btn-set" id="btn-signout" onclick="signOut()">Sign Out</button>
   </div>
 </header>
 
