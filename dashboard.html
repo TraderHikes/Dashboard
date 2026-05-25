@@ -533,20 +533,22 @@ canvas.tc{display:block;width:100%;height:100%}
   }
   .logo-line1,.logo-line2{font-size:11px}
   .logo-icon{width:30px;height:30px;font-size:11px}
-  .hdr-meta{padding:5px 0;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--bdr)}
-  .hdr-meta::-webkit-scrollbar{display:none}
+  /* Header stats row: only Market Score (left) + Signed in as (right) */
+  .hdr-meta{display:flex;align-items:center;justify-content:space-between;padding:5px 12px;border-bottom:1px solid var(--bdr);gap:0;overflow:visible}
   .hdr-sep{display:none}
-  .hdr-stat{padding:2px 10px;border-right:1px solid var(--bdr);flex-shrink:0}
-  .hdr-stat:last-child{border-right:none}
+  /* Hide Total Capital, Deployed, Open P&L on mobile */
+  .hdr-stat{display:none}
+  /* Show only the last hdr-stat — "Signed in as" */
+  .hdr-stat:last-of-type{display:flex;flex-direction:column;margin-left:auto}
   .hdr-stat-l{font-size:8px}
   .hdr-stat-v{font-size:11px}
-  .regime-pill{font-size:10px;padding:3px 8px;flex-shrink:0;margin-left:6px;margin-right:4px}
+  .regime-pill{font-size:10px;padding:4px 10px;flex-shrink:0}
   .htime,.live-pill{display:none}
   .hdr-r{gap:6px}
   .btn-set{padding:5px 10px;font-size:10px}
   /* Nav 2x3 grid */
   .nav{display:grid;grid-template-columns:repeat(3,1fr);padding:0;position:relative;top:0}
-  .ntab{padding:9px 4px;font-size:10px;text-align:center;justify-content:center;
+  .ntab{padding:8px 3px;font-size:9px;text-align:center;justify-content:center;
     border-bottom:2px solid transparent;border-right:1px solid var(--bdr);white-space:nowrap;
     overflow:hidden;text-overflow:ellipsis}
   .ntab:nth-child(3n){border-right:none}
@@ -636,8 +638,8 @@ canvas.tc{display:block;width:100%;height:100%}
   <div class="ntab active" onclick="sw('portfolio',this)">🏠 Portfolio</div>
   <div class="ntab" onclick="sw('breadth',this)">📊 Breadth</div>
   <div class="ntab" onclick="sw('sectoral',this)">⛰ Sectoral</div>
-  <div class="ntab" onclick="sw('open',this)">Open <span class="nbadge" id="badge-open">—</span></div>
-  <div class="ntab" onclick="sw('closed',this)">Closed <span class="nbadge" id="badge-closed">—</span></div>
+  <div class="ntab" onclick="sw('open',this)">Open Trades <span class="nbadge" id="badge-open">—</span></div>
+  <div class="ntab" onclick="sw('closed',this)">Closed Trades <span class="nbadge" id="badge-closed">—</span></div>
   <div class="ntab" onclick="sw('filter',this)">✦ Filter</div>
 </nav>
 
