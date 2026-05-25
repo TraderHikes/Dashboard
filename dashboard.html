@@ -4015,6 +4015,9 @@ window.addEventListener('load', async () => {
   // Draw canvas charts after data is loaded
   drawPortfolioCharts();
 
+  // Load market breadth in background — updates header regime pill immediately
+  loadMarketBreadth();
+
   window.addEventListener('resize', async () => {
     await renderOpen();
     await renderClosed();
