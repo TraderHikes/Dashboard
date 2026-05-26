@@ -2677,12 +2677,11 @@ async function renderOpen(){
     netBadge.className = 'sc-badge ' + (totalPnl>=0?'up':'dn');
   }
 
-  // ── Locked P&L (sum of partial exits across all open trades) ──
-  // Locked P&L — only from partial exits on CURRENTLY OPEN trades
-  const openIds = (openTrades||[]).map(t => t.id);
+  // ── Locked P&L (sum of partial exits on CURRENT open trades only) ──
   sb.from('partial_exits').select('realised_pnl,open_trade_id').then(({ data: pxAll }) => {
+    const currentIds = (trades||[]).map(t => t.id);
     const locked = (pxAll||[])
-      .filter(p => openIds.includes(p.open_trade_id))
+      .filter(p => currentIds.includes(p.open_trade_id))
       .reduce((s,p) => s + (p.realised_pnl||0), 0);
     const lockedEl    = document.getElementById('os-locked');
     const lockedBadge = document.getElementById('os-locked-badge');
