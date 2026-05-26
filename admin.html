@@ -862,97 +862,56 @@
   </div>
 
 
-  <!-- ════ TAB 8: CLOSED TRADES EDITOR ════ -->
   <div class="tab-pane" id="tab-closed-edit">
     <div class="card">
       <div class="card-hdr">
         <span class="card-title">Closed Trades — Edit &amp; Correct</span>
-        <span style="font-size:11px;color:var(--muted)">Select any trade to edit. Changes save directly to Supabase. No existing data is deleted.</span>
+        <span style="font-size:11px;color:var(--muted)">Click ✎ Edit on any row to correct entry. Changes save directly to Supabase.</span>
       </div>
       <div class="card-body">
         <div class="alert alert-success" id="closed-edit-success"></div>
         <div class="alert alert-error"   id="closed-edit-error"></div>
-
-        <!-- Trade List -->
-        <div id="closed-edit-list" style="margin-bottom:20px">
-          <div style="color:var(--muted);font-size:12px">Loading closed trades…</div>
-        </div>
-
-        <!-- Edit Form (hidden until a trade is selected) -->
-        <div id="closed-edit-form-wrap" style="display:none">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--bdr)">
+        <div id="closed-edit-list"><div style="color:var(--muted);font-size:12px">Loading…</div></div>
+        <div id="closed-edit-form-wrap" style="display:none;margin-top:20px;border-top:1px solid var(--bdr);padding-top:18px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
             <div style="font-size:14px;font-weight:700;color:var(--white)" id="closed-edit-sym">—</div>
-            <div style="font-size:11px;color:var(--muted)" id="closed-edit-co">—</div>
             <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="cancelClosedEdit()">✕ Cancel</button>
           </div>
-          <form id="form-closed-edit">
-            <input type="hidden" id="closed-edit-id">
-            <div class="form-grid four" style="margin-bottom:14px">
-              <div class="form-group">
-                <label class="form-label">Entry Date</label>
-                <input class="form-input" type="date" id="ce-entry-date">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Avg Entry Price ₹</label>
-                <input class="form-input" type="number" step="0.05" id="ce-avg-entry">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Exit Date *</label>
-                <input class="form-input" type="date" id="ce-exit-date" required>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Avg Exit Price ₹ *</label>
-                <input class="form-input" type="number" step="0.05" id="ce-avg-exit" required>
-              </div>
+          <input type="hidden" id="closed-edit-id">
+          <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+            <div class="form-group"><label class="form-label">Entry Date</label><input class="form-input" type="date" id="ce-entry-date"></div>
+            <div class="form-group"><label class="form-label">Avg Entry ₹</label><input class="form-input" type="number" step="0.05" id="ce-avg-entry"></div>
+            <div class="form-group"><label class="form-label">Exit Date *</label><input class="form-input" type="date" id="ce-exit-date" required></div>
+            <div class="form-group"><label class="form-label">Avg Exit ₹ *</label><input class="form-input" type="number" step="0.05" id="ce-avg-exit" required></div>
+          </div>
+          <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+            <div class="form-group"><label class="form-label">Total Qty</label><input class="form-input" type="number" id="ce-qty"></div>
+            <div class="form-group"><label class="form-label">Exit Reason</label>
+              <select class="form-select" id="ce-exit-reason">
+                <option value="Target reached">Target reached</option>
+                <option value="Trailing SL hit">Trailing SL hit</option>
+                <option value="SL hit">SL hit</option>
+                <option value="Manual exit">Manual exit</option>
+              </select>
             </div>
-            <div class="form-grid four" style="margin-bottom:14px">
-              <div class="form-group">
-                <label class="form-label">Total Quantity</label>
-                <input class="form-input" type="number" id="ce-qty">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Exit Reason</label>
-                <select class="form-select" id="ce-exit-reason">
-                  <option value="Target reached">Target reached</option>
-                  <option value="Trailing SL hit">Trailing SL hit</option>
-                  <option value="SL hit">SL hit</option>
-                  <option value="Partial + trail">Partial + trail</option>
-                  <option value="Manual exit">Manual exit</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Sector</label>
-                <input class="form-input" type="text" id="ce-sector">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Exchange</label>
-                <select class="form-select" id="ce-exchange">
-                  <option value="NSE">NSE</option>
-                  <option value="BSE">BSE</option>
-                </select>
-              </div>
+            <div class="form-group"><label class="form-label">Sector</label><input class="form-input" type="text" id="ce-sector"></div>
+            <div class="form-group"><label class="form-label">Exchange</label>
+              <select class="form-select" id="ce-exchange"><option value="NSE">NSE</option><option value="BSE">BSE</option></select>
             </div>
-            <div class="form-group" style="margin-bottom:14px">
-              <label class="form-label">Teaching Notes</label>
-              <input class="form-input" type="text" id="ce-notes" placeholder="Notes about this trade…">
+          </div>
+          <div class="form-group" style="margin-bottom:14px"><label class="form-label">Teaching Notes</label><input class="form-input" type="text" id="ce-notes"></div>
+          <div id="ce-pnl-preview" style="background:var(--card2);border:1px solid var(--bdr);border-radius:8px;padding:12px 16px;margin-bottom:14px;display:none">
+            <div style="font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Recalculated P&L Preview</div>
+            <div style="display:flex;gap:20px">
+              <div><div style="font-size:9px;color:var(--muted)">Realised P&L</div><div style="font-size:14px;font-weight:700;font-family:var(--fm)" id="ce-prev-pnl">—</div></div>
+              <div><div style="font-size:9px;color:var(--muted)">Return %</div><div style="font-size:14px;font-weight:700;font-family:var(--fm)" id="ce-prev-ret">—</div></div>
+              <div><div style="font-size:9px;color:var(--muted)">Holding Days</div><div style="font-size:14px;font-weight:700;font-family:var(--fm)" id="ce-prev-days">—</div></div>
             </div>
-
-            <!-- Auto-calculated P&L preview -->
-            <div id="ce-pnl-preview" style="background:var(--card2);border:1px solid var(--bdr);border-radius:10px;padding:14px 16px;margin-bottom:16px;display:none">
-              <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Recalculated P&L Preview</div>
-              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
-                <div><div style="font-size:10px;color:var(--muted)">Realised P&L</div><div style="font-size:16px;font-weight:800;font-family:var(--fm)" id="ce-prev-pnl">—</div></div>
-                <div><div style="font-size:10px;color:var(--muted)">Return %</div><div style="font-size:16px;font-weight:800;font-family:var(--fm)" id="ce-prev-ret">—</div></div>
-                <div><div style="font-size:10px;color:var(--muted)">Holding Days</div><div style="font-size:16px;font-weight:800;font-family:var(--fm)" id="ce-prev-days">—</div></div>
-                <div><div style="font-size:10px;color:var(--muted)">Total Qty</div><div style="font-size:16px;font-weight:800;font-family:var(--fm)" id="ce-prev-qty">—</div></div>
-              </div>
-            </div>
-
-            <div style="display:flex;justify-content:flex-end;gap:10px">
-              <button type="button" class="btn btn-ghost" onclick="cancelClosedEdit()">Cancel</button>
-              <button type="button" class="btn btn-primary" onclick="saveClosedEdit()">Save Changes</button>
-            </div>
-          </form>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:10px">
+            <button class="btn btn-ghost" onclick="cancelClosedEdit()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveClosedEdit()">Save Changes</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1492,7 +1451,10 @@ async function loadOpenTrades() {
       <td>${pnlStr}</td>
       <td style="color:var(--blue-lt);font-weight:700">${posPct}</td>
       <td><span class="badge ${badgeMap[t.status]||'badge-watch'}">${t.status.replace('_',' ')}</span></td>
-      <td><button class="btn btn-danger btn-sm" onclick="deleteTrade('${t.id}','${t.symbol}')">Delete</button></td>
+      <td style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" onclick="openEditTrade('${t.id}')">✎ Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteTrade('${t.id}','${t.symbol}')">Delete</button>
+      </td>
     </tr>`;
   }).join('');
 }
@@ -1784,6 +1746,118 @@ document.getElementById('form-snapshot').addEventListener('submit', async e => {
 });
 
 // ════════════════════════════════════════════
+// EDIT OPEN TRADE
+// ════════════════════════════════════════════
+let _editTradeCache = {};
+
+async function openEditTrade(id) {
+  // Load fresh data for this trade
+  const { data, error } = await sb.from('open_trades').select('*').eq('id', id).single();
+  if (error || !data) { alert('Could not load trade data.'); return; }
+  _editTradeCache = data;
+
+  document.getElementById('edit-trade-id').value      = id;
+  document.getElementById('edit-modal-title').textContent = `Edit Trade — ${data.symbol}`;
+  document.getElementById('edit-symbol').value         = data.symbol || '';
+  document.getElementById('edit-entry-date').value     = data.entry_date || '';
+  document.getElementById('edit-avg-entry').value      = data.avg_entry_price || data.entry_price || '';
+  document.getElementById('edit-sl').value             = data.sl_price || data.stop_loss || '';
+  document.getElementById('edit-target').value         = data.target_price || '';
+  document.getElementById('edit-qty').value            = data.total_quantity || data.quantity || '';
+  document.getElementById('edit-rem-qty').value        = data.remaining_qty || data.quantity || '';
+  document.getElementById('edit-status').value         = data.status || 'open';
+  document.getElementById('edit-sector').value         = data.sector || '';
+  document.getElementById('edit-exchange').value       = data.exchange || 'NSE';
+  document.getElementById('edit-notes').value          = data.trade_notes || data.notes || '';
+  document.getElementById('edit-modal-alert').innerHTML = '';
+
+  // Show P&L preview
+  updateEditPreview();
+  ['edit-avg-entry','edit-sl','edit-qty'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updateEditPreview);
+  });
+
+  document.getElementById('edit-trade-modal').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function updateEditPreview() {
+  const entry = parseFloat(document.getElementById('edit-avg-entry').value);
+  const sl    = parseFloat(document.getElementById('edit-sl').value);
+  const qty   = parseFloat(document.getElementById('edit-qty').value);
+  const prev  = document.getElementById('edit-pnl-preview');
+  if (!entry || !sl) { prev.style.display = 'none'; return; }
+  prev.style.display = 'block';
+  const riskShare = Math.abs(entry - sl).toFixed(2);
+  const totalRisk = qty ? (riskShare * qty).toLocaleString('en-IN', {maximumFractionDigits:0}) : '—';
+  document.getElementById('edit-prev-entry').textContent    = '₹' + entry.toLocaleString('en-IN');
+  document.getElementById('edit-prev-sl').textContent       = '₹' + sl.toLocaleString('en-IN');
+  document.getElementById('edit-prev-risk').textContent     = '₹' + riskShare;
+  document.getElementById('edit-prev-totalrisk').textContent= qty ? '₹' + totalRisk : '—';
+}
+
+async function saveEditTrade() {
+  const id = document.getElementById('edit-trade-id').value;
+  const alertEl = document.getElementById('edit-modal-alert');
+  alertEl.innerHTML = '';
+
+  const entry  = parseFloat(document.getElementById('edit-avg-entry').value);
+  const sl     = parseFloat(document.getElementById('edit-sl').value);
+  const target = parseFloat(document.getElementById('edit-target').value);
+  const qty    = parseInt(document.getElementById('edit-qty').value);
+  const remQty = parseInt(document.getElementById('edit-rem-qty').value);
+
+  if (!entry || !sl || !qty) {
+    alertEl.innerHTML = '<div class="alert alert-error" style="margin-bottom:10px">Avg Entry, Stop Loss and Quantity are required.</div>';
+    return;
+  }
+  if (remQty > qty) {
+    alertEl.innerHTML = '<div class="alert alert-error" style="margin-bottom:10px">Remaining Qty cannot exceed Total Qty.</div>';
+    return;
+  }
+
+  const payload = {
+    symbol:          document.getElementById('edit-symbol').value.trim().toUpperCase(),
+    entry_date:      document.getElementById('edit-entry-date').value || null,
+    avg_entry_price: entry,
+    sl_price:        sl,
+    stop_loss:       sl,
+    target_price:    target || null,
+    total_quantity:  qty,
+    quantity:        qty,
+    remaining_qty:   remQty,
+    status:          document.getElementById('edit-status').value,
+    sector:          document.getElementById('edit-sector').value.trim() || null,
+    exchange:        document.getElementById('edit-exchange').value,
+    trade_notes:     document.getElementById('edit-notes').value.trim() || null,
+    updated_at:      new Date().toISOString(),
+  };
+
+  const { error } = await sb.from('open_trades').update(payload).eq('id', id);
+  if (error) {
+    alertEl.innerHTML = `<div class="alert alert-error" style="margin-bottom:10px">Error: ${error.message}</div>`;
+    return;
+  }
+
+  closeEditTrade();
+  toast(`${payload.symbol} updated ✓`);
+  await loadOpenTrades();
+  await loadOpenTradesForSelect();
+}
+
+function closeEditTrade() {
+  document.getElementById('edit-trade-modal').style.display = 'none';
+  document.body.style.overflow = '';
+  _editTradeCache = {};
+}
+
+// Close modal on backdrop click
+document.getElementById('edit-trade-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeEditTrade();
+});
+
+
+// ════════════════════════════════════════════
 // CLOSED TRADES EDITOR
 // ════════════════════════════════════════════
 let closedTradesCache = [];
@@ -1793,73 +1867,53 @@ async function loadClosedTradesForEdit() {
   if (!listEl) return;
   listEl.innerHTML = '<div style="color:var(--muted);font-size:12px">Loading…</div>';
   cancelClosedEdit();
-
-  const { data, error } = await sb.from('closed_trades')
-    .select('*').order('exit_date', { ascending: false });
-
-  if (error || !data || !data.length) {
-    listEl.innerHTML = '<div style="color:var(--muted);font-size:12px">No closed trades found.</div>';
-    return;
-  }
+  const { data, error } = await sb.from('closed_trades').select('*').order('exit_date', { ascending: false });
+  if (error || !data || !data.length) { listEl.innerHTML = '<div style="color:var(--muted);font-size:12px">No closed trades found.</div>'; return; }
   closedTradesCache = data;
-
-  listEl.innerHTML = `
-    <table style="width:100%;border-collapse:collapse;font-size:12px">
-      <thead>
-        <tr style="border-bottom:1px solid var(--bdr)">
-          <th style="padding:8px 10px;text-align:left;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Symbol</th>
-          <th style="padding:8px 10px;text-align:left;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Entry Date</th>
-          <th style="padding:8px 10px;text-align:left;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Exit Date</th>
-          <th style="padding:8px 10px;text-align:right;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Avg Entry ₹</th>
-          <th style="padding:8px 10px;text-align:right;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Avg Exit ₹</th>
-          <th style="padding:8px 10px;text-align:right;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Realised P&L</th>
-          <th style="padding:8px 10px;text-align:right;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Return %</th>
-          <th style="padding:8px 10px;text-align:center;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${data.map(t => {
-          const pnl = t.realised_pnl || 0;
-          const ret = t.return_pct || 0;
-          const pnlCol = pnl >= 0 ? 'var(--green)' : 'var(--red)';
-          return `<tr style="border-bottom:1px solid rgba(255,255,255,.04)" id="ct-row-${t.id}">
-            <td style="padding:10px;font-weight:700;color:var(--white);font-family:var(--fm)">${t.symbol}</td>
-            <td style="padding:10px;color:var(--muted);font-family:var(--fm)">${t.entry_date || '—'}</td>
-            <td style="padding:10px;font-family:var(--fm)" id="ct-exit-${t.id}">${t.exit_date || '—'}</td>
-            <td style="padding:10px;text-align:right;font-family:var(--fm)">₹${Number(t.avg_entry_price||0).toLocaleString('en-IN',{maximumFractionDigits:2})}</td>
-            <td style="padding:10px;text-align:right;font-family:var(--fm)">₹${Number(t.avg_exit_price||0).toLocaleString('en-IN',{maximumFractionDigits:2})}</td>
-            <td style="padding:10px;text-align:right;font-weight:700;color:${pnlCol};font-family:var(--fm)">${pnl>=0?'+':''}₹${Math.abs(pnl).toLocaleString('en-IN',{maximumFractionDigits:0})}</td>
-            <td style="padding:10px;text-align:right;font-weight:700;color:${pnlCol};font-family:var(--fm)">${ret>=0?'+':''}${ret}%</td>
-            <td style="padding:10px;text-align:center">
-              <button class="btn btn-ghost btn-sm" onclick="openClosedEdit('${t.id}')">✎ Edit</button>
-            </td>
-          </tr>`;
-        }).join('')}
-      </tbody>
-    </table>`;
+  listEl.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:12px">
+    <thead><tr style="border-bottom:1px solid var(--bdr)">
+      <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:600">Symbol</th>
+      <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:600">Entry</th>
+      <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:600">Exit Date</th>
+      <th style="padding:7px 10px;text-align:right;font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:600">Avg Entry</th>
+      <th style="padding:7px 10px;text-align:right;font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:600">Avg Exit</th>
+      <th style="padding:7px 10px;text-align:right;font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:600">P&L</th>
+      <th style="padding:7px 10px;text-align:right;font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:600">Return</th>
+      <th style="padding:7px 10px;text-align:center;font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:600">Action</th>
+    </tr></thead>
+    <tbody>${data.map(t => {
+      const pnl = t.realised_pnl || 0;
+      const ret = t.return_pct || 0;
+      const pc = pnl >= 0 ? 'var(--green)' : 'var(--red)';
+      return `<tr style="border-bottom:1px solid rgba(255,255,255,.04)">
+        <td style="padding:9px 10px;font-weight:700;color:var(--white);font-family:var(--fm)">${t.symbol}</td>
+        <td style="padding:9px 10px;color:var(--muted);font-family:var(--fm)">${t.entry_date||'—'}</td>
+        <td style="padding:9px 10px;font-family:var(--fm)">${t.exit_date||'—'}</td>
+        <td style="padding:9px 10px;text-align:right;font-family:var(--fm)">₹${Number(t.avg_entry_price||0).toLocaleString('en-IN',{maximumFractionDigits:2})}</td>
+        <td style="padding:9px 10px;text-align:right;font-family:var(--fm)">₹${Number(t.avg_exit_price||0).toLocaleString('en-IN',{maximumFractionDigits:2})}</td>
+        <td style="padding:9px 10px;text-align:right;font-weight:700;color:${pc};font-family:var(--fm)">${pnl>=0?'+':''}₹${Math.abs(pnl).toLocaleString('en-IN',{maximumFractionDigits:0})}</td>
+        <td style="padding:9px 10px;text-align:right;font-weight:700;color:${pc};font-family:var(--fm)">${ret>=0?'+':''}${ret}%</td>
+        <td style="padding:9px 10px;text-align:center"><button class="btn btn-ghost btn-sm" onclick="openClosedEdit('${t.id}')">✎ Edit</button></td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
 }
 
 function openClosedEdit(id) {
   const t = closedTradesCache.find(x => String(x.id) === String(id));
   if (!t) return;
-
-  document.getElementById('closed-edit-id').value      = t.id;
+  document.getElementById('closed-edit-id').value     = t.id;
   document.getElementById('closed-edit-sym').textContent = t.symbol;
-  document.getElementById('closed-edit-co').textContent  = t.company_name || '';
-  document.getElementById('ce-entry-date').value  = t.entry_date    || '';
-  document.getElementById('ce-avg-entry').value   = t.avg_entry_price || '';
-  document.getElementById('ce-exit-date').value   = t.exit_date     || '';
-  document.getElementById('ce-avg-exit').value    = t.avg_exit_price || '';
-  document.getElementById('ce-qty').value         = t.quantity      || '';
-  document.getElementById('ce-exit-reason').value = t.exit_reason   || 'Target reached';
-  document.getElementById('ce-sector').value      = t.sector        || '';
-  document.getElementById('ce-exchange').value    = t.exchange      || 'NSE';
-  document.getElementById('ce-notes').value       = t.trade_notes   || '';
-
+  document.getElementById('ce-entry-date').value      = t.entry_date || '';
+  document.getElementById('ce-avg-entry').value       = t.avg_entry_price || '';
+  document.getElementById('ce-exit-date').value       = t.exit_date || '';
+  document.getElementById('ce-avg-exit').value        = t.avg_exit_price || '';
+  document.getElementById('ce-qty').value             = t.quantity || '';
+  document.getElementById('ce-exit-reason').value     = t.exit_reason || 'Target reached';
+  document.getElementById('ce-sector').value          = t.sector || '';
+  document.getElementById('ce-exchange').value        = t.exchange || 'NSE';
+  document.getElementById('ce-notes').value           = t.trade_notes || '';
   document.getElementById('closed-edit-form-wrap').style.display = 'block';
-  document.getElementById('closed-edit-form-wrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-  // Wire live preview
+  document.getElementById('closed-edit-form-wrap').scrollIntoView({ behavior:'smooth', block:'start' });
   ['ce-avg-entry','ce-avg-exit','ce-qty','ce-entry-date','ce-exit-date'].forEach(id => {
     document.getElementById(id).addEventListener('input', updateCePreview);
   });
@@ -1867,81 +1921,154 @@ function openClosedEdit(id) {
 }
 
 function updateCePreview() {
-  const entry   = parseFloat(document.getElementById('ce-avg-entry').value);
-  const exit    = parseFloat(document.getElementById('ce-avg-exit').value);
-  const qty     = parseFloat(document.getElementById('ce-qty').value);
-  const entryDt = document.getElementById('ce-entry-date').value;
-  const exitDt  = document.getElementById('ce-exit-date').value;
-  const preview = document.getElementById('ce-pnl-preview');
-
-  if (!entry || !exit || !qty) { preview.style.display = 'none'; return; }
-  preview.style.display = 'block';
-
+  const entry = parseFloat(document.getElementById('ce-avg-entry').value);
+  const exit  = parseFloat(document.getElementById('ce-avg-exit').value);
+  const qty   = parseFloat(document.getElementById('ce-qty').value);
+  const entDt = document.getElementById('ce-entry-date').value;
+  const exDt  = document.getElementById('ce-exit-date').value;
+  const prev  = document.getElementById('ce-pnl-preview');
+  if (!entry || !exit || !qty) { prev.style.display = 'none'; return; }
+  prev.style.display = 'block';
   const pnl  = Math.round((exit - entry) * qty * 100) / 100;
   const ret  = Math.round((exit - entry) / entry * 100 * 100) / 100;
-  const days = (entryDt && exitDt)
-    ? Math.round((new Date(exitDt) - new Date(entryDt)) / 86400000)
-    : '—';
-
-  const pnlCol = pnl >= 0 ? 'var(--green)' : 'var(--red)';
-  document.getElementById('ce-prev-pnl').textContent  = (pnl>=0?'+':'') + '₹' + Math.abs(pnl).toLocaleString('en-IN',{maximumFractionDigits:0});
-  document.getElementById('ce-prev-pnl').style.color  = pnlCol;
-  document.getElementById('ce-prev-ret').textContent  = (ret>=0?'+':'') + ret + '%';
-  document.getElementById('ce-prev-ret').style.color  = pnlCol;
+  const days = (entDt && exDt) ? Math.round((new Date(exDt) - new Date(entDt)) / 86400000) : '—';
+  const c = pnl >= 0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('ce-prev-pnl').textContent = (pnl>=0?'+':'')+'₹'+Math.abs(pnl).toLocaleString('en-IN',{maximumFractionDigits:0});
+  document.getElementById('ce-prev-pnl').style.color = c;
+  document.getElementById('ce-prev-ret').textContent = (ret>=0?'+':'')+ret+'%';
+  document.getElementById('ce-prev-ret').style.color = c;
   document.getElementById('ce-prev-days').textContent = days;
-  document.getElementById('ce-prev-qty').textContent  = qty;
 }
 
 async function saveClosedEdit() {
-  const id      = document.getElementById('closed-edit-id').value;
-  const entry   = parseFloat(document.getElementById('ce-avg-entry').value);
-  const exit    = parseFloat(document.getElementById('ce-avg-exit').value);
-  const qty     = parseFloat(document.getElementById('ce-qty').value);
-  const entryDt = document.getElementById('ce-entry-date').value;
-  const exitDt  = document.getElementById('ce-exit-date').value;
-
-  if (!id || !exit || !exitDt) {
-    showAlert('closed-edit-error', 'Exit date and exit price are required.', 'error'); return;
-  }
-
-  const pnl      = Math.round((exit - entry) * qty * 100) / 100;
-  const ret      = Math.round((exit - entry) / entry * 100 * 100) / 100;
-  const holdDays = (entryDt && exitDt)
-    ? Math.round((new Date(exitDt) - new Date(entryDt)) / 86400000) : null;
-
-  const payload = {
-    entry_date:      entryDt   || null,
-    avg_entry_price: entry     || null,
-    exit_date:       exitDt,
-    avg_exit_price:  exit,
-    quantity:        qty       || null,
-    realised_pnl:    isNaN(pnl) ? null : pnl,
-    return_pct:      isNaN(ret) ? null : ret,
-    holding_days:    holdDays,
-    exit_reason:     document.getElementById('ce-exit-reason').value,
-    sector:          document.getElementById('ce-sector').value.trim()  || null,
-    exchange:        document.getElementById('ce-exchange').value,
-    trade_notes:     document.getElementById('ce-notes').value.trim()   || null,
-  };
-
-  const { error } = await sb.from('closed_trades').update(payload).eq('id', id);
-  if (error) {
-    showAlert('closed-edit-error', '✗ Error: ' + error.message, 'error'); return;
-  }
-
-  showAlert('closed-edit-success',
-    `✓ ${closedTradesCache.find(x=>String(x.id)===String(id))?.symbol} updated successfully. Exit date: ${exitDt}`,
-    'success');
+  const id    = document.getElementById('closed-edit-id').value;
+  const entry = parseFloat(document.getElementById('ce-avg-entry').value);
+  const exit  = parseFloat(document.getElementById('ce-avg-exit').value);
+  const qty   = parseFloat(document.getElementById('ce-qty').value);
+  const entDt = document.getElementById('ce-entry-date').value;
+  const exDt  = document.getElementById('ce-exit-date').value;
+  if (!id || !exit || !exDt) { document.getElementById('closed-edit-error').textContent = 'Exit date and exit price are required.'; return; }
+  const pnl  = Math.round((exit - entry) * qty * 100) / 100;
+  const ret  = Math.round((exit - entry) / entry * 100 * 100) / 100;
+  const days = (entDt && exDt) ? Math.round((new Date(exDt) - new Date(entDt)) / 86400000) : null;
+  const { error } = await sb.from('closed_trades').update({
+    entry_date: entDt || null, avg_entry_price: entry || null,
+    exit_date: exDt, avg_exit_price: exit, quantity: qty || null,
+    realised_pnl: isNaN(pnl)?null:pnl, return_pct: isNaN(ret)?null:ret,
+    holding_days: days, exit_reason: document.getElementById('ce-exit-reason').value,
+    sector: document.getElementById('ce-sector').value.trim() || null,
+    exchange: document.getElementById('ce-exchange').value,
+    trade_notes: document.getElementById('ce-notes').value.trim() || null,
+  }).eq('id', id);
+  if (error) { document.getElementById('closed-edit-error').textContent = '✗ ' + error.message; return; }
+  const sym = closedTradesCache.find(x=>String(x.id)===String(id))?.symbol;
+  document.getElementById('closed-edit-success').textContent = `✓ ${sym} updated. Exit date: ${exDt}`;
   toast('Closed trade updated ✓');
   cancelClosedEdit();
   await loadClosedTradesForEdit();
 }
 
 function cancelClosedEdit() {
-  document.getElementById('closed-edit-form-wrap').style.display = 'none';
-  document.getElementById('closed-edit-id').value = '';
+  const wrap = document.getElementById('closed-edit-form-wrap');
+  if (wrap) wrap.style.display = 'none';
+  const id = document.getElementById('closed-edit-id');
+  if (id) id.value = '';
 }
 
 </script>
+
+<!-- ════ EDIT OPEN TRADE MODAL ════ -->
+<div id="edit-trade-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1000;overflow-y:auto;padding:40px 16px">
+  <div style="background:var(--bg2);border:1px solid var(--bdr2);border-radius:14px;max-width:600px;margin:0 auto;overflow:hidden">
+    <!-- Modal Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--bdr)">
+      <div>
+        <div style="font-family:var(--f);font-size:15px;font-weight:700;color:var(--white)" id="edit-modal-title">Edit Trade</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">Changes save directly to Supabase. Does not affect partial exits or pyramid entries.</div>
+      </div>
+      <button onclick="closeEditTrade()" style="background:var(--card);border:1px solid var(--bdr);border-radius:50%;width:28px;height:28px;cursor:pointer;color:var(--muted);font-size:14px;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>
+    <!-- Modal Body -->
+    <div style="padding:22px">
+      <div id="edit-modal-alert"></div>
+      <input type="hidden" id="edit-trade-id">
+      <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+        <div class="form-group">
+          <label class="form-label">Symbol</label>
+          <input class="form-input" id="edit-symbol" type="text" placeholder="e.g. RELIANCE">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Entry Date</label>
+          <input class="form-input" id="edit-entry-date" type="date">
+        </div>
+      </div>
+      <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px">
+        <div class="form-group">
+          <label class="form-label">Avg Entry Price ₹</label>
+          <input class="form-input" id="edit-avg-entry" type="number" step="0.05">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Stop Loss ₹</label>
+          <input class="form-input" id="edit-sl" type="number" step="0.05">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Target ₹</label>
+          <input class="form-input" id="edit-target" type="number" step="0.05">
+        </div>
+      </div>
+      <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px">
+        <div class="form-group">
+          <label class="form-label">Total Quantity</label>
+          <input class="form-input" id="edit-qty" type="number">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Remaining Quantity</label>
+          <input class="form-input" id="edit-rem-qty" type="number">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select class="form-select" id="edit-status">
+            <option value="open">Open</option>
+            <option value="partial">Partial</option>
+            <option value="pyramided">Pyramided</option>
+            <option value="watch">Watch</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+        <div class="form-group">
+          <label class="form-label">Sector</label>
+          <input class="form-input" id="edit-sector" type="text">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Exchange</label>
+          <select class="form-select" id="edit-exchange">
+            <option value="NSE">NSE</option>
+            <option value="BSE">BSE</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:14px">
+        <label class="form-label">Teaching Notes</label>
+        <input class="form-input" id="edit-notes" type="text" placeholder="Notes about this trade…">
+      </div>
+      <!-- Live P&L preview -->
+      <div id="edit-pnl-preview" style="background:var(--card2);border:1px solid var(--bdr);border-radius:8px;padding:12px 16px;margin-bottom:16px;display:none">
+        <div style="font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Current P&L vs CMP</div>
+        <div style="display:flex;gap:20px">
+          <div><div style="font-size:9px;color:var(--muted)">Avg Entry</div><div style="font-size:14px;font-weight:700;font-family:var(--fm)" id="edit-prev-entry">—</div></div>
+          <div><div style="font-size:9px;color:var(--muted)">Stop Loss</div><div style="font-size:14px;font-weight:700;font-family:var(--fm);color:var(--red)" id="edit-prev-sl">—</div></div>
+          <div><div style="font-size:9px;color:var(--muted)">Risk/Share</div><div style="font-size:14px;font-weight:700;font-family:var(--fm)" id="edit-prev-risk">—</div></div>
+          <div><div style="font-size:9px;color:var(--muted)">Total Risk</div><div style="font-size:14px;font-weight:700;font-family:var(--fm);color:var(--red)" id="edit-prev-totalrisk">—</div></div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px">
+        <button class="btn btn-ghost" onclick="closeEditTrade()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveEditTrade()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
