@@ -1758,12 +1758,45 @@ async function loadEditEntries(tradeId) {
 
   const { data, error } = await sb.from('trade_entries')
     .select('*').eq('open_trade_id', tradeId).order('entry_date');
+
+  // Build the "add initial entry" helper card
+  const addInitialCard = `
+    <div style="background:#0d1520;border:1px dashed #5c6ffb44;border-radius:8px;padding:14px 16px;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;color:#5c6ffb;margin-bottom:8px">⚠ Initial Entry Not Recorded</div>
+      <div style="font-size:11px;color:#4a6070;margin-bottom:12px">
+        Your first buy was added before entry tracking was set up. Use the values from the Open Trades table to seed it here.
+        Avg entry shown there: <strong style="color:#e8f0f8">₹${_et.avg_entry_price||_et.entry_price||'—'}</strong>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:10px">
+        <div><label style="font-size:9px;color:#4a6070;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px">Entry Date</label>
+          <input class="form-input" type="date" id="seed-date" value="${_et.entry_date||''}"></div>
+        <div><label style="font-size:9px;color:#4a6070;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px">Entry Price ₹</label>
+          <input class="form-input" type="number" step="0.05" id="seed-price" value="${_et.entry_price||''}"></div>
+        <div><label style="font-size:9px;color:#4a6070;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px">Quantity</label>
+          <input class="form-input" type="number" id="seed-qty" value=""></div>
+        <div><label style="font-size:9px;color:#4a6070;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px">Notes</label>
+          <input class="form-input" type="text" id="seed-notes" placeholder="Initial buy"></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end">
+        <button onclick="seedInitialEntry('${tradeId}')"
+          style="background:#5c6ffb;border:none;border-radius:6px;padding:6px 16px;font-size:11px;font-weight:600;color:#fff;cursor:pointer">
+          + Add Initial Entry
+        </button>
+      </div>
+    </div>`;
+
   if (error || !data || !data.length) {
-    el.innerHTML = '<div style="color:#4a6070;font-size:12px">No entry legs found in trade_entries table.</div>';
+    // No entries at all — show seed card
+    el.innerHTML = addInitialCard;
     return;
   }
 
-  el.innerHTML = data.map((e, i) => `
+  // Check if we likely have all entries
+  // If trade has_pyramid=true and only 1 entry, show seed card above entries
+  const missingInitial = (_et.has_pyramid || _et.status === 'pyramided') && data.length < 2;
+  const prefix = missingInitial ? addInitialCard : '';
+
+  el.innerHTML = prefix + data.map((e, i) => `
     <div id="entry-row-${e.id}" style="background:#0d1520;border:1px solid #1e2d3d;border-radius:8px;padding:14px 16px;margin-bottom:10px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <span style="font-size:11px;font-weight:700;color:#5c6ffb;letter-spacing:.05em;text-transform:uppercase">
@@ -1884,6 +1917,27 @@ async function loadEditExits(tradeId) {
       </div>
     </div>`;
   }).join('');
+}
+
+async function seedInitialEntry(tradeId) {
+  const date  = document.getElementById('seed-date').value;
+  const price = parseFloat(document.getElementById('seed-price').value);
+  const qty   = parseInt(document.getElementById('seed-qty').value);
+  const notes = document.getElementById('seed-notes').value.trim();
+  if (!price || !qty) { showEditAlert('Entry price and quantity are required.','error'); return; }
+
+  const { error } = await sb.from('trade_entries').insert({
+    open_trade_id: tradeId,
+    entry_date:    date || null,
+    entry_price:   price,
+    quantity:      qty,
+    notes:         notes || 'Initial entry (seeded)',
+  });
+
+  if (error) { showEditAlert('Error: ' + error.message,'error'); return; }
+  showEditAlert('✓ Initial entry added.','success');
+  toast('Initial entry seeded ✓');
+  await loadEditEntries(tradeId);
 }
 
 async function saveExitLeg(exitId, tradeId) {
