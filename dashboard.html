@@ -738,17 +738,12 @@ canvas.tc{display:block;width:100%;height:100%}
       <div style="background:var(--card2);padding:12px 18px;border-left:1px solid var(--bdr)">
         <div class="pcl">Nifty 500 Return</div>
         <div class="pcv a" id="eq-nifty-return">—</div>
-        <div class="pcs">Same period</div>
+        <div class="pcs">Since Apr 1, 2026</div>
       </div>
       <div style="background:var(--card2);padding:12px 18px;border-left:1px solid var(--bdr)">
         <div class="pcl">Alpha Generated</div>
         <div class="pcv g" id="eq-alpha">—</div>
         <div class="pcs">Outperformance</div>
-      </div>
-      <div style="background:var(--card2);padding:12px 18px;border-left:1px solid var(--bdr)">
-        <div class="pcl">Portfolio Value</div>
-        <div class="pcv b" id="eq-port-value">—</div>
-        <div class="pcs">Invested + P&L</div>
       </div>
       <div style="background:var(--card2);padding:12px 18px;border-left:1px solid var(--bdr)">
         <div class="pcl">Total Realised P&L</div>
@@ -1993,13 +1988,19 @@ async function loadPortfolioOverview() {
   // Enforce ₹85L minimum — snapshot may have stale ₹25L from old pipeline run
   const totalCapital = Math.max(snap?.total_capital || 0, 8500000);
   const cashAvail    = snap?.cash_available !== undefined ? snap.cash_available : Math.max(0, totalCapital - totalDeployed);
-  const portValue    = snap?.portfolio_value || (totalCapital + totalPnl);
-  const portReturn   = snap?.cumulative_return_pct || 0;
 
-  // 3. Closed trades
+  // 3. Closed trades — needed for realised P&L in portfolio value
   const { data: closedTrades } = await sb.from('closed_trades').select('*');
   let realisedPnl = 0;
   if(closedTrades) closedTrades.forEach(t => realisedPnl += (t.realised_pnl||0));
+
+  // Portfolio Value = Capital + unrealised open P&L + realised P&L from closed trades
+  // Margin-aware: deployed can exceed capital, but return is measured on capital base
+  const portValue  = totalCapital + totalPnl + realisedPnl;
+  // Portfolio return % on capital
+  const portReturn = totalCapital > 0
+    ? ((portValue - totalCapital) / totalCapital * 100)
+    : (snap?.cumulative_return_pct || 0);
 
   // All snapshots for equity curve + monthly heatmap
   const { data: allSnaps } = await sb
@@ -2039,9 +2040,18 @@ async function loadPortfolioOverview() {
   // ── EQUITY CURVE STATS ROW ─────────────────
   let niftyReturn = 0;
   if(allSnaps && allSnaps.length>=2){
-    const f=allSnaps[0], l=allSnaps[allSnaps.length-1];
-    if(f.nifty500_level && l.nifty500_level)
-      niftyReturn = (l.nifty500_level-f.nifty500_level)/f.nifty500_level*100;
+    // Nifty 500 return from April 1, 2026 (portfolio start date)
+    const BENCHMARK_START = '2026-04-01';
+    const l = allSnaps[allSnaps.length-1]; // latest
+    // Find snapshot nearest to Apr 1 2026
+    const baseSnap = allSnaps.reduce((best, s) => {
+      if(!s.nifty500_level) return best;
+      const d = s.snapshot_date || '';
+      if(d < BENCHMARK_START) return best; // before start date — skip
+      return (!best || d < best.snapshot_date) ? s : best;
+    }, null) || allSnaps[0];
+    if(baseSnap?.nifty500_level && l.nifty500_level)
+      niftyReturn = (l.nifty500_level - baseSnap.nifty500_level) / baseSnap.nifty500_level * 100;
   }
   const alpha = portReturn - niftyReturn;
   setText('eq-port-return', (portReturn>=0?'+':'')+portReturn.toFixed(1)+'%');
