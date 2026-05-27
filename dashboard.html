@@ -1291,12 +1291,12 @@ canvas.tc{display:block;width:100%;height:100%}
       <div class="scl">Deployed</div>
       <div class="scv" id="os-deployed">—</div>
       <div class="scs" id="os-positions">—</div>
-      <div class="sc-badge info" id="os-deployed-badge">—</div>
+      <div class="sc-badge" id="os-deployed-badge">—</div>
     </div>
     <div class="sc">
       <div class="scl">Day's P&amp;L</div>
       <div class="scv" id="os-daypnl">—</div>
-      <div class="scs">Change from prev session</div>
+      <div class="scs">vs yesterday's close</div>
       <div class="sc-badge" id="os-daypnl-badge">—</div>
     </div>
     <div class="sc">
@@ -1333,8 +1333,8 @@ canvas.tc{display:block;width:100%;height:100%}
             <option value="default">Entry Date</option>
             <option value="alpha_asc">A → Z</option>
             <option value="alpha_desc">Z → A</option>
-            <option value="pct_desc">Profit % ↓</option>
-            <option value="pct_asc">Profit % ↑</option>
+            <option value="pct_desc">Return % ↓</option>
+            <option value="pct_asc">Return % ↑</option>
             <option value="pnl_desc">Notional P&L ↓</option>
             <option value="pnl_asc">Notional P&L ↑</option>
             <option value="size_desc">Position Size ↓</option>
@@ -1534,9 +1534,8 @@ canvas.tc{display:block;width:100%;height:100%}
 </div><!-- /wrap -->
 
 <script>
-/* ── OPEN TRADES SORT STATE ── */
-let _openTradesData = [];
-let _openTotalCap   = 8500000;
+let _openTradesData=[];
+let _openTotalCap=8500000;
 
 /* ── SUPABASE CLIENT ── */
 const SUPABASE_URL = 'https://kqndpeflwuztzhixibih.supabase.co';
@@ -2893,7 +2892,12 @@ async function renderOpen(){
   // ── Deployed ──────────────────────────────────
   setT('os-deployed', fmtL(totalDeployed));
   setT('os-positions', `${trades.length} position${trades.length!==1?'s':''}`);
-  setT('os-deployed-badge', `▲ ${(totalDeployed/totalDeployed*100).toFixed(0)}% of portfolio`);
+  const depBadge = document.getElementById('os-deployed-badge');
+  if (depBadge) {
+    const tc = trades.length;
+    depBadge.textContent = '▲ ' + tc + (tc===1?' trade':' trades');
+    depBadge.className = 'sc-badge up';
+  }
 
   // ── Net Open P&L badge ────────────────────────
   const netPct = totalDeployed > 0 ? (totalPnl/totalDeployed*100) : 0;
@@ -2955,7 +2959,7 @@ async function renderOpen(){
           dayChgEl.style.color = dayChg>=0?'var(--green)':'var(--red)';
         }
         if(dayBadge){
-          dayBadge.textContent = (dayChg>=0?'\u25b2 +':'\u25bc ')+Math.abs(dayPct).toFixed(2)+'% from prev session';
+          dayBadge.textContent = (dayChg>=0?'\u25b2 +':'\u25bc ')+Math.abs(dayPct).toFixed(2)+'% of portfolio';
           dayBadge.className = 'sc-badge ' + (dayChg>=0?'up':'dn');
         }
       } else {
@@ -2984,7 +2988,7 @@ async function renderOpen(){
     .limit(1).single()
     .then(({ data: snap }) => {
       const totalCap  = snap?.total_capital || 8500000;
-      _openTotalCap = totalCap;
+      _openTotalCap=totalCap;
       const cashAvail = snap?.cash_available || Math.max(0, totalCap - totalDeployed);
       const cashPct   = totalCap > 0 ? (cashAvail/totalCap*100).toFixed(1) : 0;
       setT('os-cash', cashPct + '%', 'var(--cyan)');
@@ -2999,9 +3003,7 @@ async function renderOpen(){
   setT('hdr-deployed', fmtL(totalDeployed));
   setT('hdr-pnl', (totalPnl>=0?'+':'')+fmt(totalPnl), totalPnl>=0?'var(--green)':'var(--red)');
 
-  // Cache trades for sort feature
-  _openTradesData = trades;
-
+  _openTradesData=trades;
   c.innerHTML='';
   trades.forEach(t=>{
     // Use avg_entry_price + remaining_qty if pyramided, else fall back to originals
@@ -4084,47 +4086,25 @@ window.addEventListener('load', async () => {
   });
 });
 
-// ════════════════════════════════════════════
-// OPEN TRADES SORT
-// ════════════════════════════════════════════
-function applyOtSort() {
-  if (!_openTradesData.length) return;
-
-  const sel  = document.getElementById('ot-sort');
-  const mode = sel ? sel.value : 'default';
-  const c    = document.getElementById('ot-container');
-  if (!c) return;
-
-  // Compute sort key for each trade
-  const keyed = _openTradesData.map(t => {
-    const ae = t.avg_entry_price || t.entry_price;
-    const rq = t.remaining_qty   || t.quantity;
-    return {
-      id:    t.id,
-      sym:   t.symbol,
-      pct:   t.cmp ? ((t.cmp - ae) / ae * 100) : 0,
-      pnl:   t.cmp ? ((t.cmp - ae) * rq)       : 0,
-      size:  ae * rq,
-    };
+function applyOtSort(){
+  if(!_openTradesData.length)return;
+  const mode=document.getElementById('ot-sort')?.value||'default';
+  const c=document.getElementById('ot-container');if(!c)return;
+  const keyed=_openTradesData.map(t=>{
+    const ae=t.avg_entry_price||t.entry_price,rq=t.remaining_qty||t.quantity;
+    return{id:t.id,sym:t.symbol,pct:t.cmp?((t.cmp-ae)/ae*100):0,pnl:t.cmp?((t.cmp-ae)*rq):0,size:ae*rq};
   });
-
-  switch (mode) {
-    case 'alpha_asc':  keyed.sort((a,b) => a.sym.localeCompare(b.sym)); break;
-    case 'alpha_desc': keyed.sort((a,b) => b.sym.localeCompare(a.sym)); break;
-    case 'pct_desc':   keyed.sort((a,b) => b.pct  - a.pct);  break;
-    case 'pct_asc':    keyed.sort((a,b) => a.pct  - b.pct);  break;
-    case 'pnl_desc':   keyed.sort((a,b) => b.pnl  - a.pnl);  break;
-    case 'pnl_asc':    keyed.sort((a,b) => a.pnl  - b.pnl);  break;
-    case 'size_desc':  keyed.sort((a,b) => b.size - a.size);  break;
-    case 'size_asc':   keyed.sort((a,b) => a.size - b.size);  break;
-    default: break; // Entry Date — original order already in DOM
+  switch(mode){
+    case 'alpha_asc': keyed.sort((a,b)=>a.sym.localeCompare(b.sym));break;
+    case 'alpha_desc':keyed.sort((a,b)=>b.sym.localeCompare(a.sym));break;
+    case 'pct_desc':  keyed.sort((a,b)=>b.pct-a.pct);break;
+    case 'pct_asc':   keyed.sort((a,b)=>a.pct-b.pct);break;
+    case 'pnl_desc':  keyed.sort((a,b)=>b.pnl-a.pnl);break;
+    case 'pnl_asc':   keyed.sort((a,b)=>a.pnl-b.pnl);break;
+    case 'size_desc': keyed.sort((a,b)=>b.size-a.size);break;
+    case 'size_asc':  keyed.sort((a,b)=>a.size-b.size);break;
   }
-
-  // Reorder existing DOM nodes — charts stay intact, no re-render needed
-  keyed.forEach(k => {
-    const node = document.getElementById('tc_' + k.id);
-    if (node) c.appendChild(node); // moves to end in sorted order
-  });
+  keyed.forEach(k=>{const node=document.getElementById('tc_'+k.id);if(node)c.appendChild(node);});
 }
 
 </script>
