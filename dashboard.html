@@ -2952,14 +2952,15 @@ async function renderOpen(){
       const dayBadge  = document.getElementById('os-daypnl-badge');
       if(snaps && snaps.length >= 2) {
         const dayChg = snaps[0].portfolio_value - snaps[1].portfolio_value;
-        const dayPct = snaps[1].portfolio_value > 0
-          ? (dayChg / snaps[1].portfolio_value * 100) : 0;
+        // % change on deployed capital — how much did holdings move
+        const dayPct = totalDeployed > 0
+          ? (dayChg / totalDeployed * 100) : 0;
         if(dayChgEl){
           dayChgEl.textContent = (dayChg>=0?'+':'')+fmt(dayChg);
           dayChgEl.style.color = dayChg>=0?'var(--green)':'var(--red)';
         }
         if(dayBadge){
-          dayBadge.textContent = (dayChg>=0?'\u25b2 +':'\u25bc ')+Math.abs(dayPct).toFixed(2)+'% of portfolio';
+          dayBadge.textContent = (dayChg>=0?'\u25b2 +':'\u25bc ')+Math.abs(dayPct).toFixed(2)+'% on deployed';
           dayBadge.className = 'sc-badge ' + (dayChg>=0?'up':'dn');
         }
       } else {
