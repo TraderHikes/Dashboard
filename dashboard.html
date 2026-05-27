@@ -208,7 +208,7 @@ body{overflow-x:hidden;
 .pstat.ps-green::after{background:radial-gradient(circle,rgba(30,201,147,.12) 0%,transparent 70%)}
 .pstat.ps-red::after{background:radial-gradient(circle,rgba(240,82,114,.1) 0%,transparent 70%)}
 .pstat.ps-cyan::after{background:radial-gradient(circle,rgba(0,212,200,.1) 0%,transparent 70%)}
-.pstat-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:14px}
+.pstat-icon{display:none}
 .pi-blue{background:var(--blue-dim);border:1px solid var(--bdr3)}
 .pi-green{background:var(--green-dim);border:1px solid var(--green-bd)}
 .pi-red{background:var(--red-dim);border:1px solid var(--red-bd)}
@@ -682,28 +682,24 @@ canvas.tc{display:block;width:100%;height:100%}
   <!-- 4 Big Stat Cards -->
   <div class="port-stats">
     <div class="pstat ps-blue">
-      <div class="pstat-icon pi-blue">₹</div>
       <div class="pstat-label">Amount Invested</div>
       <div class="pstat-value" id="port-invested" style="color:var(--white)">—</div>
       <div class="pstat-sub" id="port-invested-sub">Loading...</div>
       <div class="pstat-delta pd-up" id="port-invested-pct" style="display:none"></div>
     </div>
     <div class="pstat ps-green">
-      <div class="pstat-icon pi-green">+</div>
       <div class="pstat-label">Notional P&L (Open)</div>
       <div class="pstat-value" id="port-pnl" style="color:var(--green)">—</div>
       <div class="pstat-sub">Unrealised gain on open trades</div>
       <div class="pstat-delta pd-up" id="port-pnl-pct">—</div>
     </div>
     <div class="pstat ps-cyan">
-      <div class="pstat-icon pi-cyan">✦</div>
       <div class="pstat-label">Cash Margin Available</div>
       <div class="pstat-value" id="port-cash" style="color:var(--cyan)">—</div>
       <div class="pstat-sub">Free capital for new trades</div>
       <div class="pstat-delta pd-up" id="port-cash-pct">—</div>
     </div>
     <div class="pstat ps-red">
-      <div class="pstat-icon pi-red">⚡</div>
       <div class="pstat-label">Open Risk (Max Loss)</div>
       <div class="pstat-value" id="port-risk" style="color:var(--red)">—</div>
       <div class="pstat-sub">If all SLs hit simultaneously</div>
@@ -1986,7 +1982,7 @@ async function loadPortfolioOverview() {
     const rq = t.remaining_qty   || t.quantity;
     totalDeployed += ae * rq;
     if(t.cmp) totalPnl += (t.cmp - ae) * rq;
-    totalRisk += Math.max(0, (ae - t.sl_price) * rq);
+    totalRisk += Math.max(0, (ae - (t.sl_price||0)) * rq);
   });
 
   // 2. Latest portfolio snapshot
@@ -2877,8 +2873,10 @@ async function renderOpen(){
 
   let totalDeployed=0, totalPnl=0;
   trades.forEach(t=>{
-    totalDeployed += t.entry_price * t.quantity;
-    if(t.cmp) totalPnl += (t.cmp - t.entry_price) * t.quantity;
+    const ae = t.avg_entry_price || t.entry_price;
+    const rq = t.remaining_qty   || t.quantity;
+    totalDeployed += ae * rq;
+    if(t.cmp) totalPnl += (t.cmp - ae) * rq;
   });
 
   const wins   = trades.filter(t=>t.cmp && t.cmp>(t.avg_entry_price||t.entry_price));
