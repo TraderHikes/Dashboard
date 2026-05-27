@@ -634,8 +634,7 @@ canvas.tc{display:block;width:100%;height:100%}
   </div>
   <div class="hdr-meta">
     <div class="regime-pill" id="hdr-regime-pill"><div class="rp-dot" id="hdr-regime-dot"></div><span id="hdr-regime-text">Market Score</span></div>
-    <div class="hdr-sep"></div>
-    <div class="hdr-stat"><div class="hdr-stat-l">Total Capital</div><div class="hdr-stat-v" id="hdr-capital">—</div></div>
+
     <div class="hdr-sep"></div>
     <div class="hdr-stat"><div class="hdr-stat-l">Deployed</div><div class="hdr-stat-v" id="hdr-deployed">—</div></div>
     <div class="hdr-sep"></div>
@@ -1966,9 +1965,9 @@ async function loadPortfolioOverview() {
   // 2. Latest portfolio snapshot
   const { data: snap } = await sb
     .from('portfolio_snapshots').select('*')
-    .order('snapshot_date', { ascending:false }).limit(1).single();
+    .order('snapshot_date', { ascending:false }).limit(1).maybeSingle();
 
-  const totalCapital = snap?.total_capital || 8500000; // fallback to ₹85L
+  const totalCapital = snap?.total_capital || 8500000; // ₹85L fallback — update via pipeline
   const cashAvail    = snap?.cash_available || Math.max(0, totalCapital - totalDeployed);
   const portValue    = snap?.portfolio_value || (totalDeployed + totalPnl + cashAvail);
   const portReturn   = snap?.cumulative_return_pct || 0;
@@ -2953,7 +2952,7 @@ async function renderOpen(){
     .order('snapshot_date', { ascending: false })
     .limit(1).single()
     .then(({ data: snap }) => {
-      const totalCap  = snap?.total_capital || 8500000; // fallback to ₹85L if snapshot missing
+      const totalCap  = snap?.total_capital || 8500000; // ₹85L fallback
       const cashAvail = snap?.cash_available || Math.max(0, totalCap - totalDeployed);
       const cashPct   = totalCap > 0 ? (cashAvail/totalCap*100).toFixed(1) : 0;
       setT('os-cash', cashPct + '%', 'var(--cyan)');
