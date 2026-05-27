@@ -404,9 +404,26 @@
       </div>
     </div>
     <div class="card">
-      <div class="card-hdr">
+      <div class="card-hdr" style="flex-wrap:wrap;gap:10px">
         <span class="card-title">Current Open Trades</span>
-        <button class="btn btn-ghost btn-sm" onclick="loadOpenTrades()">↻ Refresh</button>
+        <div style="display:flex;align-items:center;gap:10px;margin-left:auto">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:10px;color:var(--muted);letter-spacing:.04em">Sort</span>
+            <select id="admin-ot-sort" onchange="applyAdminOtSort()"
+              style="background:var(--card2);border:1px solid var(--bdr);color:var(--text);font-family:var(--fm);font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;outline:none">
+              <option value="default">Entry Date ↓</option>
+              <option value="alpha_asc">A → Z</option>
+              <option value="alpha_desc">Z → A</option>
+              <option value="pct_desc">Return % ↓</option>
+              <option value="pct_asc">Return % ↑</option>
+              <option value="pnl_desc">P&L ↓</option>
+              <option value="pnl_asc">P&L ↑</option>
+              <option value="size_desc">Position Size ↓</option>
+              <option value="size_asc">Position Size ↑</option>
+            </select>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="loadOpenTrades()">↻ Refresh</button>
+        </div>
       </div>
       <div style="overflow-x:auto">
         <table class="data-table">
@@ -1371,6 +1388,7 @@ async function loadOpenTrades() {
     .from('open_trades').select('*').order('entry_date', { ascending: false });
   if (error) { tbody.innerHTML = `<tr><td colspan="12" style="color:var(--red);padding:16px">${error.message}</td></tr>`; return; }
   if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:20px">No open trades yet.</td></tr>'; return; }
+  _adminOtData = data; // cache for sort
   tbody.innerHTML = data.map(t => {
     const avgEntry = t.avg_entry_price || t.entry_price;
     const remQty   = t.remaining_qty   || t.quantity;
@@ -2124,6 +2142,77 @@ async function saveClosedEdit() {
 function cancelClosedEdit() {
   const wrap = document.getElementById('closed-edit-form-wrap');
   if (wrap) wrap.style.display = 'none';
+}
+
+
+// ════════════════════════════════════════════
+// ADMIN OPEN TRADES SORT
+// ════════════════════════════════════════════
+let _adminOtData = [];
+
+function applyAdminOtSort() {
+  if (!_adminOtData.length) return;
+  const mode   = document.getElementById('admin-ot-sort')?.value || 'default';
+  let sorted = [..._adminOtData];
+
+  sorted.forEach(t => {
+    const ae = t.avg_entry_price || t.entry_price;
+    const rq = t.remaining_qty   || t.quantity;
+    t._pct  = (t.cmp && ae) ? ((t.cmp - ae) / ae * 100) : 0;
+    t._pnl  = (t.cmp && ae) ? ((t.cmp - ae) * rq)       : 0;
+    t._size = ae * rq;
+  });
+
+  switch (mode) {
+    case 'alpha_asc':  sorted.sort((a,b) => a.symbol.localeCompare(b.symbol)); break;
+    case 'alpha_desc': sorted.sort((a,b) => b.symbol.localeCompare(a.symbol)); break;
+    case 'pct_desc':   sorted.sort((a,b) => b._pct  - a._pct);  break;
+    case 'pct_asc':    sorted.sort((a,b) => a._pct  - b._pct);  break;
+    case 'pnl_desc':   sorted.sort((a,b) => b._pnl  - a._pnl);  break;
+    case 'pnl_asc':    sorted.sort((a,b) => a._pnl  - b._pnl);  break;
+    case 'size_desc':  sorted.sort((a,b) => b._size - a._size);  break;
+    case 'size_asc':   sorted.sort((a,b) => a._size - b._size);  break;
+    default: break;
+  }
+
+  // Re-render tbody with sorted data using same row template
+  const tbody = document.getElementById('open-trades-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = sorted.map(t => {
+    const avgEntry = t.avg_entry_price || t.entry_price;
+    const remQty   = t.remaining_qty   || t.quantity;
+    const pnl      = t.cmp ? ((t.cmp - avgEntry) * remQty) : null;
+    const pnlStr   = pnl !== null
+      ? `<span style="color:${pnl>=0?'var(--green)':'var(--red)'}">${pnl>=0?'+':''}\u20b9${Math.abs(pnl).toLocaleString('en-IN',{maximumFractionDigits:0})}</span>`
+      : '<span style="color:var(--muted)">\u2014</span>';
+    const retPct   = (t.cmp && avgEntry) ? ((t.cmp - avgEntry) / avgEntry * 100) : null;
+    const retStr   = retPct !== null
+      ? `<span style="color:${retPct>=0?'var(--green)':'var(--red)'};font-weight:700">${retPct>=0?'+':''}${retPct.toFixed(2)}%</span>`
+      : '<span style="color:var(--muted)">—</span>';
+    const badgeMap = { long:'badge-long', trail_sl:'badge-trail', watch:'badge-watch' };
+    const posPct   = t.position_size_pct ? t.position_size_pct+'%' : '\u2014';
+    const flags    = [
+      t.has_pyramid      ? '<span class="badge badge-long" style="font-size:9px">P</span>' : '',
+      t.has_partial_exit ? '<span class="badge badge-watch" style="font-size:9px">PE</span>' : '',
+    ].filter(Boolean).join(' ');
+    return `<tr>
+      <td class="mono" style="font-weight:700;color:var(--white)">${t.symbol} ${flags}</td>
+      <td style="color:var(--text2)">${t.company_name||''}</td>
+      <td class="mono">${t.entry_date||'—'}</td>
+      <td class="mono">\u20b9${Number(avgEntry).toLocaleString('en-IN')}</td>
+      <td class="mono">${remQty}<span style="color:var(--muted);font-size:10px">/${t.total_quantity||t.quantity}</span></td>
+      <td class="mono" style="color:var(--red)">\u20b9${Number(t.sl_price||0).toLocaleString('en-IN')}</td>
+      <td class="mono">${t.cmp?'\u20b9'+Number(t.cmp).toLocaleString('en-IN'):'<span style="color:var(--muted)">\u2014</span>'}</td>
+      <td>${pnlStr}</td>
+      <td>${retStr}</td>
+      <td style="color:var(--blue-lt);font-weight:700">${posPct}</td>
+      <td><span class="badge ${badgeMap[t.status]||'badge-watch'}">${(t.status||'').replace('_',' ')}</span></td>
+      <td style="display:flex;gap:6px;align-items:center">
+        <button class="btn btn-ghost btn-sm" onclick="openEditTrade('${t.id}')">✎ Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteTrade('${t.id}','${t.symbol}')">Delete</button>
+      </td>
+    </tr>`;
+  }).join('');
 }
 
 </script>
