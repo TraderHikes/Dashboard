@@ -1731,11 +1731,11 @@ async function saveCoreFields() {
   const id  = document.getElementById('edit-trade-id').value;
   const sl  = parseFloat(document.getElementById('edit-sl').value);
   const tgt = parseFloat(document.getElementById('edit-target').value);
-  if (!sl) { showEditAlert('Stop Loss is required.','error'); return; }
+  if (isNaN(sl) || sl === undefined) { showEditAlert('Please enter a valid Stop Loss price.','error'); return; }
 
   const { error } = await sb.from('open_trades').update({
     symbol:       document.getElementById('edit-symbol').value.trim().toUpperCase(),
-    sl_price:     sl, stop_loss: sl,
+    sl_price:     sl, stop_loss: sl, stop_loss_price: sl,
     target_price: tgt || null,
     status:       document.getElementById('edit-status').value,
     sector:       document.getElementById('edit-sector').value.trim() || null,
@@ -2120,7 +2120,12 @@ function cancelClosedEdit() {
         <div style="padding:18px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
           <input type="hidden" id="edit-trade-id">
           <div class="form-group"><label class="form-label">Symbol</label><input class="form-input" id="edit-symbol" type="text"></div>
-          <div class="form-group"><label class="form-label">Stop Loss ₹ *</label><input class="form-input" id="edit-sl" type="number" step="0.05"></div>
+          <div class="form-group">
+          <label class="form-label">Stop Loss ₹ *</label>
+          <input class="form-input" id="edit-sl" type="number" step="any" placeholder="e.g. 1590"
+            oninput="document.getElementById('edit-sl-preview').textContent=this.value?'New SL: ₹'+parseFloat(this.value).toLocaleString('en-IN'):''">
+          <div id="edit-sl-preview" style="font-size:10px;color:var(--amber,#ffb340);margin-top:4px;font-weight:600"></div>
+        </div>
           <div class="form-group"><label class="form-label">Target ₹</label><input class="form-input" id="edit-target" type="number" step="0.05"></div>
           <div class="form-group"><label class="form-label">Status</label>
             <select class="form-select" id="edit-status">
