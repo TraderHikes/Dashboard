@@ -1990,9 +1990,10 @@ async function loadPortfolioOverview() {
     .from('portfolio_snapshots').select('*')
     .order('snapshot_date', { ascending:false }).limit(1).maybeSingle();
 
-  const totalCapital = snap?.total_capital || 8500000;
-  const cashAvail    = snap?.cash_available || Math.max(0, totalCapital - totalDeployed);
-  const portValue    = snap?.portfolio_value || (totalDeployed + totalPnl + cashAvail);
+  // Enforce ₹85L minimum — snapshot may have stale ₹25L from old pipeline run
+  const totalCapital = Math.max(snap?.total_capital || 0, 8500000);
+  const cashAvail    = snap?.cash_available !== undefined ? snap.cash_available : Math.max(0, totalCapital - totalDeployed);
+  const portValue    = snap?.portfolio_value || (totalCapital + totalPnl);
   const portReturn   = snap?.cumulative_return_pct || 0;
 
   // 3. Closed trades
@@ -2718,7 +2719,7 @@ async function buildAllocList(){
   }
 
   const colours=['#5c6ffb','#00d4c8','#7b8bfc','#f5a623','#1ec993','#4da8ff','#7c4dff','#f05272'];
-  const totalCap = trades[0]?.capital_at_entry || 2500000;
+  const totalCap = Math.max(trades[0]?.capital_at_entry || 0, 8500000);
   const deployed = trades.reduce((s,t)=>{
     const ae = t.avg_entry_price||0;
     const rq = t.remaining_qty||0;
@@ -2988,7 +2989,7 @@ async function renderOpen(){
     .order('snapshot_date', { ascending: false })
     .limit(1).single()
     .then(({ data: snap }) => {
-      const totalCap  = snap?.total_capital || 8500000;
+      const totalCap  = Math.max(snap?.total_capital || 0, 8500000);
       _openTotalCap=totalCap;
       const cashAvail = snap?.cash_available || Math.max(0, totalCap - totalDeployed);
       const cashPct   = totalCap > 0 ? (cashAvail/totalCap*100).toFixed(1) : 0;
