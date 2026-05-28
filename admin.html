@@ -2255,7 +2255,24 @@ function applyAdminOtSort() {
 async function loadWatchlistAdmin() {
   // Load stats from watchlist_enriched
   const { data: enriched } = await sb.from('watchlist_enriched').select('*').order('rs_rating', { ascending: false });
-  const { data: raw }      = await sb.from('watchlist').select('symbol,company_name,rs_rating,uploaded_at');
+  const { data: raw }      = await sb.from('watchlist').select('symbol,company_name,rs_rating,uploaded_at').order('uploaded_at', { ascending: false });
+
+  // Show last upload history
+  if (raw && raw.length) {
+    const lastUpload = raw[0]?.uploaded_at;
+    const histBar  = document.getElementById('wl-history-bar');
+    const histText = document.getElementById('wl-history-text');
+    const histTime = document.getElementById('wl-history-time');
+    const histCount= document.getElementById('wl-history-count');
+    if (histBar)  histBar.style.display  = 'flex';
+    if (histText) histText.textContent   = `${raw.length} stocks uploaded`;
+    if (histTime && lastUpload) {
+      const d = new Date(lastUpload);
+      histTime.textContent = '· ' + d.toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' })
+        + ' at ' + d.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+    }
+    if (histCount) histCount.textContent = `✓ Watchlist active`;
+  }
 
   // Stats
   const total  = raw?.length || 0;
@@ -2451,7 +2468,7 @@ async function wlUploadCSV() {
     setTimeout(()=>{ alertOk.style.display='none'; }, 8000);
   }
   toast(`✓ Watchlist: ${uploaded} stocks uploaded`);
-  await loadWatchlistAdmin();
+  await loadWatchlistAdmin(); // reloads table + updates history bar
 }
 
 </script>
@@ -2622,12 +2639,20 @@ async function wlUploadCSV() {
         </div>
 
         <div style="background:var(--bg);border:1px solid var(--bdr);border-radius:8px;padding:12px 16px;font-size:11px;color:var(--muted);line-height:1.8">
-          <strong style="color:var(--text2)">Expected CSV columns:</strong>
-          Symbol · CompanyName · Cur_Price · Price_Change · Price_Percentage_chg · RS_Rating<br>
+          <strong style="color:var(--text2)">Expected CSV columns (only 3 used):</strong>
+          Symbol · CompanyName · RS_Rating<br>
           <strong style="color:var(--text2)">How it works:</strong>
-          Upload replaces all existing stocks → pipeline runs tonight → enriches with 21/50/200 EMA, sector data, buy range flag → students see updated Focused Watchlist tomorrow morning.
+          Upload → Symbol/Company/RS visible on Dashboard immediately. Pipeline adds EMA data overnight → Focused Watchlist auto-populates next morning.
         </div>
       </div>
+    </div>
+
+    <!-- Last upload history -->
+    <div id="wl-history-bar" style="display:none;background:rgba(92,111,251,.08);border:1px solid rgba(92,111,251,.2);border-radius:8px;padding:10px 16px;margin-bottom:14px;align-items:center;gap:10px">
+      <span style="font-size:11px;color:var(--blue-lt);font-weight:700">Last Upload:</span>
+      <span style="font-size:11px;color:var(--text)" id="wl-history-text">—</span>
+      <span style="font-size:10px;color:var(--muted)" id="wl-history-time"></span>
+      <span style="font-size:10px;color:var(--green);margin-left:auto" id="wl-history-count"></span>
     </div>
 
     <!-- Stats Row -->
