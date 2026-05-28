@@ -1413,12 +1413,9 @@ canvas.tc{display:block;width:100%;height:100%}
           <th onclick="sfSortFocused('symbol')">Symbol</th>
           <th onclick="sfSortFocused('company_name')">Company</th>
           <th onclick="sfSortFocused('cur_price')">CMP ₹</th>
-          <th onclick="sfSortFocused('price_chg_pct')">Change %</th>
-          <th onclick="sfSortFocused('rs_rating')" class="sf-srt">RS</th>
-          <th onclick="sfSortFocused('sector_name')">Sector</th>
-          <th onclick="sfSortFocused('sector_score')">Sector Score</th>
-          <th onclick="sfSortFocused('pct_from_21ema')">vs 21 EMA</th>
-          <th onclick="sfSortFocused('pct_from_10wema')">vs 10W EMA</th>
+          <th onclick="sfSortFocused('rs_rating')" class="sf-srt">RS ↕</th>
+          <th onclick="sfSortFocused('pct_from_21ema')">vs 21 EMA ↕</th>
+          <th onclick="sfSortFocused('pct_from_10wema')">vs 10W EMA ↕</th>
           <th onclick="sfSortFocused('pct_from_200ema')">vs 200 EMA</th>
         </tr></thead>
         <tbody id="sf-focused-tbody">
@@ -4168,29 +4165,49 @@ const sfPct      = v => v==null?'—':(v>=0?'+':'')+Number(v).toFixed(1)+'%';
 
 // ── Load from Supabase ────────────────────────────────────────────
 async function loadStockFilter() {
-  const cards = document.getElementById('sf-focused-cards');
-  const tbody = document.getElementById('sf-tbody');
-  if (cards) cards.innerHTML = '<div class="sf-loading"><div class="sf-spinner"></div><div>Loading…</div></div>';
+  const ftbody = document.getElementById('sf-focused-tbody');
+  const tbody  = document.getElementById('sf-tbody');
+  if (ftbody) ftbody.innerHTML = '<tr><td colspan="4" class="sf-empty">Loading…</td></tr>';
 
-  const { data, error } = await sb
-    .from('watchlist_enriched')
-    .select('*')
-    .order('rs_rating', { ascending: false });
+  // Fetch both tables and merge — watchlist has RS+company from CSV,
+  // watchlist_enriched has EMA data from pipeline
+  const [rawRes, enrichedRes] = await Promise.all([
+    sb.from('watchlist').select('symbol,company_name,rs_rating,cur_price,price_chg_pct'),
+    sb.from('watchlist_enriched').select('*'),
+  ]);
 
-  if (error || !data || !data.length) {
-    if (cards) cards.innerHTML = '<div class="sf-empty" style="grid-column:1/-1;padding:32px;text-align:center">No stocks in buy range today. Pipeline enriches watchlist each evening.</div>';
-    if (tbody) tbody.innerHTML = '<tr><td colspan="11" class="sf-empty">Watchlist data loads after tonight\'s pipeline run.</td></tr>';
+  const rawMap = {};
+  (rawRes.data||[]).forEach(r => rawMap[r.symbol] = r);
+
+  const enrichedMap = {};
+  (enrichedRes.data||[]).forEach(r => enrichedMap[r.symbol] = r);
+
+  // Merge: enriched data takes priority, fill missing fields from raw
+  const allSymbols = new Set([
+    ...Object.keys(rawMap),
+    ...Object.keys(enrichedMap),
+  ]);
+
+  _sfData = [...allSymbols].map(sym => {
+    const raw = rawMap[sym] || {};
+    const enr = enrichedMap[sym] || {};
+    return {
+      ...enr,
+      symbol:       sym,
+      company_name: raw.company_name || enr.company_name || null,
+      rs_rating:    raw.rs_rating    || enr.rs_rating    || null,
+      cur_price:    enr.cur_price    || raw.cur_price     || null,
+      price_chg_pct:enr.price_chg_pct|| raw.price_chg_pct|| null,
+    };
+  }).sort((a,b) => (b.rs_rating||0) - (a.rs_rating||0));
+
+  if (!_sfData.length) {
+    if (ftbody) ftbody.innerHTML = '<tr><td colspan="4" class="sf-empty">Upload CSV to populate watchlist.</td></tr>';
+    if (tbody)  tbody.innerHTML  = '<tr><td colspan="8" class="sf-empty">Upload CSV to populate watchlist.</td></tr>';
     return;
   }
 
-  _sfData = data;
-  const meta = document.getElementById('sf-upload-meta');
-  if (meta) {
-    const latest = data[0]?.enriched_date || '—';
-    meta.textContent = `${data.length} stocks · Enriched: ${latest}`;
-  }
-
-  sfRenderCards();
+  sfRenderFocused();
   sfRenderTable();
 }
 
@@ -4206,7 +4223,7 @@ function sfRenderFocused() {
   let focused = _sfData.filter(s => s.in_buy_range);
 
   if (!focused.length) {
-    tbody.innerHTML = '<tr><td colspan="10" class="sf-empty" style="padding:28px">No stocks in focus range today. Check back after pipeline runs.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="sf-empty" style="padding:28px">No stocks in focus range today. Check back after pipeline runs.</td></tr>';
     return;
   }
 
@@ -4218,19 +4235,14 @@ function sfRenderFocused() {
   });
 
   tbody.innerHTML = focused.map(s => {
-    const chgCol = (s.price_chg_pct||0)>=0 ? 'var(--green)' : 'var(--red)';
-    const secCol = sfScoreCol(s.sector_score||0);
     return `<tr>
-      <td class="sf-sym-cell">${s.symbol}</td>
-      <td style="color:var(--text2);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.company_name||'—'}</td>
-      <td style="font-weight:700">${sfFmt(s.cur_price)}</td>
-      <td style="color:${chgCol};font-weight:700">${sfPct(s.price_chg_pct)}</td>
-      <td><span style="background:rgba(92,111,251,.15);color:var(--blue-lt);padding:2px 8px;border-radius:4px;font-weight:700;font-family:var(--fm)">${s.rs_rating||'—'}</span></td>
-      <td style="color:var(--text2)">${s.sector_name||'—'}</td>
-      <td><span style="color:${secCol};font-weight:700">${s.sector_score||'—'}</span> <span style="font-size:9px;color:var(--muted)">${s.sector_label||''}</span></td>
-      <td style="color:${sfEmaCol(s.pct_from_21ema)};font-weight:700">${sfPct(s.pct_from_21ema)}</td>
-      <td style="color:${sfEmaCol(s.pct_from_10wema)};font-weight:700">${sfPct(s.pct_from_10wema)}</td>
-      <td style="color:${sfEmaCol(s.pct_from_200ema)};font-weight:700">${sfPct(s.pct_from_200ema)}</td>
+      <td class="sf-sym-cell" style="color:var(--white)">${s.symbol}</td>
+      <td style="color:var(--white);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.company_name||'—'}</td>
+      <td style="color:var(--white);font-weight:600">${sfFmt(s.cur_price)}</td>
+      <td style="color:var(--white);font-weight:700">${s.rs_rating||'—'}</td>
+      <td style="color:var(--white);font-weight:600">${sfPct(s.pct_from_21ema)}</td>
+      <td style="color:var(--white);font-weight:600">${sfPct(s.pct_from_10wema)}</td>
+      <td style="color:var(--white);font-weight:600">${sfPct(s.pct_from_200ema)}</td>
     </tr>`;
   }).join('');
 
