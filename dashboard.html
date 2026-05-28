@@ -1399,14 +1399,7 @@ canvas.tc{display:block;width:100%;height:100%}
   <div class="sf-wrap">
 
     <!-- Info bar (read-only — upload is in Admin Panel) -->
-    <div class="sf-upload-bar" style="justify-content:space-between">
-      <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:13px">📋</span>
-        <span class="sf-upload-label" style="color:var(--text)">MarketSmith Watchlist</span>
-        <span class="sf-upload-meta" id="sf-upload-meta">Loading…</span>
-      </div>
-      <span style="font-size:10px;color:var(--muted)">Upload via Admin Panel to refresh</span>
-    </div>
+
 
     <!-- Section 1: Focused Watchlist -->
     <div class="sf-section-title">
@@ -4167,8 +4160,8 @@ async function loadStockFilter() {
     .order('rs_rating', { ascending: false });
 
   if (error || !data || !data.length) {
-    if (cards) cards.innerHTML = '<div class="sf-empty">No watchlist data yet.<br>Upload a CSV file above to populate.</div>';
-    if (tbody) tbody.innerHTML = '<tr><td colspan="11" class="sf-empty">Upload CSV to populate</td></tr>';
+    if (cards) cards.innerHTML = '<div class="sf-empty" style="grid-column:1/-1;padding:32px;text-align:center">No stocks in buy range today. Pipeline enriches watchlist each evening.</div>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="11" class="sf-empty">Watchlist data loads after tonight\'s pipeline run.</td></tr>';
     return;
   }
 
