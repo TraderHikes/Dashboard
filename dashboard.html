@@ -1407,8 +1407,24 @@ canvas.tc{display:block;width:100%;height:100%}
         <span style="font-family:var(--f);font-size:15px;font-weight:800;letter-spacing:.03em;color:var(--white)">Focused Watchlist</span>
       </div>
     </div>
-    <div id="sf-focused-cards" class="sf-cards">
-      <div class="sf-loading"><div class="sf-spinner"></div><div>Loading focused watchlist…</div></div>
+    <div class="sf-table-wrap" style="margin-bottom:8px">
+      <table class="sf-table" id="sf-focused-table">
+        <thead><tr>
+          <th onclick="sfSortFocused('symbol')">Symbol</th>
+          <th onclick="sfSortFocused('company_name')">Company</th>
+          <th onclick="sfSortFocused('cur_price')">CMP ₹</th>
+          <th onclick="sfSortFocused('price_chg_pct')">Change %</th>
+          <th onclick="sfSortFocused('rs_rating')" class="sf-srt">RS</th>
+          <th onclick="sfSortFocused('sector_name')">Sector</th>
+          <th onclick="sfSortFocused('sector_score')">Sector Score</th>
+          <th onclick="sfSortFocused('pct_from_21ema')">vs 21 EMA</th>
+          <th onclick="sfSortFocused('pct_from_10wema')">vs 10W EMA</th>
+          <th onclick="sfSortFocused('pct_from_200ema')">vs 200 EMA</th>
+        </tr></thead>
+        <tbody id="sf-focused-tbody">
+          <tr><td colspan="10" class="sf-empty">Loading…</td></tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- Section 2: Full Watchlist Table -->
@@ -4179,49 +4195,55 @@ async function loadStockFilter() {
 }
 
 // ── Focused Cards (in_buy_range = true) ──────────────────────────
-function sfRenderCards() {
-  const el = document.getElementById('sf-focused-cards');
-  if (!el) return;
-  const focused = _sfData.filter(s => s.in_buy_range);
+function sfRenderCards() { sfRenderFocused(); } // alias for boot call
+
+let _sfFocusedSortKey = 'rs_rating';
+let _sfFocusedSortDir = -1;
+
+function sfRenderFocused() {
+  const tbody = document.getElementById('sf-focused-tbody');
+  if (!tbody) return;
+  let focused = _sfData.filter(s => s.in_buy_range);
 
   if (!focused.length) {
-    el.innerHTML = '<div class="sf-empty" style="grid-column:1/-1;padding:28px">No stocks in buy range today. Check back after market hours.</div>';
+    tbody.innerHTML = '<tr><td colspan="10" class="sf-empty" style="padding:28px">No stocks in focus range today. Check back after pipeline runs.</td></tr>';
     return;
   }
 
-  el.innerHTML = focused.map(s => {
-    const chgCol = (s.price_chg_pct||0) >= 0 ? 'var(--green)' : 'var(--red)';
+  // Sort
+  focused.sort((a,b) => {
+    const av=a[_sfFocusedSortKey], bv=b[_sfFocusedSortKey];
+    if(av==null) return 1; if(bv==null) return -1;
+    return typeof av==='string' ? av.localeCompare(bv)*_sfFocusedSortDir : (av-bv)*_sfFocusedSortDir;
+  });
+
+  tbody.innerHTML = focused.map(s => {
+    const chgCol = (s.price_chg_pct||0)>=0 ? 'var(--green)' : 'var(--red)';
     const secCol = sfScoreCol(s.sector_score||0);
-    return `<div class="sf-card">
-      <div class="sf-card-top">
-        <div>
-          <div class="sf-sym">${s.symbol}</div>
-          <div class="sf-co">${s.company_name||'—'}</div>
-        </div>
-        <div class="sf-rs">RS ${s.rs_rating||'—'}</div>
-      </div>
-      <div class="sf-price">${sfFmt(s.cur_price)}</div>
-      <div class="sf-chg" style="color:${chgCol}">${sfPct(s.price_chg_pct)} today</div>
-      <div class="sf-emas">
-        <div class="sf-ema-item">
-          <div class="sf-ema-val" style="color:${sfEmaCol(s.pct_from_21ema)}">${sfPct(s.pct_from_21ema)}</div>
-          <div class="sf-ema-lbl">21 EMA</div>
-        </div>
-        <div class="sf-ema-item">
-          <div class="sf-ema-val" style="color:${sfEmaCol(s.pct_from_10wema)}">${sfPct(s.pct_from_10wema)}</div>
-          <div class="sf-ema-lbl">10W EMA</div>
-        </div>
-        <div class="sf-ema-item">
-          <div class="sf-ema-val" style="color:${sfEmaCol(s.pct_from_200ema)}">${sfPct(s.pct_from_200ema)}</div>
-          <div class="sf-ema-lbl">200 EMA</div>
-        </div>
-      </div>
-      ${s.sector_name ? `<div class="sf-sector-badge">
-        <div class="sf-sector-dot" style="background:${secCol}"></div>
-        ${s.sector_name} · ${s.sector_score||'?'}
-      </div>` : ''}
-    </div>`;
+    return `<tr>
+      <td class="sf-sym-cell">${s.symbol}</td>
+      <td style="color:var(--text2);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.company_name||'—'}</td>
+      <td style="font-weight:700">${sfFmt(s.cur_price)}</td>
+      <td style="color:${chgCol};font-weight:700">${sfPct(s.price_chg_pct)}</td>
+      <td><span style="background:rgba(92,111,251,.15);color:var(--blue-lt);padding:2px 8px;border-radius:4px;font-weight:700;font-family:var(--fm)">${s.rs_rating||'—'}</span></td>
+      <td style="color:var(--text2)">${s.sector_name||'—'}</td>
+      <td><span style="color:${secCol};font-weight:700">${s.sector_score||'—'}</span> <span style="font-size:9px;color:var(--muted)">${s.sector_label||''}</span></td>
+      <td style="color:${sfEmaCol(s.pct_from_21ema)};font-weight:700">${sfPct(s.pct_from_21ema)}</td>
+      <td style="color:${sfEmaCol(s.pct_from_10wema)};font-weight:700">${sfPct(s.pct_from_10wema)}</td>
+      <td style="color:${sfEmaCol(s.pct_from_200ema)};font-weight:700">${sfPct(s.pct_from_200ema)}</td>
+    </tr>`;
   }).join('');
+
+  // Update header sort indicators
+  document.querySelectorAll('#sf-focused-table th').forEach(th => {
+    th.classList.toggle('sf-srt', th.getAttribute('onclick') === `sfSortFocused('${_sfFocusedSortKey}')`);
+  });
+}
+
+function sfSortFocused(key) {
+  if (_sfFocusedSortKey===key) _sfFocusedSortDir *= -1;
+  else { _sfFocusedSortKey=key; _sfFocusedSortDir=-1; }
+  sfRenderFocused();
 }
 
 // ── Full Table ────────────────────────────────────────────────────
