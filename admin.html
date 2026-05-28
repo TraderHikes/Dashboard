@@ -2387,9 +2387,12 @@ async function wlUploadCSV() {
     const sym = c[iSym];
     if (!sym || sym === '' || sym.toLowerCase() === 'symbol') continue;
     rows.push({
-      symbol:      sym.toUpperCase(),
-      company_name:iCompany >= 0 ? c[iCompany] || null : null,
-      rs_rating:   iRS      >= 0 ? parseInt(c[iRS]) || null : null,
+      symbol:        sym.toUpperCase(),
+      company_name:  iCompany >= 0 ? c[iCompany]                      || null : null,
+      cur_price:     iPrice   >= 0 ? parseFloat(c[iPrice])            || null : null,
+      price_chg_pct: iChgPct  >= 0 ? parseFloat(c[iChgPct])          || null : null,
+      rs_rating:     iRS      >= 0 ? parseInt(c[iRS])                 || null : null,
+      uploaded_at:   new Date().toISOString(),
     });
   }
 
