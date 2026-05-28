@@ -2372,9 +2372,7 @@ async function wlUploadCSV() {
 
   const iSym     = colIdx(['symbol']);
   const iCompany = colIdx(['companyname','company_name','company','name']);
-  const iPrice   = colIdx(['cur_price','price','current_price']);
   const iChange  = colIdx(['price_change','change']);
-  const iChgPct  = colIdx(['price_percentage_chg','price_chg_pct','pct','percentage']);
   const iRS      = colIdx(['rs_rating','rs']);
 
   if (iSym < 0) {
@@ -2387,12 +2385,10 @@ async function wlUploadCSV() {
     const sym = c[iSym];
     if (!sym || sym === '' || sym.toLowerCase() === 'symbol') continue;
     rows.push({
-      symbol:        sym.toUpperCase(),
-      company_name:  iCompany >= 0 ? c[iCompany]                      || null : null,
-      cur_price:     iPrice   >= 0 ? parseFloat(c[iPrice])            || null : null,
-      price_chg_pct: iChgPct  >= 0 ? parseFloat(c[iChgPct])          || null : null,
-      rs_rating:     iRS      >= 0 ? parseInt(c[iRS])                 || null : null,
-      uploaded_at:   new Date().toISOString(),
+      symbol:       sym.toUpperCase(),
+      company_name: iCompany >= 0 ? c[iCompany]   || null : null,
+      rs_rating:    iRS      >= 0 ? parseInt(c[iRS]) || null : null,
+      uploaded_at:  new Date().toISOString(),
     });
   }
 
