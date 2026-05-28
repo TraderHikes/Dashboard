@@ -2254,7 +2254,7 @@ function applyAdminOtSort() {
 async function loadWatchlistAdmin() {
   // Load stats from watchlist_enriched
   const { data: enriched } = await sb.from('watchlist_enriched').select('*').order('rs_rating', { ascending: false });
-  const { data: raw }      = await sb.from('watchlist').select('symbol,company_name,cur_price,price_chg_pct,rs_rating,uploaded_at');
+  const { data: raw }      = await sb.from('watchlist').select('symbol,company_name,rs_rating,uploaded_at');
 
   // Stats
   const total  = raw?.length || 0;
@@ -2306,8 +2306,6 @@ function wlRenderTable() {
   tbody.innerHTML = rows.map(r => `<tr style="border-bottom:1px solid rgba(255,255,255,.03)">
     <td style="padding:8px 10px;font-weight:700;color:var(--white);font-family:var(--fm)">${r.symbol}</td>
     <td style="padding:8px 10px;color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.company_name||'—'}</td>
-    <td style="padding:8px 10px;text-align:right;font-family:var(--fm)">${fmtNum(r.cur_price)}</td>
-    <td style="padding:8px 10px;text-align:right">${fmtChg(r.price_chg_pct)}</td>
     <td style="padding:8px 10px;text-align:center">
       <span style="background:rgba(92,111,251,.15);color:var(--blue-lt);padding:2px 8px;border-radius:4px;font-weight:700;font-family:var(--fm)">${r.rs_rating||'—'}</span>
     </td>
@@ -2671,12 +2669,11 @@ async function wlUploadCSV() {
       <div class="card-body" style="padding:0;overflow-x:auto">
         <table class="data-table" id="wl-table">
           <thead><tr>
-            <th>Symbol</th><th>Company</th><th>CMP ₹</th><th>Change %</th>
-            <th>RS</th><th>vs 21 EMA</th><th>vs 10W EMA</th><th>vs 200 EMA</th>
+            <th>Symbol</th><th>Company</th><th>RS</th><th>vs 21 EMA</th><th>vs 10W EMA</th><th>vs 200 EMA</th>
             <th>Sector</th><th>Status</th><th>Action</th>
           </tr></thead>
           <tbody id="wl-tbody">
-            <tr><td colspan="11" style="text-align:center;color:var(--muted);padding:24px">Loading…</td></tr>
+            <tr><td colspan="9" style="text-align:center;color:var(--muted);padding:24px">Loading…</td></tr>
           </tbody>
         </table>
       </div>
