@@ -80,7 +80,7 @@
   }
 
   /* ── APP LAYOUT ── */
-  .app { max-width:1100px; margin:0 auto; padding:24px 20px; }
+  .app { max-width:100%; margin:0 auto; padding:24px 32px; }
   .app-hdr {
     display:flex; align-items:center; justify-content:space-between;
     margin-bottom:24px; padding-bottom:16px; border-bottom:1px solid var(--bdr);
@@ -147,6 +147,8 @@
     box-shadow:0 0 8px var(--blue);
     border-radius:2px 2px 0 0;
   }
+
+  .form-tab-wrap { max-width:960px; margin:0 auto; }
   .tab-pane { display:none; }
   .tab-pane.active { display:block; }
 
@@ -318,12 +320,12 @@
     <button class="tab-btn" onclick="openTab('tab-students',this)">Students</button>
     <button class="tab-btn" onclick="openTab('tab-breadth',this)">Market Breadth</button>
     <button class="tab-btn" onclick="openTab('tab-snapshot',this)">Portfolio Snapshot</button>
-    <button class="tab-btn" onclick="openTab('tab-closed-edit',this);loadClosedTradesForEdit()">Closed Trades ✎</button>
-    <button class="tab-btn" onclick="openTab('tab-watchlist',this);loadWatchlistAdmin()">📌 Watchlist</button>
+    <button class="tab-btn" onclick="openTab('tab-closed-edit',this);loadClosedTradesForEdit()">Closed Trades</button>
+    <button class="tab-btn" onclick="openTab('tab-watchlist',this);loadWatchlistAdmin()">Watchlist</button>
   </div>
 
   <!-- ════ TAB 1: ADD / VIEW OPEN TRADES ════ -->
-  <div class="tab-pane active" id="tab-open">
+  <div class="tab-pane active" id="tab-open"><div class="form-tab-wrap">
     <div class="card">
       <div class="card-hdr"><span class="card-title">Add New Open Trade</span></div>
       <div class="card-body">
@@ -469,10 +471,10 @@
         </table>
       </div>
     </div>
-  </div>
+  </div></div>
 
   <!-- ════ TAB 2: ADD ENTRY (PYRAMID) ════ -->
-  <div class="tab-pane" id="tab-pyramid">
+  <div class="tab-pane" id="tab-pyramid"><div class="form-tab-wrap">
     <div class="card">
       <div class="card-hdr"><span class="card-title">Add Entry to Existing Position (Pyramid)</span></div>
       <div class="card-body">
@@ -575,10 +577,10 @@
         </form>
       </div>
     </div>
-  </div>
+  </div></div>
 
   <!-- ════ TAB 3: PARTIAL EXIT ════ -->
-  <div class="tab-pane" id="tab-partial">
+  <div class="tab-pane" id="tab-partial"><div class="form-tab-wrap">
     <div class="card">
       <div class="card-hdr"><span class="card-title">Book Partial Profits / Partial Exit</span></div>
       <div class="card-body">
@@ -682,10 +684,10 @@
         </form>
       </div>
     </div>
-  </div>
+  </div></div>
 
   <!-- ════ TAB 4: FINAL EXIT ════ -->
-  <div class="tab-pane" id="tab-close">
+  <div class="tab-pane" id="tab-close"><div class="form-tab-wrap">
     <div class="card">
       <div class="card-hdr"><span class="card-title">Final Exit — Close Trade Completely</span></div>
       <div class="card-body">
@@ -2248,132 +2250,6 @@ function applyAdminOtSort() {
 
 
 // ════════════════════════════════════════════
-// WATCHLIST MANAGEMENT
-// ════════════════════════════════════════════
-
-async function loadWatchlist() {
-  const wrap = document.getElementById('wl-table-wrap');
-  if (!wrap) return;
-  wrap.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:20px 0">Loading…</div>';
-
-  const { data, error } = await sb.from('watchlist')
-    .select('*').order('added_date', { ascending: false });
-
-  if (error || !data || !data.length) {
-    wrap.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:20px 0">No stocks in watchlist yet.</div>';
-    return;
-  }
-
-  const setupBadge = tag => {
-    const map = {'Flag':'rgba(92,111,251,.15)','HTF':'rgba(46,232,220,.15)',
-      'Breakout':'rgba(46,216,160,.15)','Pullback':'rgba(255,179,64,.15)',
-      'Stage-2':'rgba(255,93,122,.12)','Watch':'rgba(255,255,255,.06)'};
-    const col = {'Flag':'var(--blue-lt)','HTF':'#2ee8dc','Breakout':'#2ed8a0',
-      'Pullback':'#ffb340','Stage-2':'#ff8099','Watch':'var(--muted)'};
-    const bg = Object.keys(map).find(k=>tag?.includes(k));
-    return tag ? `<span style="background:${map[bg]||map.Watch};color:${col[bg]||col.Watch};padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700">${tag}</span>` : '—';
-  };
-
-  const rsCol = v => (v||0)>=0?'var(--green)':'var(--red)';
-  const sg = v => (v||0)>=0?'+':'';
-
-  wrap.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <div style="font-size:11px;font-weight:700;color:var(--white)">${data.length} stocks</div>
-      <div style="font-size:10px;color:var(--muted)">Pipeline enriches CMP, RS, EMA daily</div>
-    </div>
-    <table style="width:100%;border-collapse:collapse;font-size:12px">
-      <thead><tr style="border-bottom:1px solid var(--bdr)">
-        ${['Symbol','Company','Setup','Sector','CMP','RS 1M','RS 3M','21·50·200','Notes','Status','Action']
-          .map(h=>`<th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:600;white-space:nowrap">${h}</th>`).join('')}
-      </tr></thead>
-      <tbody>${data.map(s => {
-        const emaDots = [s.above_21ema,s.above_50ema,s.above_200ema].map(v=>
-          `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${v?'#2ed8a0':'#ff5d7a'};margin:0 2px"></span>`).join('');
-        return `<tr style="border-bottom:1px solid rgba(255,255,255,.04)">
-          <td style="padding:9px 10px;font-weight:800;color:var(--white);font-family:var(--fm)">${s.symbol}</td>
-          <td style="padding:9px 10px;color:var(--text2);max-width:140px;overflow:hidden;text-overflow:ellipsis">${s.company_name||'—'}</td>
-          <td style="padding:9px 10px">${setupBadge(s.setup_tag)}</td>
-          <td style="padding:9px 10px;color:var(--muted);font-size:10px">${s.sector||'—'}</td>
-          <td style="padding:9px 10px;font-family:var(--fm)">${s.cmp?'₹'+Number(s.cmp).toLocaleString('en-IN',{maximumFractionDigits:2}):'—'}</td>
-          <td style="padding:9px 10px;font-weight:700;color:${rsCol(s.rs_1m)};font-family:var(--fm)">${s.rs_1m!=null?sg(s.rs_1m)+Number(s.rs_1m).toFixed(1)+'%':'—'}</td>
-          <td style="padding:9px 10px;font-weight:700;color:${rsCol(s.rs_3m)};font-family:var(--fm)">${s.rs_3m!=null?sg(s.rs_3m)+Number(s.rs_3m).toFixed(1)+'%':'—'}</td>
-          <td style="padding:9px 10px">${emaDots}</td>
-          <td style="padding:9px 10px;color:var(--muted);font-size:10px;font-style:italic;max-width:160px;overflow:hidden;text-overflow:ellipsis">${s.notes||'—'}</td>
-          <td style="padding:9px 10px">
-            <span style="padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;background:${s.is_active?'rgba(46,216,160,.15)':'rgba(255,255,255,.06)'};color:${s.is_active?'#2ed8a0':'var(--muted)'}">
-              ${s.is_active?'Active':'Inactive'}
-            </span>
-          </td>
-          <td style="padding:9px 10px;display:flex;gap:6px">
-            <button class="btn btn-ghost btn-sm" onclick="editWatchlistSetup('${s.id}','${s.symbol}','${s.setup_tag||''}')">✎</button>
-            <button class="btn btn-ghost btn-sm" onclick="toggleWatchlist('${s.id}',${s.is_active})">${s.is_active?'Pause':'Resume'}</button>
-            <button class="btn btn-danger btn-sm" onclick="removeFromWatchlist('${s.id}','${s.symbol}')">✕</button>
-          </td>
-        </tr>`;
-      }).join('')}</tbody>
-    </table>`;
-}
-
-async function addToWatchlist() {
-  const sym = document.getElementById('wl-symbol').value.trim().toUpperCase();
-  if (!sym) { document.getElementById('wl-error').textContent = 'Symbol is required.'; return; }
-  document.getElementById('wl-error').textContent = '';
-
-  const { error } = await sb.from('watchlist').upsert({
-    symbol:       sym,
-    company_name: document.getElementById('wl-company').value.trim() || null,
-    setup_tag:    document.getElementById('wl-setup').value,
-    sector:       document.getElementById('wl-sector').value.trim() || null,
-    sector_key:   document.getElementById('wl-sector-key').value || null,
-    notes:        document.getElementById('wl-notes').value.trim() || null,
-    is_active:    true,
-    added_date:   new Date().toISOString().split('T')[0],
-  }, { onConflict: 'symbol' });
-
-  if (error) { document.getElementById('wl-error').textContent = '✗ ' + error.message; return; }
-  document.getElementById('wl-success').textContent = `✓ ${sym} added to watchlist. Pipeline will enrich CMP, RS & EMA on next run.`;
-  toast(`${sym} added to watchlist ✓`);
-  ['wl-symbol','wl-company','wl-notes'].forEach(id => { document.getElementById(id).value = ''; });
-  setTimeout(() => { document.getElementById('wl-success').textContent = ''; }, 5000);
-  await loadWatchlist();
-}
-
-async function editWatchlistSetup(id, sym, currentTag) {
-  const tags = ['Flag','HTF','Breakout','Pullback','Stage-2','Watch'];
-  const newTag = prompt(`Setup tag for ${sym}:
-${tags.join(' / ')}`, currentTag);
-  if (newTag === null) return;
-  const notes = prompt(`Notes for ${sym} (optional):`, '');
-  const { error } = await sb.from('watchlist').update({
-    setup_tag: newTag.trim() || null,
-    notes: notes?.trim() || null,
-  }).eq('id', id);
-  if (error) { alert('Error: ' + error.message); return; }
-  toast(`${sym} updated ✓`);
-  await loadWatchlist();
-}
-
-async function toggleWatchlist(id, isActive) {
-  const { error } = await sb.from('watchlist').update({ is_active: !isActive }).eq('id', id);
-  if (error) { alert('Error: ' + error.message); return; }
-  toast(`Stock ${isActive ? 'paused' : 'resumed'} ✓`);
-  await loadWatchlist();
-}
-
-async function removeFromWatchlist(id, sym) {
-  if (!confirm(`Remove ${sym} from watchlist?`)) return;
-  const { error } = await sb.from('watchlist').delete().eq('id', id);
-  if (error) { alert('Error: ' + error.message); return; }
-  toast(`${sym} removed ✓`);
-  await loadWatchlist();
-}
-
-
-// ════════════════════════════════════════════════════════
-// WATCHLIST ADMIN — CSV Upload + Table Management
-// ════════════════════════════════════════════════════════
-let _wlData = [];   // enriched rows for table display
 
 async function loadWatchlistAdmin() {
   // Load stats from watchlist_enriched
@@ -2678,173 +2554,92 @@ async function wlUploadCSV() {
 </div>
 
 
-<!-- ════ WATCHLIST MANAGEMENT TAB ════ -->
+
+
+<!-- ════ WATCHLIST TAB ════ -->
 <div class="tab-pane" id="tab-watchlist">
-  <div class="card">
-    <div class="card-hdr">
-      <span class="card-title">📌 Watchlist Management</span>
-      <span style="font-size:11px;color:var(--muted)">Stocks you add here are enriched daily by the pipeline and shown to students in the Stock Filter tab.</span>
-    </div>
-    <div class="card-body">
-      <div class="alert alert-success" id="wl-success"></div>
-      <div class="alert alert-error"   id="wl-error"></div>
+  <div class="form-tab-wrap">
 
-      <!-- Add Stock Form -->
-      <div style="background:var(--card2);border:1px solid var(--bdr);border-radius:10px;padding:18px;margin-bottom:20px">
-        <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:14px">Add Stock to Watchlist</div>
-        <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
-          <div class="form-group">
-            <label class="form-label">Symbol *</label>
-            <input class="form-input" id="wl-symbol" type="text" placeholder="e.g. DIXON" style="text-transform:uppercase">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Company Name</label>
-            <input class="form-input" id="wl-company" type="text" placeholder="e.g. Dixon Technologies">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Setup Tag</label>
-            <select class="form-select" id="wl-setup">
-              <option value="Flag">Flag</option>
-              <option value="HTF">High Tight Flag</option>
-              <option value="Breakout">Breakout</option>
-              <option value="Pullback">Pullback</option>
-              <option value="Stage-2">Stage-2</option>
-              <option value="Watch">Watch</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
-          <div class="form-group">
-            <label class="form-label">Sector</label>
-            <input class="form-input" id="wl-sector" type="text" placeholder="e.g. Defence">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Sector Key</label>
-            <select class="form-select" id="wl-sector-key">
-              <option value="">— select —</option>
-              <option value="BANK">Bank</option>
-              <option value="IT">IT</option>
-              <option value="AUTO">Auto</option>
-              <option value="PHARMA">Pharma</option>
-              <option value="FMCG">FMCG</option>
-              <option value="METAL">Metal</option>
-              <option value="REALTY">Realty</option>
-              <option value="ENERGY">Energy</option>
-              <option value="INFRA">Infra</option>
-              <option value="DEFENCE">Defence</option>
-              <option value="CHEMICALS">Chemicals</option>
-              <option value="CAP_GOODS">Capital Goods</option>
-              <option value="MFG">Manufacturing</option>
-              <option value="HEALTHCARE">Healthcare</option>
-              <option value="OIL_GAS">Oil & Gas</option>
-              <option value="FIN_SERV">Financial Services</option>
-              <option value="MEDIA">Media</option>
-              <option value="PSU_BANK">PSU Bank</option>
-              <option value="PVT_BANK">Private Bank</option>
-              <option value="CONS_DUR">Consumer Durables</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Notes</label>
-            <input class="form-input" id="wl-notes" type="text" placeholder="Why watching this stock…">
-          </div>
-        </div>
-        <div style="display:flex;justify-content:flex-end">
-          <button class="btn btn-primary" onclick="addToWatchlist()">+ Add to Watchlist</button>
-        </div>
+    <!-- Upload Section -->
+    <div class="card">
+      <div class="card-hdr">
+        <span class="card-title">Upload MarketSmith Watchlist CSV</span>
+        <span style="font-size:11px;color:var(--muted);font-weight:400">Replaces entire watchlist. Pipeline enriches with EMAs + sectors tonight.</span>
       </div>
+      <div class="card-body">
+        <div class="alert alert-success" id="wl-alert-success"></div>
+        <div class="alert alert-error"   id="wl-alert-error"></div>
 
-      <!-- Current Watchlist -->
-      <div id="wl-table-wrap">
-        <div style="color:var(--muted);font-size:12px;padding:20px 0">Loading watchlist…</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-
-<div class="tab-pane" id="tab-watchlist">
-  <div class="card">
-    <div class="card-hdr">
-      <span class="card-title">📋 Watchlist — MarketSmith CSV Upload</span>
-      <span style="font-size:11px;color:var(--muted)">Upload daily from MarketSmith India. Pipeline enriches with EMAs + sectors tonight.</span>
-    </div>
-    <div class="card-body">
-
-      <!-- Upload Section -->
-      <div style="background:var(--bg);border:1px solid var(--bdr);border-radius:10px;padding:18px 20px;margin-bottom:20px">
-        <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:14px">Upload New Watchlist</div>
-        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px">
           <input type="file" id="wl-file-input" accept=".csv"
-            style="font-size:11px;color:var(--text);background:var(--card2);border:1px solid var(--bdr);border-radius:6px;padding:6px 10px;cursor:pointer;font-family:var(--fm)">
+            style="font-size:12px;color:var(--text);background:var(--card2);border:1px solid var(--bdr);border-radius:8px;padding:8px 12px;cursor:pointer;font-family:var(--fm);flex:1;min-width:200px">
           <button onclick="wlUploadCSV()"
-            style="background:var(--blue);border:none;border-radius:6px;padding:8px 20px;font-size:12px;font-weight:600;color:#fff;cursor:pointer;font-family:var(--f)">
-            ⬆ Upload & Replace
+            style="background:var(--blue);border:none;border-radius:8px;padding:10px 24px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;font-family:var(--f);flex-shrink:0">
+            ⬆ Upload &amp; Replace Watchlist
           </button>
           <span id="wl-upload-status" style="font-size:12px;font-family:var(--fm)"></span>
         </div>
-        <div style="margin-top:10px;font-size:10px;color:var(--muted);line-height:1.6">
-          Expected columns: <code>Symbol, CompanyName, Cur_Price, Price_Change, Price_Percentage_chg, RS_Rating</code><br>
-          Upload replaces the entire watchlist. Pipeline runs tonight and enriches all stocks with EMAs, sector data and buy range flags.
-        </div>
-      </div>
 
-      <!-- Status cards -->
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px" id="wl-stats">
-        <div style="background:var(--card2);border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;text-align:center">
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Total Stocks</div>
-          <div style="font-size:22px;font-weight:800;font-family:var(--fm);color:var(--white)" id="wl-stat-total">—</div>
-        </div>
-        <div style="background:var(--card2);border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;text-align:center">
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">In Buy Range</div>
-          <div style="font-size:22px;font-weight:800;font-family:var(--fm);color:#2ed8a0" id="wl-stat-buy">—</div>
-        </div>
-        <div style="background:var(--card2);border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;text-align:center">
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Enriched Date</div>
-          <div style="font-size:13px;font-weight:700;font-family:var(--fm);color:var(--text)" id="wl-stat-date">—</div>
-        </div>
-        <div style="background:var(--card2);border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;text-align:center">
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Avg RS Rating</div>
-          <div style="font-size:22px;font-weight:800;font-family:var(--fm);color:var(--blue-lt)" id="wl-stat-rs">—</div>
+        <div style="background:var(--bg);border:1px solid var(--bdr);border-radius:8px;padding:12px 16px;font-size:11px;color:var(--muted);line-height:1.8">
+          <strong style="color:var(--text2)">Expected CSV columns:</strong>
+          Symbol · CompanyName · Cur_Price · Price_Change · Price_Percentage_chg · RS_Rating<br>
+          <strong style="color:var(--text2)">How it works:</strong>
+          Upload replaces all existing stocks → pipeline runs tonight → enriches with 21/50/200 EMA, sector data, buy range flag → students see updated Focused Watchlist tomorrow morning.
         </div>
       </div>
+    </div>
 
-      <!-- Watchlist table -->
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-        <input type="text" id="wl-search" placeholder="Search symbol or company…"
-          oninput="wlRenderTable()"
-          style="background:var(--card2);border:1px solid var(--bdr);color:var(--text);font-family:var(--fm);font-size:11px;padding:5px 12px;border-radius:6px;outline:none;width:220px">
-        <select id="wl-filter" onchange="wlRenderTable()"
-          style="background:var(--card2);border:1px solid var(--bdr);color:var(--text);font-family:var(--fm);font-size:11px;padding:5px 10px;border-radius:6px;cursor:pointer;outline:none">
-          <option value="all">All Stocks</option>
-          <option value="buy">In Buy Range</option>
-          <option value="enriched">Enriched Only</option>
-          <option value="not_enriched">Not Yet Enriched</option>
-        </select>
-        <span id="wl-count" style="font-size:11px;color:var(--muted);margin-left:auto"></span>
+    <!-- Stats Row -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px" id="wl-stats-row">
+      <div style="background:var(--card);border:1px solid var(--bdr);border-radius:10px;padding:14px;text-align:center">
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Total Stocks</div>
+        <div style="font-size:24px;font-weight:800;font-family:var(--fm);color:var(--white)" id="wl-stat-total">—</div>
       </div>
-      <div style="overflow-x:auto">
-        <table style="width:100%;border-collapse:collapse;font-size:12px" id="wl-table">
-          <thead><tr style="border-bottom:1px solid var(--bdr)">
-            <th style="padding:8px 10px;text-align:left;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:600;white-space:nowrap">Symbol</th>
-            <th style="padding:8px 10px;text-align:left;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:600">Company</th>
-            <th style="padding:8px 10px;text-align:right;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:600">CMP ₹</th>
-            <th style="padding:8px 10px;text-align:right;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:600">Change %</th>
-            <th style="padding:8px 10px;text-align:center;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:600">RS</th>
-            <th style="padding:8px 10px;text-align:center;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:600">vs 21 EMA</th>
-            <th style="padding:8px 10px;text-align:center;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:600">vs 10W EMA</th>
-            <th style="padding:8px 10px;text-align:center;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:600">vs 200 EMA</th>
-            <th style="padding:8px 10px;text-align:left;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:600">Sector</th>
-            <th style="padding:8px 10px;text-align:center;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:600">Status</th>
-            <th style="padding:8px 10px;text-align:center;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:600">Action</th>
+      <div style="background:var(--card);border:1px solid var(--bdr);border-radius:10px;padding:14px;text-align:center">
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">In Buy Range</div>
+        <div style="font-size:24px;font-weight:800;font-family:var(--fm);color:#2ed8a0" id="wl-stat-buy">—</div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--bdr);border-radius:10px;padding:14px;text-align:center">
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Last Enriched</div>
+        <div style="font-size:14px;font-weight:700;font-family:var(--fm);color:var(--text)" id="wl-stat-date">—</div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--bdr);border-radius:10px;padding:14px;text-align:center">
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Avg RS Rating</div>
+        <div style="font-size:24px;font-weight:800;font-family:var(--fm);color:var(--blue-lt)" id="wl-stat-rs">—</div>
+      </div>
+    </div>
+
+    <!-- Watchlist Table -->
+    <div class="card">
+      <div class="card-hdr" style="flex-wrap:wrap;gap:10px">
+        <span class="card-title">Current Watchlist</span>
+        <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+          <input type="text" id="wl-search" placeholder="Search symbol…" oninput="wlRenderTable()"
+            style="background:var(--card2);border:1px solid var(--bdr);color:var(--text);font-family:var(--fm);font-size:11px;padding:5px 12px;border-radius:6px;outline:none;width:180px">
+          <select id="wl-filter" onchange="wlRenderTable()"
+            style="background:var(--card2);border:1px solid var(--bdr);color:var(--text);font-family:var(--fm);font-size:11px;padding:5px 10px;border-radius:6px;cursor:pointer;outline:none">
+            <option value="all">All</option>
+            <option value="buy">In Buy Range</option>
+            <option value="enriched">Enriched</option>
+            <option value="pending">Pending</option>
+          </select>
+          <span id="wl-count" style="font-size:11px;color:var(--muted)"></span>
+        </div>
+      </div>
+      <div class="card-body" style="padding:0;overflow-x:auto">
+        <table class="data-table" id="wl-table">
+          <thead><tr>
+            <th>Symbol</th><th>Company</th><th>CMP ₹</th><th>Change %</th>
+            <th>RS</th><th>vs 21 EMA</th><th>vs 10W EMA</th><th>vs 200 EMA</th>
+            <th>Sector</th><th>Status</th><th>Action</th>
           </tr></thead>
           <tbody id="wl-tbody">
             <tr><td colspan="11" style="text-align:center;color:var(--muted);padding:24px">Loading…</td></tr>
           </tbody>
         </table>
       </div>
-
     </div>
+
   </div>
 </div>
 
