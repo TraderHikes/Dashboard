@@ -289,7 +289,7 @@
     <button class="tab-btn" onclick="openTab('tab-breadth',this)">Market Breadth</button>
     <button class="tab-btn" onclick="openTab('tab-snapshot',this)">Portfolio Snapshot</button>
     <button class="tab-btn" onclick="openTab('tab-closed-edit',this);loadClosedTradesForEdit()">Closed Trades ✎</button>
-    <button class="tab-btn" onclick="openTab('tab-watchlist',this);loadWatchlist()">📌 Watchlist</button>
+    <button class="tab-btn" onclick="openTab('tab-watchlist',this);loadWatchlistAdmin()">📌 Watchlist</button>
   </div>
 
   <!-- ════ TAB 1: ADD / VIEW OPEN TRADES ════ -->
@@ -2339,6 +2339,174 @@ async function removeFromWatchlist(id, sym) {
   await loadWatchlist();
 }
 
+
+// ════════════════════════════════════════════════════════
+// WATCHLIST ADMIN — CSV Upload + Table Management
+// ════════════════════════════════════════════════════════
+let _wlData = [];   // enriched rows for table display
+
+async function loadWatchlistAdmin() {
+  // Load stats from watchlist_enriched
+  const { data: enriched } = await sb.from('watchlist_enriched').select('*').order('rs_rating', { ascending: false });
+  const { data: raw }      = await sb.from('watchlist').select('symbol,company_name,cur_price,price_chg_pct,rs_rating,uploaded_at');
+
+  // Stats
+  const total  = raw?.length || 0;
+  const inBuy  = enriched?.filter(r => r.in_buy_range).length || 0;
+  const dates  = enriched?.map(r => r.enriched_date).filter(Boolean).sort().reverse();
+  const lastDt = dates?.[0] || '—';
+  const avgRS  = raw?.length ? Math.round(raw.reduce((s,r)=>s+(r.rs_rating||0),0)/raw.length) : 0;
+
+  const _s = id => document.getElementById(id);
+  if(_s('wl-stat-total')) _s('wl-stat-total').textContent = total || '—';
+  if(_s('wl-stat-buy'))   _s('wl-stat-buy').textContent   = inBuy || '—';
+  if(_s('wl-stat-date'))  _s('wl-stat-date').textContent  = lastDt;
+  if(_s('wl-stat-rs'))    _s('wl-stat-rs').textContent    = avgRS || '—';
+
+  // Merge raw + enriched for table
+  const enrichedMap = {};
+  (enriched||[]).forEach(r => enrichedMap[r.symbol] = r);
+  _wlData = (raw||[]).map(r => ({ ...r, ...(enrichedMap[r.symbol] || {}) }));
+
+  wlRenderTable();
+}
+
+function wlRenderTable() {
+  const tbody  = document.getElementById('wl-tbody');
+  const countEl= document.getElementById('wl-count');
+  if (!tbody) return;
+
+  const q       = (document.getElementById('wl-search')?.value || '').toLowerCase();
+  const filter  = document.getElementById('wl-filter')?.value || 'all';
+
+  let rows = _wlData.filter(r => {
+    if (q && !r.symbol?.toLowerCase().includes(q) && !r.company_name?.toLowerCase().includes(q)) return false;
+    if (filter === 'buy')         return r.in_buy_range;
+    if (filter === 'enriched')    return r.pct_from_21ema != null;
+    if (filter === 'not_enriched')return r.pct_from_21ema == null;
+    return true;
+  });
+
+  if (countEl) countEl.textContent = rows.length + ' stocks';
+
+  const fmtPct = v => {
+    if (v==null) return '<span style="color:var(--muted)">—</span>';
+    const c = v<=0?'var(--green)':v<=10?'#2ee8dc':v<=20?'#ffb340':'var(--red)';
+    return `<span style="color:${c};font-weight:700">${v>=0?'+':''}${v.toFixed(1)}%</span>`;
+  };
+  const fmtNum = v => v==null?'—':'₹'+Number(v).toLocaleString('en-IN',{maximumFractionDigits:2});
+  const fmtChg = v => v==null?'—':`<span style="color:${v>=0?'var(--green)':'var(--red)'};font-weight:700">${v>=0?'+':''}${v.toFixed(2)}%</span>`;
+
+  tbody.innerHTML = rows.map(r => `<tr style="border-bottom:1px solid rgba(255,255,255,.03)">
+    <td style="padding:8px 10px;font-weight:700;color:var(--white);font-family:var(--fm)">${r.symbol}</td>
+    <td style="padding:8px 10px;color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.company_name||'—'}</td>
+    <td style="padding:8px 10px;text-align:right;font-family:var(--fm)">${fmtNum(r.cur_price)}</td>
+    <td style="padding:8px 10px;text-align:right">${fmtChg(r.price_chg_pct)}</td>
+    <td style="padding:8px 10px;text-align:center">
+      <span style="background:rgba(92,111,251,.15);color:var(--blue-lt);padding:2px 8px;border-radius:4px;font-weight:700;font-family:var(--fm)">${r.rs_rating||'—'}</span>
+    </td>
+    <td style="padding:8px 10px;text-align:center">${fmtPct(r.pct_from_21ema)}</td>
+    <td style="padding:8px 10px;text-align:center">${fmtPct(r.pct_from_10wema)}</td>
+    <td style="padding:8px 10px;text-align:center">${fmtPct(r.pct_from_200ema)}</td>
+    <td style="padding:8px 10px;color:var(--text2);font-size:11px">${r.sector_name||'<span style="color:var(--muted)">—</span>'}</td>
+    <td style="padding:8px 10px;text-align:center">
+      ${r.in_buy_range
+        ? '<span style="background:rgba(46,216,160,.15);color:#2ed8a0;border:1px solid rgba(46,216,160,.25);padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700">✓ BUY RANGE</span>'
+        : r.pct_from_21ema != null
+          ? '<span style="font-size:9px;color:var(--muted)">Enriched</span>'
+          : '<span style="font-size:9px;color:var(--amber)">Pending pipeline</span>'}
+    </td>
+    <td style="padding:8px 10px;text-align:center">
+      <button onclick="wlRemove('${r.symbol}')"
+        style="background:rgba(255,23,68,.12);border:1px solid rgba(255,23,68,.3);border-radius:4px;padding:2px 10px;font-size:10px;color:#ff1744;cursor:pointer">
+        Remove
+      </button>
+    </td>
+  </tr>`).join('');
+}
+
+async function wlRemove(symbol) {
+  if (!confirm(`Remove ${symbol} from watchlist?`)) return;
+  await sb.from('watchlist').delete().eq('symbol', symbol);
+  await sb.from('watchlist_enriched').delete().eq('symbol', symbol);
+  toast(`${symbol} removed from watchlist`);
+  await loadWatchlistAdmin();
+}
+
+// ── CSV Upload ────────────────────────────────────────────────────
+async function wlUploadCSV() {
+  const fileInput = document.getElementById('wl-file-input');
+  const statusEl  = document.getElementById('wl-upload-status');
+
+  if (!fileInput?.files[0]) {
+    if(statusEl){ statusEl.textContent = '⚠ Select a CSV file first'; statusEl.style.color='var(--amber)'; }
+    return;
+  }
+
+  const file = fileInput.files[0];
+  statusEl.textContent = '⏳ Parsing CSV…'; statusEl.style.color = 'var(--amber)';
+
+  const text    = await file.text();
+  const lines   = text.trim().split(/\r?\n/);
+  const headers = lines[0].split(',').map(h => h.replace(/"/g,'').trim().toLowerCase());
+
+  // Flexible column mapping
+  const col = {
+    symbol:  headers.findIndex(h => h.includes('symbol')),
+    company: headers.findIndex(h => h.includes('company') || h.includes('name')),
+    price:   headers.findIndex(h => h === 'cur_price' || (h.includes('price') && !h.includes('chg') && !h.includes('pct') && !h.includes('change'))),
+    change:  headers.findIndex(h => h === 'price_change' || h === 'change'),
+    chgpct:  headers.findIndex(h => h.includes('pct') || h.includes('percentage')),
+    rs:      headers.findIndex(h => h.includes('rs_rating') || h === 'rs'),
+  };
+
+  if (col.symbol < 0) {
+    statusEl.textContent = '❌ No Symbol column found'; statusEl.style.color='var(--red)'; return;
+  }
+
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const c   = lines[i].split(',').map(v => v.replace(/"/g,'').trim());
+    const sym = c[col.symbol];
+    if (!sym || sym.toLowerCase() === 'symbol' || sym === '') continue;
+    rows.push({
+      symbol:        sym.toUpperCase(),
+      company_name:  col.company >= 0  ? c[col.company]                    : null,
+      cur_price:     col.price   >= 0  ? parseFloat(c[col.price])  || null : null,
+      price_change:  col.change  >= 0  ? parseFloat(c[col.change]) || null : null,
+      price_chg_pct: col.chgpct  >= 0  ? parseFloat(c[col.chgpct]) || null : null,
+      rs_rating:     col.rs      >= 0  ? parseInt(c[col.rs])        || null : null,
+      uploaded_at:   new Date().toISOString(),
+    });
+  }
+
+  if (!rows.length) {
+    statusEl.textContent = '❌ No valid rows found'; statusEl.style.color='var(--red)'; return;
+  }
+
+  statusEl.textContent = `⏳ Uploading ${rows.length} stocks…`;
+
+  // Clear existing watchlist + enriched, then insert fresh
+  await sb.from('watchlist').delete().neq('id', 0);
+  await sb.from('watchlist_enriched').delete().neq('id', 0);
+
+  let errors = 0;
+  for (let i = 0; i < rows.length; i += 50) {
+    const { error } = await sb.from('watchlist').insert(rows.slice(i, i+50));
+    if (error) { errors++; console.error('Insert error:', error); }
+  }
+
+  if (errors) {
+    statusEl.textContent = `⚠ Uploaded with ${errors} errors — check console`; statusEl.style.color='var(--amber)';
+  } else {
+    statusEl.textContent = `✓ ${rows.length} stocks uploaded successfully`; statusEl.style.color='var(--green)';
+    toast(`✓ Watchlist updated — ${rows.length} stocks`);
+  }
+
+  // Reload table
+  await loadWatchlistAdmin();
+}
+
 </script>
 
 <!-- ════ EDIT OPEN TRADE MODAL ════ -->
@@ -2560,6 +2728,92 @@ async function removeFromWatchlist(id, sym) {
       <div id="wl-table-wrap">
         <div style="color:var(--muted);font-size:12px;padding:20px 0">Loading watchlist…</div>
       </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="tab-pane" id="tab-watchlist">
+  <div class="card">
+    <div class="card-hdr">
+      <span class="card-title">📋 Watchlist — MarketSmith CSV Upload</span>
+      <span style="font-size:11px;color:var(--muted)">Upload daily from MarketSmith India. Pipeline enriches with EMAs + sectors tonight.</span>
+    </div>
+    <div class="card-body">
+
+      <!-- Upload Section -->
+      <div style="background:var(--bg);border:1px solid var(--bdr);border-radius:10px;padding:18px 20px;margin-bottom:20px">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:14px">Upload New Watchlist</div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <input type="file" id="wl-file-input" accept=".csv"
+            style="font-size:11px;color:var(--text);background:var(--card2);border:1px solid var(--bdr);border-radius:6px;padding:6px 10px;cursor:pointer;font-family:var(--fm)">
+          <button onclick="wlUploadCSV()"
+            style="background:var(--blue);border:none;border-radius:6px;padding:8px 20px;font-size:12px;font-weight:600;color:#fff;cursor:pointer;font-family:var(--f)">
+            ⬆ Upload & Replace
+          </button>
+          <span id="wl-upload-status" style="font-size:12px;font-family:var(--fm)"></span>
+        </div>
+        <div style="margin-top:10px;font-size:10px;color:var(--muted);line-height:1.6">
+          Expected columns: <code>Symbol, CompanyName, Cur_Price, Price_Change, Price_Percentage_chg, RS_Rating</code><br>
+          Upload replaces the entire watchlist. Pipeline runs tonight and enriches all stocks with EMAs, sector data and buy range flags.
+        </div>
+      </div>
+
+      <!-- Status cards -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px" id="wl-stats">
+        <div style="background:var(--card2);border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;text-align:center">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Total Stocks</div>
+          <div style="font-size:22px;font-weight:800;font-family:var(--fm);color:var(--white)" id="wl-stat-total">—</div>
+        </div>
+        <div style="background:var(--card2);border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;text-align:center">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">In Buy Range</div>
+          <div style="font-size:22px;font-weight:800;font-family:var(--fm);color:#2ed8a0" id="wl-stat-buy">—</div>
+        </div>
+        <div style="background:var(--card2);border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;text-align:center">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Enriched Date</div>
+          <div style="font-size:13px;font-weight:700;font-family:var(--fm);color:var(--text)" id="wl-stat-date">—</div>
+        </div>
+        <div style="background:var(--card2);border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;text-align:center">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Avg RS Rating</div>
+          <div style="font-size:22px;font-weight:800;font-family:var(--fm);color:var(--blue-lt)" id="wl-stat-rs">—</div>
+        </div>
+      </div>
+
+      <!-- Watchlist table -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <input type="text" id="wl-search" placeholder="Search symbol or company…"
+          oninput="wlRenderTable()"
+          style="background:var(--card2);border:1px solid var(--bdr);color:var(--text);font-family:var(--fm);font-size:11px;padding:5px 12px;border-radius:6px;outline:none;width:220px">
+        <select id="wl-filter" onchange="wlRenderTable()"
+          style="background:var(--card2);border:1px solid var(--bdr);color:var(--text);font-family:var(--fm);font-size:11px;padding:5px 10px;border-radius:6px;cursor:pointer;outline:none">
+          <option value="all">All Stocks</option>
+          <option value="buy">In Buy Range</option>
+          <option value="enriched">Enriched Only</option>
+          <option value="not_enriched">Not Yet Enriched</option>
+        </select>
+        <span id="wl-count" style="font-size:11px;color:var(--muted);margin-left:auto"></span>
+      </div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12px" id="wl-table">
+          <thead><tr style="border-bottom:1px solid var(--bdr)">
+            <th style="padding:8px 10px;text-align:left;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:600;white-space:nowrap">Symbol</th>
+            <th style="padding:8px 10px;text-align:left;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:600">Company</th>
+            <th style="padding:8px 10px;text-align:right;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:600">CMP ₹</th>
+            <th style="padding:8px 10px;text-align:right;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:600">Change %</th>
+            <th style="padding:8px 10px;text-align:center;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:600">RS</th>
+            <th style="padding:8px 10px;text-align:center;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:600">vs 21 EMA</th>
+            <th style="padding:8px 10px;text-align:center;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:600">vs 10W EMA</th>
+            <th style="padding:8px 10px;text-align:center;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:600">vs 200 EMA</th>
+            <th style="padding:8px 10px;text-align:left;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:600">Sector</th>
+            <th style="padding:8px 10px;text-align:center;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:600">Status</th>
+            <th style="padding:8px 10px;text-align:center;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:600">Action</th>
+          </tr></thead>
+          <tbody id="wl-tbody">
+            <tr><td colspan="11" style="text-align:center;color:var(--muted);padding:24px">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
     </div>
   </div>
 </div>
