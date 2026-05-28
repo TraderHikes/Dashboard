@@ -2390,24 +2390,53 @@ async function wlUploadCSV() {
     statusEl.textContent = '❌ No valid rows found'; statusEl.style.color='var(--red)'; return;
   }
 
-  statusEl.textContent = `⏳ Uploading ${rows.length} stocks…`;
+  statusEl.textContent = `⏳ Uploading ${rows.length} stocks…`; statusEl.style.color = 'var(--amber)';
 
-  // Clear existing watchlist + enriched, then insert fresh
-  await sb.from('watchlist').delete().neq('id', 0);
-  await sb.from('watchlist_enriched').delete().neq('id', 0);
+  // Step 1: Remove symbols no longer in the new CSV
+  // (fetch existing, diff, delete removed ones)
+  const { data: existing } = await sb.from('watchlist').select('symbol');
+  const newSyms = new Set(rows.map(r => r.symbol));
+  const toDelete = (existing || []).map(r => r.symbol).filter(s => !newSyms.has(s));
+  if (toDelete.length) {
+    for (let i = 0; i < toDelete.length; i += 50) {
+      await sb.from('watchlist').delete().in('symbol', toDelete.slice(i, i+50));
+      await sb.from('watchlist_enriched').delete().in('symbol', toDelete.slice(i, i+50));
+    }
+  }
 
-  let errors = 0;
+  // Step 2: Upsert all new rows (insert or update on symbol conflict)
+  let errorMsgs = [];
+  let uploaded  = 0;
   for (let i = 0; i < rows.length; i += 50) {
-    const { error } = await sb.from('watchlist').insert(rows.slice(i, i+50));
-    if (error) { errors++; console.error('Insert error:', error); }
+    const { error } = await sb.from('watchlist')
+      .upsert(rows.slice(i, i+50), { onConflict: 'symbol' });
+    if (error) {
+      errorMsgs.push(error.message);
+      console.error('Upsert error batch', i/50+1, ':', error);
+    } else {
+      uploaded += rows.slice(i, i+50).length;
+    }
   }
 
-  if (errors) {
-    statusEl.textContent = `⚠ Uploaded with ${errors} errors — check console`; statusEl.style.color='var(--amber)';
-  } else {
-    statusEl.textContent = `✓ ${rows.length} stocks uploaded successfully`; statusEl.style.color='var(--green)';
-    toast(`✓ Watchlist updated — ${rows.length} stocks`);
+  if (errorMsgs.length) {
+    const msg = errorMsgs[0].length > 80 ? errorMsgs[0].slice(0,80)+'…' : errorMsgs[0];
+    statusEl.textContent = `❌ Error: ${msg}`;
+    statusEl.style.color = 'var(--red)';
+    // Show in alert too
+    const alertEl = document.getElementById('wl-alert-error');
+    if (alertEl) { alertEl.textContent = `Upload failed: ${errorMsgs[0]}`; alertEl.style.display='block'; }
+    return;
   }
+
+  statusEl.textContent = `✓ ${uploaded} stocks uploaded — ${toDelete.length} removed`;
+  statusEl.style.color = 'var(--green)';
+  const alertEl = document.getElementById('wl-alert-success');
+  if (alertEl) {
+    alertEl.textContent = `✓ Watchlist updated: ${uploaded} stocks loaded, ${toDelete.length} old stocks removed. Pipeline enriches with EMAs tonight.`;
+    alertEl.style.display = 'block';
+    setTimeout(() => { alertEl.style.display='none'; }, 8000);
+  }
+  toast(`✓ Watchlist: ${uploaded} stocks uploaded`);
 
   // Reload table
   await loadWatchlistAdmin();
