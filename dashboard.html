@@ -703,7 +703,7 @@ canvas.tc{display:block;width:100%;height:100%}
 .ch-sub-lbl{color:var(--muted);font-size:10px;letter-spacing:.04em;text-transform:uppercase}
 .ch-asof{font-size:9px;color:var(--muted);letter-spacing:.05em}
 .ch-tv{height:560px;width:100%;position:relative}
-.ch-ohlc{position:absolute;top:40px;left:12px;z-index:3;pointer-events:none;font-family:var(--fm);font-size:11px;color:var(--text2);background:rgba(14,21,40,.6);padding:3px 9px;border-radius:6px;white-space:nowrap;border:1px solid var(--bdr)}
+.ch-ohlc{position:absolute;top:40px;left:12px;z-index:3;pointer-events:none;font-family:var(--fm);font-size:11px;color:var(--white);background:rgba(14,21,40,.72);padding:3px 10px;border-radius:6px;white-space:nowrap;border:1px solid var(--bdr);letter-spacing:.2px}
 .ch-mode{display:flex;gap:8px;padding:12px 12px 0}
 .ch-mode-btn{flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:9px 11px;border-radius:11px;cursor:pointer;border:1px solid var(--bdr2);background:var(--card2);position:relative;overflow:hidden;transition:all .2s;text-align:left}
 .ch-mode-btn .ch-mode-t{font-family:var(--f);font-size:11.5px;font-weight:600;color:var(--text2);position:relative;z-index:1;transition:color .2s}
@@ -713,7 +713,8 @@ canvas.tc{display:block;width:100%;height:100%}
 #ch-mode-full.active{border-color:transparent;background:linear-gradient(135deg,#5c6ffb,#3a4bd6);box-shadow:0 4px 16px rgba(92,111,251,.35)}
 #ch-mode-focused.active{border-color:transparent;background:linear-gradient(135deg,#2ed8a0,#15a87a);box-shadow:0 4px 16px rgba(46,216,160,.35)}
 #ch-mode-focused.active .ch-mode-n{color:rgba(255,255,255,.85)}
-.ch-ohlc .oh-k{color:var(--muted);margin-left:3px}
+.ch-ohlc .oh-k{color:var(--muted);margin-left:9px;margin-right:3px;font-weight:600}
+.ch-ohlc .oh-k:first-child{margin-left:0}
 .ch-ohlc b.pos{color:var(--green)}
 .ch-ohlc b.neg{color:var(--red)}
 .ch-ctrl{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 16px;border-bottom:1px solid var(--bdr);flex-wrap:wrap}
