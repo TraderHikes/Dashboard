@@ -700,9 +700,19 @@ canvas.tc{display:block;width:100%;height:100%}
 .ch-sub{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--fm);font-size:11px;color:var(--text)}
 .ch-sub b{color:var(--white);font-weight:600}
 .ch-sub b.pos{color:var(--green)}.ch-sub b.neg{color:var(--red)}
+.ch-sub-lbl{color:var(--muted);font-size:10px;letter-spacing:.04em;text-transform:uppercase}
 .ch-asof{font-size:9px;color:var(--muted);letter-spacing:.05em}
 .ch-tv{height:560px;width:100%;position:relative}
-.ch-ohlc{position:absolute;top:8px;left:12px;z-index:3;pointer-events:none;font-family:var(--fm);font-size:11px;color:var(--text2);background:rgba(14,21,40,.6);padding:3px 9px;border-radius:6px;white-space:nowrap;border:1px solid var(--bdr)}
+.ch-ohlc{position:absolute;top:40px;left:12px;z-index:3;pointer-events:none;font-family:var(--fm);font-size:11px;color:var(--text2);background:rgba(14,21,40,.6);padding:3px 9px;border-radius:6px;white-space:nowrap;border:1px solid var(--bdr)}
+.ch-mode{display:flex;gap:8px;padding:12px 12px 0}
+.ch-mode-btn{flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:9px 11px;border-radius:11px;cursor:pointer;border:1px solid var(--bdr2);background:var(--card2);position:relative;overflow:hidden;transition:all .2s;text-align:left}
+.ch-mode-btn .ch-mode-t{font-family:var(--f);font-size:11.5px;font-weight:600;color:var(--text2);position:relative;z-index:1;transition:color .2s}
+.ch-mode-btn .ch-mode-n{font-family:var(--fm);font-size:10px;color:var(--muted);position:relative;z-index:1;transition:color .2s}
+.ch-mode-btn:hover{border-color:var(--bdr3)}
+.ch-mode-btn.active .ch-mode-t,.ch-mode-btn.active .ch-mode-n{color:#fff}
+#ch-mode-full.active{border-color:transparent;background:linear-gradient(135deg,#5c6ffb,#3a4bd6);box-shadow:0 4px 16px rgba(92,111,251,.35)}
+#ch-mode-focused.active{border-color:transparent;background:linear-gradient(135deg,#2ed8a0,#15a87a);box-shadow:0 4px 16px rgba(46,216,160,.35)}
+#ch-mode-focused.active .ch-mode-n{color:rgba(255,255,255,.85)}
 .ch-ohlc .oh-k{color:var(--muted);margin-left:3px}
 .ch-ohlc b.pos{color:var(--green)}
 .ch-ohlc b.neg{color:var(--red)}
@@ -1657,8 +1667,18 @@ canvas.tc{display:block;width:100%;height:100%}
 <div class="pane" id="pane-charts">
   <div class="ch-wrap">
     <div class="ch-side">
+      <div class="ch-mode">
+        <button class="ch-mode-btn active" id="ch-mode-full"    onclick="setWatchMode('full',this)">
+          <span class="ch-mode-t">Full Watchlist</span>
+          <span class="ch-mode-n" id="ch-mode-full-n">—</span>
+        </button>
+        <button class="ch-mode-btn" id="ch-mode-focused" onclick="setWatchMode('focused',this)">
+          <span class="ch-mode-t">Focused Watchlist</span>
+          <span class="ch-mode-n" id="ch-mode-focused-n">—</span>
+        </button>
+      </div>
       <div class="ch-search-wrap">
-        <input class="ch-search" id="ch-search" type="text" placeholder="Search watchlist…" oninput="filterCharts(this.value)" autocomplete="off">
+        <input class="ch-search" id="ch-search" type="text" placeholder="Search watchlist…" oninput="filterCharts()" autocomplete="off">
       </div>
       <div class="ch-count" id="ch-count">—</div>
       <div class="ch-list" id="ch-list"><div class="ch-empty">Loading…</div></div>
@@ -4430,6 +4450,7 @@ let _chartsLoaded    = false;
 let _chartsData      = [];
 let _chartsAsOf      = null;
 let _chartsActiveSym = null;
+let _watchMode       = 'full';   // 'full' | 'focused' (focused = in_buy_range)
 
 /* Lightweight Charts runtime state */
 let _lwcPromise   = null;   // library load promise (lazy)
@@ -4528,8 +4549,13 @@ async function loadCharts(){
       document.getElementById('ch-count').textContent = '0 stocks';
       return;
     }
-    renderChartsList(_chartsData);
-    selectChart(_chartsData[0].symbol);
+    // Mode toggle badge counts
+    const focusedCount = _chartsData.filter(r => r.in_buy_range).length;
+    document.getElementById('ch-mode-full-n').textContent    = _chartsData.length + ' stocks';
+    document.getElementById('ch-mode-focused-n').textContent = focusedCount + ' stocks';
+
+    renderChartsList(chartsModeSet());
+    selectChart((chartsModeSet()[0] || _chartsData[0]).symbol);
   }catch(e){
     listEl.innerHTML = '<div class="ch-empty">Could not load watchlist.<br>' + (e.message || e) + '</div>';
   }
@@ -4561,12 +4587,36 @@ function renderChartsList(rows){
   }
 }
 
-function filterCharts(q){
-  q = (q || '').trim().toUpperCase();
-  const rows = !q ? _chartsData : _chartsData.filter(r =>
+/* Stocks visible under the current mode (Full = all, Focused = in_buy_range) */
+function chartsModeSet(){
+  return _watchMode === 'focused'
+    ? _chartsData.filter(r => r.in_buy_range)
+    : _chartsData;
+}
+
+/* Apply current mode + the current search box text, then render */
+function applyChartsFilter(){
+  const q = (document.getElementById('ch-search').value || '').trim().toUpperCase();
+  let rows = chartsModeSet();
+  if(q) rows = rows.filter(r =>
     r.symbol.toUpperCase().includes(q) ||
     (r.company_name || '').toUpperCase().includes(q));
   renderChartsList(rows);
+  return rows;
+}
+
+function filterCharts(){ applyChartsFilter(); }
+
+function setWatchMode(mode, el){
+  _watchMode = mode;
+  document.querySelectorAll('.ch-mode-btn').forEach(b => b.classList.remove('active'));
+  if(el) el.classList.add('active');
+
+  const rows = applyChartsFilter();
+  // If the active stock isn't in this set, jump to the first one that is
+  if(rows.length && !rows.some(r => r.symbol === _chartsActiveSym)){
+    selectChart(rows[0].symbol);
+  }
 }
 
 function selectChart(symbol){
@@ -4680,7 +4730,7 @@ async function renderChart(symbol){
       '<span>' + lbl + ' <b class="' + (v >= 0 ? 'pos' : 'neg') + '">' +
       (v >= 0 ? '+' : '') + v.toFixed(1) + '%</b></span>';
     const sub = [
-      '<span>EOD <b>₹' + lastClose.toFixed(2) + '</b></span>',
+      '<span class="ch-sub-lbl">Distance from EMAs</span>',
       dpct(emaDist['10'],  '10E'),
       dpct(emaDist['20'],  '20E'),
       dpct(emaDist['50'],  '50E'),
