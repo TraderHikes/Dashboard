@@ -463,11 +463,11 @@
         <table class="data-table">
           <thead><tr>
             <th>Symbol</th><th>Company</th><th>Entry Date</th>
-            <th>Avg Entry ₹</th><th>Rem/Total Qty</th><th>SL ₹</th><th>CMP ₹</th>
+            <th>Avg Entry ₹</th><th>Rem/Total Qty</th><th>Invested ₹</th><th>SL ₹</th><th>CMP ₹</th>
             <th>P&L ₹</th><th>Return %</th><th>Pos Size</th><th>Status</th><th>Actions</th>
           </tr></thead>
           <tbody id="open-trades-tbody">
-            <tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px">Loading...</td></tr>
+            <tr><td colspan="13" style="text-align:center;color:var(--muted);padding:20px">Loading...</td></tr>
           </tbody>
         </table>
       </div>
@@ -1417,11 +1417,11 @@ async function loadTradeHistoryForClose(tradeId) {
 }
 async function loadOpenTrades() {
   const tbody = document.getElementById('open-trades-tbody');
-  tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:20px">Loading...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:20px">Loading...</td></tr>';
   const { data, error } = await sb
     .from('open_trades').select('*').order('entry_date', { ascending: false });
-  if (error) { tbody.innerHTML = `<tr><td colspan="12" style="color:var(--red);padding:16px">${error.message}</td></tr>`; return; }
-  if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:20px">No open trades yet.</td></tr>'; return; }
+  if (error) { tbody.innerHTML = `<tr><td colspan="13" style="color:var(--red);padding:16px">${error.message}</td></tr>`; return; }
+  if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:20px">No open trades yet.</td></tr>'; return; }
   _adminOtData = data; // cache for sort
   tbody.innerHTML = data.map(t => {
     const avgEntry = t.avg_entry_price || t.entry_price;
@@ -1446,6 +1446,7 @@ async function loadOpenTrades() {
       <td class="mono">${t.entry_date}</td>
       <td class="mono">\u20b9${Number(avgEntry).toLocaleString('en-IN')}</td>
       <td class="mono">${remQty}<span style="color:var(--muted);font-size:10px">/${t.total_quantity||t.quantity}</span></td>
+      <td class="mono" style="color:var(--text2)">\u20b9${Number(avgEntry*remQty).toLocaleString('en-IN',{maximumFractionDigits:0})}</td>
       <td class="mono" style="color:var(--red)">\u20b9${Number(t.sl_price).toLocaleString('en-IN')}</td>
       <td class="mono">${t.cmp?'\u20b9'+Number(t.cmp).toLocaleString('en-IN'):'<span style="color:var(--muted)">\u2014</span>'}</td>
       <td>${pnlStr}</td>
@@ -2235,6 +2236,7 @@ function applyAdminOtSort() {
       <td class="mono">${t.entry_date||'—'}</td>
       <td class="mono">\u20b9${Number(avgEntry).toLocaleString('en-IN')}</td>
       <td class="mono">${remQty}<span style="color:var(--muted);font-size:10px">/${t.total_quantity||t.quantity}</span></td>
+      <td class="mono" style="color:var(--text2)">\u20b9${Number(avgEntry*remQty).toLocaleString('en-IN',{maximumFractionDigits:0})}</td>
       <td class="mono" style="color:var(--red)">\u20b9${Number(t.sl_price||0).toLocaleString('en-IN')}</td>
       <td class="mono">${t.cmp?'\u20b9'+Number(t.cmp).toLocaleString('en-IN'):'<span style="color:var(--muted)">\u2014</span>'}</td>
       <td>${pnlStr}</td>
