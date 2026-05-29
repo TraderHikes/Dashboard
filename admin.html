@@ -1218,14 +1218,8 @@ document.getElementById('form-pyramid').addEventListener('submit', async e => {
       notes:             fd.get('notes') || null,
     });
 
-    // 2. Update open_trades with new weighted avg
-    await sb.from('open_trades').update({
-      avg_entry_price:  parseFloat(newAvg.toFixed(2)),
-      total_quantity:   newTotalQty,
-      remaining_qty:    newRemQty,
-      has_pyramid:      true,
-      updated_at:       new Date().toISOString(),
-    }).eq('id', tradeId);
+    // 2. Recompute blended position from base + all pyramid legs (single source of truth)
+    await recomputeOpenTrade(tradeId, 'Pyramid entry added');
 
     showAlert('pyramid-success',
       `✓ Entry added! ${t.symbol}: New avg ₹${newAvg.toFixed(2)} · Total qty ${newTotalQty}`,
@@ -1955,26 +1949,8 @@ async function saveEntryLeg(entryId, tradeId) {
 
   if (error) { showEditAlert('Error: ' + error.message,'error'); return; }
 
-  // Recalculate weighted avg + totals on open_trades from all legs
-  const { data: allEntries } = await sb.from('trade_entries')
-    .select('entry_price,quantity').eq('open_trade_id', tradeId);
-  if (allEntries && allEntries.length) {
-    const totalQty = allEntries.reduce((s,e)=>s+e.quantity,0);
-    const wavg = allEntries.reduce((s,e)=>s+(e.entry_price*e.quantity),0) / totalQty;
-    const { data: exits } = await sb.from('partial_exits')
-      .select('quantity').eq('open_trade_id', tradeId);
-    const soldQty = (exits||[]).reduce((s,e)=>s+(e.quantity||0),0);
-    await sb.from('open_trades').update({
-      avg_entry_price: Math.round(wavg*100)/100,
-      total_quantity:  totalQty,
-      remaining_qty:   Math.max(0, totalQty - soldQty),
-      has_pyramid:     allEntries.length > 1,
-      updated_at: new Date().toISOString(),
-    }).eq('id', tradeId);
-  }
-
-  showEditAlert('✓ Entry leg saved. Weighted avg recalculated.','success');
-  toast('Entry leg updated ✓');
+  // Recompute blended position (base in open_trades + pyramid legs)
+  await recomputeOpenTrade(tradeId, 'Pyramid leg saved');
   await loadOpenTrades();
   await loadEditEntries(tradeId);
 }
@@ -2037,54 +2013,55 @@ async function loadAllPartialExits() {
 }
 
 async function deleteEntryLeg(entryId, tradeId) {
-  if (!confirm('Delete this entry leg? The position quantity, average price, and pyramid badge will be recalculated from the remaining legs. This cannot be undone.')) return;
+  if (!confirm('Delete this pyramid leg? The blended quantity, average price, and pyramid badge will be recalculated from the base buy + remaining pyramid legs. This cannot be undone.')) return;
 
   const { error } = await sb.from('trade_entries').delete().eq('id', entryId);
   if (error) { showEditAlert('Error: ' + error.message,'error'); return; }
 
-  // Recompute the parent position from whatever entry legs remain.
-  const { data: remaining } = await sb.from('trade_entries')
-    .select('entry_price,quantity').eq('open_trade_id', tradeId).order('entry_date');
-
-  if (!remaining || remaining.length === 0) {
-    // No recorded legs left. Don't blindly zero the position — warn the admin.
-    await sb.from('open_trades').update({
-      has_pyramid: false,
-      updated_at: new Date().toISOString(),
-    }).eq('id', tradeId);
-    showEditAlert('⚠ Entry leg deleted. No entry legs remain for this trade — please verify/seed the initial entry; quantity was left unchanged.','error');
-    toast('Entry leg deleted — verify position');
-    await loadOpenTrades();
-    await loadOpenTradesForSelect();
-    await loadEditEntries(tradeId);
-    return;
-  }
-
-  // Total bought across remaining legs + weighted-average entry
-  const totalBought = remaining.reduce((s,e)=>s + (e.quantity||0), 0);
-  const wavg = totalBought > 0
-    ? remaining.reduce((s,e)=>s + (e.entry_price*e.quantity), 0) / totalBought
-    : 0;
-
-  // Subtract any quantity already sold via partial exits → true remaining_qty
-  const { data: exits } = await sb.from('partial_exits')
-    .select('quantity').eq('open_trade_id', tradeId);
-  const soldQty = (exits||[]).reduce((s,e)=>s + (e.quantity||0), 0);
-  const remainingQty = Math.max(0, totalBought - soldQty);
-
-  await sb.from('open_trades').update({
-    avg_entry_price: Math.round(wavg*100)/100,
-    total_quantity:  totalBought,
-    remaining_qty:   remainingQty,
-    has_pyramid:     remaining.length > 1,   // ← clears the "P" badge when only the base leg is left
-    updated_at:      new Date().toISOString(),
-  }).eq('id', tradeId);
-
-  showEditAlert(`✓ Entry leg deleted. Position recalculated: avg ₹${(Math.round(wavg*100)/100).toLocaleString('en-IN')} · total qty ${totalBought}${soldQty?` · rem ${remainingQty}`:''}.`,'success');
-  toast('Entry leg deleted — position updated');
+  await recomputeOpenTrade(tradeId, 'Pyramid leg deleted');
   await loadOpenTrades();
   await loadOpenTradesForSelect();
   await loadEditEntries(tradeId);
+}
+
+// ── Option B recompute ────────────────────────────────
+// Model: the BASE buy lives in open_trades.quantity / entry_price.
+// trade_entries holds PYRAMID legs only. Blended position =
+// base + all pyramid legs. remaining_qty = blended total − sold.
+async function recomputeOpenTrade(tradeId, label) {
+  // Read the immutable base from open_trades
+  const { data: ot } = await sb.from('open_trades')
+    .select('quantity,entry_price').eq('id', tradeId).single();
+  if (!ot) return;
+  const baseQty = ot.quantity || 0;
+  const basePx  = ot.entry_price || 0;
+
+  // Pyramid legs (everything in trade_entries for this trade)
+  const { data: pyr } = await sb.from('trade_entries')
+    .select('entry_price,quantity').eq('open_trade_id', tradeId);
+  const pyrLegs = pyr || [];
+
+  const pyrQty  = pyrLegs.reduce((s,e)=>s + (e.quantity||0), 0);
+  const pyrCost = pyrLegs.reduce((s,e)=>s + (e.entry_price*e.quantity), 0);
+
+  const totalQty = baseQty + pyrQty;
+  const wavg = totalQty > 0 ? (basePx*baseQty + pyrCost) / totalQty : basePx;
+
+  // Subtract already-sold qty (partial exits) for true remaining
+  const { data: exits } = await sb.from('partial_exits')
+    .select('quantity').eq('open_trade_id', tradeId);
+  const soldQty = (exits||[]).reduce((s,e)=>s + (e.quantity||0), 0);
+
+  await sb.from('open_trades').update({
+    avg_entry_price: Math.round(wavg*100)/100,
+    total_quantity:  totalQty,
+    remaining_qty:   Math.max(0, totalQty - soldQty),
+    has_pyramid:     pyrLegs.length > 0,   // ← badge reflects pyramids only
+    updated_at:      new Date().toISOString(),
+  }).eq('id', tradeId);
+
+  showEditAlert(`✓ ${label}. Position: ${totalQty} @ ₹${(Math.round(wavg*100)/100).toLocaleString('en-IN')}${pyrLegs.length?` (base ${baseQty} + ${pyrLegs.length} pyramid leg${pyrLegs.length>1?'s':''})`:' (no pyramids)'}.`,'success');
+  toast(label + ' — position updated');
 }
 
 // ── Partial Exits ─────────────────────────────────────
