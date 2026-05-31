@@ -519,7 +519,7 @@ def fetch_sector_breadth(sector_map):
 def fetch_fundamentals(sym_ns):
     """Fetch Market Cap, trailing PE, ROE for one NSE symbol via yfinance.
     Returns a dict with None for any field that's unavailable. Never raises."""
-    out = {"market_cap": None, "pe_ratio": None, "roe": None}
+    out = {"market_cap": None, "pe_ratio": None, "roe": None, "pb_ratio": None}
     try:
         info = yf.Ticker(sym_ns).info or {}
         mc = info.get("marketCap")
@@ -538,6 +538,14 @@ def fetch_fundamentals(sym_ns):
             try:
                 # yfinance returns ROE as a fraction (0.185) → store as % (18.50)
                 out["roe"] = round(float(roe) * 100, 2)
+            except (TypeError, ValueError):
+                pass
+        pb = info.get("priceToBook")
+        if pb is not None:
+            try:
+                pb = float(pb)
+                if pb > 0 and pb < 100000:
+                    out["pb_ratio"] = round(pb, 2)
             except (TypeError, ValueError):
                 pass
     except Exception as e:
@@ -662,6 +670,7 @@ def enrich_watchlist():
                         "market_cap":      fund["market_cap"],
                         "pe_ratio":        fund["pe_ratio"],
                         "roe":             fund["roe"],
+                        "pb_ratio":        fund["pb_ratio"],
                         "enriched_date":   TODAY,
                     })
 
