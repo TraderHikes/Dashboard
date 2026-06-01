@@ -1626,13 +1626,42 @@ document.getElementById('form-close-trade').addEventListener('submit', async e =
     // Position size
     capital_at_entry:  t.capital_at_entry,
     position_size_pct: t.position_size_pct,
+    // Link back to the original open trade so its pyramid legs + partial
+    // exits (still keyed by open_trade_id) can be found for the archive chart.
+    origin_open_trade_id: openId,
   };
 
-  const { error: insertErr } = await sb.from('closed_trades').insert(closedPayload);
+  // Insert and get the new closed-trade id back (needed to key the candle snapshot)
+  const { data: inserted, error: insertErr } = await sb
+    .from('closed_trades').insert(closedPayload).select('id').single();
   if (insertErr) {
     showAlert('close-error', 'Error: ' + insertErr.message, 'error');
     btn.disabled = false; btn.textContent = 'Final Exit → Move to Closed Trades';
     return;
+  }
+  const closedId = inserted && inserted.id;
+
+  // ── Freeze a permanent candle snapshot for the archive chart ──
+  // Copy whatever the pipeline accumulated in trade_candles for this symbol
+  // (entry-through-exit history) into closed_trade_candles. DB-to-DB copy —
+  // no external fetch. Best-effort: a failure here must not block the close.
+  if (closedId) {
+    try {
+      const { data: srcCandles } = await sb
+        .from('trade_candles')
+        .select('date,open,high,low,close,volume')
+        .eq('symbol', t.symbol)
+        .lte('date', exitDate)               // only up to the exit — frozen reference
+        .order('date', { ascending: true });
+      if (srcCandles && srcCandles.length) {
+        const snap = srcCandles.map(c => ({ closed_trade_id: closedId, ...c }));
+        for (let i = 0; i < snap.length; i += 100) {
+          await sb.from('closed_trade_candles').insert(snap.slice(i, i + 100));
+        }
+      }
+    } catch (snapErr) {
+      console.warn('Candle snapshot failed (non-blocking):', snapErr);
+    }
   }
 
   // Delete from open_trades
