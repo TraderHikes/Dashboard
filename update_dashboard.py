@@ -349,7 +349,7 @@ def calculate_market_breadth(symbols, nifty50_close=None):
 # ════════════════════════════════════════════════════════════
 # FII / DII
 # ════════════════════════════════════════════════════════════
-def fetch_fii_dii():
+def fetch_fii_dii(nifty_close=None):
     print("🏦 Fetching FII/DII data...")
     data = None
     last_err = None
@@ -409,13 +409,17 @@ def fetch_fii_dii():
         return
 
     try:
-        sb.table("fii_dii_activity").upsert({
+        row = {
             "activity_date": TODAY,
             "fii_cash_net":  fii_net if fii_net is not None else 0.0,
             "dii_cash_net":  dii_net if dii_net is not None else 0.0,
             "source":        "NSE",
-        }, on_conflict="activity_date").execute()
-        print(f"   ✓ FII: ₹{(fii_net or 0):,.2f}Cr | DII: ₹{(dii_net or 0):,.2f}Cr\n")
+        }
+        if nifty_close is not None:
+            row["nifty_close"] = nifty_close
+        sb.table("fii_dii_activity").upsert(row, on_conflict="activity_date").execute()
+        print(f"   ✓ FII: ₹{(fii_net or 0):,.2f}Cr | DII: ₹{(dii_net or 0):,.2f}Cr"
+              + (f" | Nifty {nifty_close:,.0f}" if nifty_close else "") + "\n")
     except Exception as e:
         print(f"   ⚠️  FII/DII DB write failed: {e}\n")
 
@@ -852,7 +856,7 @@ if __name__ == "__main__":
             save_portfolio_snapshot(cmp_map, n500_val)
             calculate_market_breadth(symbols, nifty50_val)
             fetch_candles_for_open_trades()
-            fetch_fii_dii()
+            fetch_fii_dii(nifty50_val)
             # Step 1: Refresh sector constituents from NSE (live, always current)
             sector_map = fetch_sector_stocks_from_nse()
             # Step 2: Compute breadth using those constituents
