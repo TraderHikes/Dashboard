@@ -147,8 +147,27 @@ CREATE TABLE IF NOT EXISTS public.closed_trades (
   trade_notes TEXT,
   exit_reason TEXT,
   capital_at_entry NUMERIC,
-  position_size_pct NUMERIC
+  position_size_pct NUMERIC,
+  origin_open_trade_id UUID          -- links to original open_trades.id so
+                                     -- pyramids (trade_entries) + partial_exits
+                                     -- can be found for the archive chart
 );
+
+-- ---- closed_trade_candles ----
+-- Frozen OHLCV snapshot per closed trade, captured once at close (copied from
+-- trade_candles). Never updated again — permanent reference for archive charts.
+CREATE TABLE IF NOT EXISTS public.closed_trade_candles (
+  id              BIGSERIAL PRIMARY KEY,
+  closed_trade_id UUID NOT NULL REFERENCES public.closed_trades(id) ON DELETE CASCADE,
+  date            DATE NOT NULL,
+  open            NUMERIC,
+  high            NUMERIC,
+  low             NUMERIC,
+  close           NUMERIC,
+  volume          BIGINT,
+  UNIQUE (closed_trade_id, date)
+);
+CREATE INDEX IF NOT EXISTS idx_ctc_trade ON public.closed_trade_candles(closed_trade_id);
 
 -- ---- trade_candles ----
 -- Daily OHLCV for OPEN-trade symbols (mini charts).
@@ -211,6 +230,10 @@ CREATE TABLE IF NOT EXISTS public.watchlist_enriched (
   sector_name TEXT,
   sector_score NUMERIC,
   sector_label TEXT,
+  market_cap NUMERIC,                 -- fundamentals (yfinance): market cap (₹)
+  pe_ratio NUMERIC,                   -- trailing P/E
+  roe NUMERIC,                        -- return on equity (%)
+  pb_ratio NUMERIC(10,2),             -- price-to-book
   enriched_date DATE DEFAULT CURRENT_DATE,
   updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -364,6 +387,7 @@ ALTER TABLE public.open_trades ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.trade_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.partial_exits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.closed_trades ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.closed_trade_candles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.trade_candles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.watchlist ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.watchlist_enriched ENABLE ROW LEVEL SECURITY;
@@ -444,6 +468,16 @@ CREATE POLICY "Admin can insert trade_candles" ON public.trade_candles FOR INSER
 CREATE POLICY "Authenticated can read trade_candles" ON public.trade_candles FOR SELECT TO authenticated
   USING (true);
 CREATE POLICY "Admin can update trade_candles" ON public.trade_candles FOR UPDATE TO authenticated
+  USING (is_admin());
+
+-- ---- closed_trade_candles ----
+CREATE POLICY "Admin can delete closed_trade_candles" ON public.closed_trade_candles FOR DELETE TO authenticated
+  USING (is_admin());
+CREATE POLICY "Admin can insert closed_trade_candles" ON public.closed_trade_candles FOR INSERT TO authenticated
+  WITH CHECK (is_admin());
+CREATE POLICY "Authenticated can read closed_trade_candles" ON public.closed_trade_candles FOR SELECT TO authenticated
+  USING (true);
+CREATE POLICY "Admin can update closed_trade_candles" ON public.closed_trade_candles FOR UPDATE TO authenticated
   USING (is_admin());
 
 -- ---- watchlist ----
