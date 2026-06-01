@@ -253,6 +253,7 @@ def fetch_cmp_for_open_trades():
 INDEX_MAP = {
     "nifty50":      "^NSEI",     "sensex":       "^BSESN",
     "nifty500":     "^CRSLDX",   "nifty_midcap": "^NSEMDCP150",
+    "nifty_smallcap":"NIFTYSMLCAP250.NS", "nifty_microcap":"NIFTY_MICROCAP250.NS",
     "nifty_it":     "^CNXIT",    "nifty_bank":   "^NSEBANK",
     "nifty_pharma": "^CNXPHARMA","nifty_auto":   "^CNXAUTO",
     "nifty_psubank":"^CNXPSUBANK","nifty_metal":  "^CNXMETAL",
@@ -265,13 +266,22 @@ def fetch_index_levels():
     n500_val = None; nifty50_val = None
     for col_key, ticker in INDEX_MAP.items():
         try:
-            close = get_close_series(ticker, period="5d")
-            if len(close) < 2:
+            # Fetch ~1y so the 200-EMA is well-defined; fall back gracefully.
+            close = get_close_series(ticker, period="1y")
+            if close is None or len(close) < 2:
                 print(f"   ⚠️  {col_key}: not enough data"); continue
             current = round(float(close.iloc[-1]), 2)
             prev    = round(float(close.iloc[-2]), 2)
             row[col_key]           = current
             row[f"{col_key}_prev"] = prev
+            # Above-EMA flags (None when not enough history for that EMA)
+            n = len(close)
+            for p in (21, 50, 200):
+                if n >= p:
+                    ema_val = float(compute_ema(close, p).iloc[-1])
+                    row[f"{col_key}_above_{p}ema"] = bool(current > ema_val)
+                else:
+                    row[f"{col_key}_above_{p}ema"] = None
             if col_key == "nifty500": n500_val    = current
             if col_key == "nifty50":  nifty50_val = current
             print(f"   ✓ {col_key}: {current:,.2f}")
