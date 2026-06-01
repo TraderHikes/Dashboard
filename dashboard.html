@@ -1495,7 +1495,7 @@ canvas.tc{display:block;width:100%;height:100%}
         <option value="pct_desc">Return % ↓</option>
         <option value="pct_asc">Return % ↑</option>
       </select>
-      <span class="chip">60-day daily</span></div></div>
+      <span class="chip">daily · 2–3 mo</span></div></div>
     <div id="ot-container" class="trades-grid"></div>
   </div>
 </div>
@@ -2614,7 +2614,7 @@ async function renderTVChart(tradeId, symbol, entryPrice, slPrice, cmp, entryDat
         timeVisible:     false,   // no date labels
         secondsVisible:  false,
         barSpacing:      7,
-        rightOffset:     8,
+        rightOffset:     5,
         fixLeftEdge:     true,
         fixRightEdge:    true,
         lockVisibleTimeRangeOnResize: true,
@@ -2729,11 +2729,21 @@ async function renderTVChart(tradeId, symbol, entryPrice, slPrice, cmp, entryDat
     markers.sort((a, b) => a.time - b.time);
     if(markers.length > 0) candleSeries.setMarkers(markers);
     const totalCandles = ohlcData.length;
-    const showFrom = Math.max(0, totalCandles - 65);
+    // Default to ~2 months of trading days; widen to ~3 months if the
+    // position has been held longer than 2 months (so the whole trade fits).
+    let lookback = 42;                       // ~2 months (trading days)
+    if(entryDate){
+      const heldDays = (Date.now() - new Date(entryDate).getTime()) / 86400000;
+      if(heldDays > 60) lookback = 63;       // ~3 months
+    }
+    const showFrom = Math.max(0, totalCandles - lookback);
     chart.timeScale().setVisibleRange({
       from: ohlcData[showFrom].time,
       to:   ohlcData[totalCandles - 1].time,
     });
+    // setVisibleRange pins the right edge to the last candle; re-apply the
+    // 5-candle gap so the latest candle isn't jammed against the price axis.
+    chart.timeScale().applyOptions({ rightOffset: 5 });
     tvCharts[tradeId] = chart;
 
     // Responsive resize
