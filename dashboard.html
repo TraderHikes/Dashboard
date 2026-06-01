@@ -622,6 +622,16 @@ canvas.tc{display:block;width:100%;height:100%}
 
 /* ══ STOCK FILTER TAB ══ */
 .sf-wrap{padding:20px 28px}
+.sf-nav{display:flex;gap:10px;margin-bottom:18px}
+.sf-nav-btn{flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 16px;border-radius:11px;cursor:pointer;border:1px solid var(--bdr2);background:var(--card2);transition:all .2s;text-align:left}
+.sf-nav-btn .sf-nav-t{font-family:var(--f);font-size:13px;font-weight:700;color:var(--text2);transition:color .2s}
+.sf-nav-btn .sf-nav-n{font-family:var(--fm);font-size:10px;color:var(--muted);transition:color .2s}
+.sf-nav-btn:hover{border-color:var(--bdr3)}
+.sf-nav-btn.active{border-color:transparent;background:linear-gradient(135deg,#5c6ffb,#3a4bd6);box-shadow:0 4px 16px rgba(92,111,251,.35)}
+.sf-nav-btn.active .sf-nav-t,.sf-nav-btn.active .sf-nav-n{color:#fff}
+.sf-nav-btn.active .sf-nav-n{color:rgba(255,255,255,.85)}
+.sf-scroll{max-height:1950px;overflow-y:auto}
+.sf-scroll thead th{position:sticky;top:0;z-index:2;background:var(--bg)}
 .sf-section-title{font-family:var(--f);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:10px}
 .sf-section-title::after{content:'';flex:1;height:1px;background:var(--bdr)}
 
@@ -1522,17 +1532,21 @@ canvas.tc{display:block;width:100%;height:100%}
 <div class="pane" id="pane-filter">
   <div class="sf-wrap">
 
-    <!-- Info bar (read-only — upload is in Admin Panel) -->
-
-
-    <!-- Section 1: Focused Watchlist -->
-    <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
-      <div style="display:inline-flex;align-items:center;padding:8px 20px;border-radius:10px;background:linear-gradient(135deg,rgba(92,111,251,.18),rgba(92,111,251,.06));border:1px solid rgba(92,111,251,.35);box-shadow:0 0 16px rgba(92,111,251,.12)">
-        <span style="font-family:var(--f);font-size:15px;font-weight:800;letter-spacing:.03em;color:var(--white)">Focused Watchlist</span>
-      </div>
-      <div id="sf-focused-count" style="display:inline-flex;align-items:center;padding:4px 14px;border-radius:20px;background:linear-gradient(135deg,rgba(92,111,251,.18),rgba(92,111,251,.06));border:1px solid rgba(92,111,251,.35);box-shadow:0 0 10px rgba(92,111,251,.12);font-size:11px;font-weight:700;font-family:var(--f);color:var(--blue-lt)">—</div>
+    <!-- Watchlist nav toggle -->
+    <div class="sf-nav">
+      <button id="sfnav-focused" class="sf-nav-btn active" onclick="sfSwitchView('focused')">
+        <span class="sf-nav-t">Focused Watchlist</span>
+        <span class="sf-nav-n" id="sf-focused-count">—</span>
+      </button>
+      <button id="sfnav-full" class="sf-nav-btn" onclick="sfSwitchView('full')">
+        <span class="sf-nav-t">Full Watchlist</span>
+        <span class="sf-nav-n" id="sf-count">—</span>
+      </button>
     </div>
-    <div class="sf-table-wrap" style="margin-bottom:8px">
+
+    <!-- View 1: Focused Watchlist -->
+    <div id="sf-view-focused">
+    <div class="sf-table-wrap sf-scroll" style="margin-bottom:8px">
       <table class="sf-table" id="sf-focused-table">
         <thead><tr>
           <th onclick="sfSortFocused('symbol')">Symbol</th>
@@ -1547,14 +1561,10 @@ canvas.tc{display:block;width:100%;height:100%}
         </tbody>
       </table>
     </div>
-
-    <!-- Section 2: Full Watchlist Table -->
-    <div style="margin-bottom:16px;margin-top:24px;display:flex;align-items:center;gap:12px">
-      <div style="display:inline-flex;align-items:center;padding:8px 20px;border-radius:10px;background:linear-gradient(135deg,rgba(92,111,251,.18),rgba(92,111,251,.06));border:1px solid rgba(92,111,251,.35);box-shadow:0 0 16px rgba(92,111,251,.12)">
-        <span style="font-family:var(--f);font-size:15px;font-weight:800;letter-spacing:.03em;color:var(--white)">Full Watchlist</span>
-      </div>
-      <div id="sf-count" style="display:inline-flex;align-items:center;padding:4px 14px;border-radius:20px;background:linear-gradient(135deg,rgba(92,111,251,.18),rgba(92,111,251,.06));border:1px solid rgba(92,111,251,.35);box-shadow:0 0 10px rgba(92,111,251,.12);font-size:11px;font-weight:700;font-family:var(--f);color:var(--blue-lt)">—</div>
     </div>
+
+    <!-- View 2: Full Watchlist Table -->
+    <div id="sf-view-full" style="display:none">
     <div class="sf-filters">
       <button class="sf-filter-chip on" data-sf="all">All</button>
       <button class="sf-filter-chip" data-sf="above_21">Above 21 EMA</button>
@@ -1562,7 +1572,7 @@ canvas.tc{display:block;width:100%;height:100%}
       <button class="sf-filter-chip" data-sf="bull_sector">Bull Sector</button>
       <input type="text" class="sf-search" id="sf-search" placeholder="Search symbol…" oninput="sfRenderTable()">
     </div>
-    <div class="sf-table-wrap">
+    <div class="sf-table-wrap sf-scroll">
       <table class="sf-table">
         <thead><tr>
           <th onclick="sfSort('symbol')">Symbol</th>
@@ -1580,6 +1590,7 @@ canvas.tc{display:block;width:100%;height:100%}
         </tbody>
       </table>
     </div>
+    </div><!-- /sf-view-full -->
   </div>
 </div>
 <div class="pane" id="pane-sectoral">
@@ -4568,6 +4579,14 @@ const sfFmt      = n => n==null?'—':'₹'+Number(n).toLocaleString('en-IN',{ma
 const sfPct      = v => v==null?'—':(v>=0?'+':'')+Number(v).toFixed(1)+'%';
 
 // ── Load from Supabase ────────────────────────────────────────────
+function sfSwitchView(view){
+  const isFocused = view === 'focused';
+  document.getElementById('sf-view-focused').style.display = isFocused ? 'block' : 'none';
+  document.getElementById('sf-view-full').style.display    = isFocused ? 'none'  : 'block';
+  document.getElementById('sfnav-focused').classList.toggle('active', isFocused);
+  document.getElementById('sfnav-full').classList.toggle('active', !isFocused);
+}
+
 async function loadStockFilter() {
   const ftbody = document.getElementById('sf-focused-tbody');
   const tbody  = document.getElementById('sf-tbody');
