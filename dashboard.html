@@ -1349,21 +1349,19 @@ canvas.tc{display:block;width:100%;height:100%}
     </div>
   </div>
 
-  <!-- ── Row 4: Monthly % Change in Indices ── -->
+  <!-- ── Row 4: Key Indices ── -->
   <div class="card">
     <div class="ch">
-      <span class="ct">Key Indices — Live Prices &amp; Day Change</span>
-      <div class="ch-r"><span class="chip" id="idx-chip">—</span></div>
+      <span class="ct">KEY INDICES</span>
     </div>
     <table class="idx-table">
       <thead><tr>
         <th>Index</th>
-        <th class="r">EOD Level</th>
-        <th class="r">Day Chg</th>
-        <th class="r">Day %</th>
-        <th class="r">Prev Close</th>
-        <th class="r">As Of</th>
-        <th class="r" style="width:120px">Bar</th>
+        <th class="r">Day Close</th>
+        <th class="r">% Change</th>
+        <th class="r">Above 21d EMA</th>
+        <th class="r">Above 50d EMA</th>
+        <th class="r">Above 200d EMA</th>
       </tr></thead>
       <tbody id="idx-tbody"></tbody>
     </table>
@@ -4256,25 +4254,19 @@ const monthlyG=[
 
 /* ── Key Indices — from Supabase index_levels table ── */
 const IDX_CONFIG = [
-  { name:'NIFTY 50',        sub:'Large Cap',        key:'nifty50'      },
-  { name:'SENSEX',          sub:'BSE Large Cap',     key:'sensex'       },
-  { name:'NIFTY 500',       sub:'Broad Market',      key:'nifty500'     },
-  { name:'NIFTY MIDCAP 150',sub:'Mid Cap',           key:'nifty_midcap' },
-  { name:'NIFTY IT',        sub:'Information Tech',  key:'nifty_it'     },
-  { name:'NIFTY BANK',      sub:'Banking',           key:'nifty_bank'   },
-  { name:'NIFTY PHARMA',    sub:'Pharmaceuticals',   key:'nifty_pharma' },
-  { name:'NIFTY AUTO',      sub:'Automobiles',       key:'nifty_auto'   },
-  { name:'NIFTY PSU BANK',  sub:'PSU Banking',       key:'nifty_psubank'},
-  { name:'NIFTY METAL',     sub:'Metals & Mining',   key:'nifty_metal'  },
-  { name:'NIFTY REALTY',    sub:'Real Estate',       key:'nifty_realty' },
-  { name:'NIFTY FMCG',      sub:'FMCG',              key:'nifty_fmcg'   },
+  { name:'NIFTY 50',          key:'nifty50'        },
+  { name:'SENSEX',            key:'sensex'         },
+  { name:'NIFTY 500',         key:'nifty500'       },
+  { name:'NIFTY MIDCAP 150',  key:'nifty_midcap'   },
+  { name:'NIFTY SMALLCAP 250',key:'nifty_smallcap' },
+  { name:'NIFTY MICROCAP 250',key:'nifty_microcap' },
 ];
 
 async function buildIdxTableLive() {
   const tb = document.getElementById('idx-tbody');
   if(!tb) return;
 
-  tb.innerHTML = `<tr><td colspan="7" style="text-align:center;
+  tb.innerHTML = `<tr><td colspan="6" style="text-align:center;
     color:var(--muted);padding:20px;font-size:12px">
     Loading index data...</td></tr>`;
 
@@ -4311,53 +4303,42 @@ async function buildIdxTableLive() {
       const cur  = row[item.key];
       const prev = row[`${item.key}_prev`];
       const chg  = fmtChg(cur, prev);
-      return { ...item, cur, prev, chg };
+      return {
+        ...item, cur, prev, chg,
+        a21:  row[`${item.key}_above_21ema`],
+        a50:  row[`${item.key}_above_50ema`],
+        a200: row[`${item.key}_above_200ema`],
+      };
     }).filter(r => r.cur); // skip any that have no data
 
     if(rows.length === 0) throw new Error('Index data not yet populated');
 
-    const maxAbsPct = Math.max(...rows.map(r => Math.abs(r.chg.pct || 0)), 1);
+    // tick / cross / dash for the above-EMA flags
+    const mark = (v) => {
+      if(v === true)  return '<span style="color:var(--green);font-weight:700">✓</span>';
+      if(v === false) return '<span style="color:var(--red);font-weight:700">✕</span>';
+      return '<span style="color:var(--muted)">—</span>';
+    };
 
     tb.innerHTML = rows.map(r => {
-      const barW   = Math.round((Math.abs(r.chg.pct || 0) / maxAbsPct) * 76);
-      const barCol = r.chg.pos
-        ? 'linear-gradient(90deg,#1ab880,var(--green))'
-        : 'linear-gradient(90deg,var(--red),#c03050)';
       const col = r.chg.pos ? 'var(--green)' : 'var(--red)';
       return `<tr>
-        <td><div class="idx-name">${r.name}</div><div class="idx-sub2">${r.sub}</div></td>
+        <td><div class="idx-name">${r.name}</div></td>
         <td class="r" style="font-weight:700;color:var(--white);font-family:var(--fm)">${fmtNum(r.cur)}</td>
-        <td class="r" style="font-family:var(--fm)">
-          <span style="color:${col};font-weight:600">${r.chg.str}</span>
-        </td>
         <td class="r"><span class="idx-pct ${r.chg.pos?'g':'r'}">${r.chg.pctStr||'—'}</span></td>
-        <td class="r" style="color:var(--muted);font-size:11px;font-family:var(--fm)">
-          ${r.prev ? fmtNum(r.prev) : '—'}
-        </td>
-        <td class="r" style="color:var(--muted);font-size:11px">EOD</td>
-        <td class="r">
-          <div class="idx-bar">
-            <div class="idx-track">
-              <div class="idx-fill" style="width:${barW}%;background:${barCol}"></div>
-            </div>
-            <span style="font-size:10px;color:${col};font-family:var(--fm);
-              font-weight:700;width:44px;text-align:right">${r.chg.pctStr||'—'}</span>
-          </div>
-        </td>
+        <td class="r">${mark(r.a21)}</td>
+        <td class="r">${mark(r.a50)}</td>
+        <td class="r">${mark(r.a200)}</td>
       </tr>`;
     }).join('');
 
-    // Update chip and header
-    const chip = document.getElementById('idx-chip');
-    if(chip) chip.textContent = `EOD · ${updDate}`;
-
   } catch(err) {
     console.warn('Index table error:', err.message);
-    tb.innerHTML = `<tr><td colspan="7" style="text-align:center;
+    tb.innerHTML = `<tr><td colspan="6" style="text-align:center;
       color:var(--muted);padding:24px;font-size:12px;line-height:1.8">
       Index data not available yet.<br>
       <span style="font-size:11px;color:var(--muted)">
-        The pipeline saves index levels daily at 4:30 PM IST.<br>
+        The pipeline saves index levels daily after market close.<br>
         Run the pipeline manually from GitHub Actions to populate data now.
       </span>
     </td></tr>`;
@@ -4649,8 +4630,6 @@ async function loadMarketBreadth() {
 
   // ── Updated chip ─────────────────────────────
   setText('breadth-updated-chip', `Updated ${updDate}`);
-  const idxChip = document.getElementById('idx-chip');
-  if(idxChip) idxChip.textContent = `EOD · ${new Date().toLocaleDateString('en-IN',{month:'long',year:'numeric'})}`;
 
   // Load FII/DII data
   await loadFiiDii();
