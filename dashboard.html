@@ -2548,14 +2548,17 @@ async function renderTVChart(tradeId, symbol, entryPrice, slPrice, cmp, entryDat
 
   try {
     // ── Step 1: Fetch candles (simple, independent query) ──
+    // Order DESC + limit to get the *newest* 180 bars, then reverse to
+    // ascending for the chart. (Ascending+limit would drop the most recent
+    // candles once a symbol accumulates more than 180 rows.)
     const candleRes = await sb
       .from('trade_candles')
       .select('date,open,high,low,close,volume')
       .eq('symbol', symbol)
-      .order('date', { ascending: true })
+      .order('date', { ascending: false })
       .limit(180);
 
-    const candles = candleRes.data;
+    const candles = (candleRes.data || []).slice().reverse();
     const candleErr = candleRes.error;
 
     console.log(`[TV] ${symbol}: ${candles?.length||0} candles, error:`, candleErr);
