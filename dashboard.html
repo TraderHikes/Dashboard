@@ -2614,7 +2614,7 @@ async function renderTVChart(tradeId, symbol, entryPrice, slPrice, cmp, entryDat
         timeVisible:     false,   // no date labels
         secondsVisible:  false,
         barSpacing:      7,
-        rightOffset:     5,
+        rightOffset:     15,
         fixLeftEdge:     true,
         fixRightEdge:    true,
         lockVisibleTimeRangeOnResize: true,
@@ -2742,8 +2742,8 @@ async function renderTVChart(tradeId, symbol, entryPrice, slPrice, cmp, entryDat
       to:   ohlcData[totalCandles - 1].time,
     });
     // setVisibleRange pins the right edge to the last candle; re-apply the
-    // 5-candle gap so the latest candle isn't jammed against the price axis.
-    chart.timeScale().applyOptions({ rightOffset: 5 });
+    // 15-candle gap so the latest candle isn't jammed against the price axis.
+    chart.timeScale().applyOptions({ rightOffset: 15 });
     tvCharts[tradeId] = chart;
 
     // Responsive resize
@@ -3477,6 +3477,7 @@ async function renderClosed(){
       .order('exit_date');
 
     const pxList   = partials || [];
+    _closedCache[t.id] = { trade: t, partials: pxList };
     const lockedPnl= pxList.reduce((s,p)=>s+(p.realised_pnl||0),0);
     const finalPnl = (t.realised_pnl||0) - lockedPnl;  // final leg only
     const totalPnlT= t.realised_pnl||0;
@@ -3581,10 +3582,195 @@ async function renderClosed(){
 
         <!-- Notes only — P&L shown in header badge -->
         ${t.trade_notes?`<div style="border-top:1px solid var(--bdr);margin-top:8px;padding-top:8px;font-size:9px;color:var(--muted);font-style:italic">"${t.trade_notes}"</div>`:''}
+
+        <!-- Chart actions -->
+        <div style="border-top:1px solid var(--bdr);margin-top:10px;padding-top:10px;display:flex;gap:8px">
+          <button onclick="toggleClosedChart('${t.id}','${t.symbol}')" id="cbtn-${t.id}"
+            style="font-size:11px;font-weight:600;padding:6px 14px;border-radius:7px;cursor:pointer;
+            background:var(--card2);border:1px solid var(--bdr);color:var(--text2)">
+            📈 View Chart
+          </button>
+          <button onclick="downloadClosedPDF('${t.id}')" id="cpdf-${t.id}"
+            style="font-size:11px;font-weight:600;padding:6px 14px;border-radius:7px;cursor:pointer;
+            background:var(--card2);border:1px solid var(--bdr);color:var(--text2)">
+            ⬇ Download PDF
+          </button>
+        </div>
+        <div id="cchart-${t.id}" style="display:none;margin-top:10px"></div>
       </div>`;
 
     grid.appendChild(card);
   }
+}
+
+/* ══════════════════════════════════════════════════
+   CLOSED-TRADE ARCHIVE CHARTS  (frozen snapshot + PDF)
+══════════════════════════════════════════════════ */
+const _closedCache  = {};   // id → { trade, partials }
+const _closedCharts = {};   // id → chart instance
+
+async function toggleClosedChart(id, symbol){
+  const box = document.getElementById('cchart-' + id);
+  const btn = document.getElementById('cbtn-' + id);
+  if(!box) return;
+  if(box.style.display !== 'none'){
+    box.style.display = 'none';
+    if(btn) btn.innerHTML = '📈 View Chart';
+    return;
+  }
+  box.style.display = 'block';
+  if(btn) btn.innerHTML = '▲ Hide Chart';
+  if(!_closedCharts[id]) await renderClosedChart(id, symbol);
+}
+
+async function renderClosedChart(id, symbol){
+  const box = document.getElementById('cchart-' + id);
+  const cache = _closedCache[id];
+  if(!box || !cache) return;
+  box.innerHTML = '<div style="padding:30px;text-align:center;color:var(--muted);font-size:11px">Loading chart…</div>';
+
+  // Frozen candle snapshot for this closed trade
+  const { data: candles, error } = await sb
+    .from('closed_trade_candles')
+    .select('date,open,high,low,close')
+    .eq('closed_trade_id', id)
+    .order('date', { ascending: true });
+
+  if(error || !candles || candles.length < 3){
+    box.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">No chart snapshot for this trade.<br><span style="font-size:9px">(Only trades closed after this feature was added have snapshots.)</span></div>';
+    return;
+  }
+
+  box.innerHTML = '<div id="cchartcv-' + id + '" style="height:340px;width:100%"></div>';
+  const el = document.getElementById('cchartcv-' + id);
+
+  const chart = LightweightCharts.createChart(el, {
+    width: el.offsetWidth, height: 340,
+    layout: { background:{ type:'solid', color:'transparent' }, textColor:'#8b9bb4' },
+    grid: { vertLines:{ color:'rgba(255,255,255,.04)' }, horzLines:{ color:'rgba(255,255,255,.04)' } },
+    rightPriceScale: { borderColor:'rgba(255,255,255,.1)' },
+    timeScale: { borderColor:'rgba(255,255,255,.1)', rightOffset: 5, fixLeftEdge:true, fixRightEdge:true },
+    handleScroll:false, handleScale:false,
+  });
+  const series = chart.addCandlestickSeries({
+    upColor:'#1ec993', downColor:'#f05272', borderVisible:false,
+    wickUpColor:'#1ec993', wickDownColor:'#f05272',
+  });
+  series.setData(candles.map(c => ({ time:c.date, open:+c.open, high:+c.high, low:+c.low, close:+c.close })));
+
+  const t  = cache.trade;
+  const px = cache.partials || [];
+
+  // Price lines: avg entry, SL, avg exit
+  series.createPriceLine({ price:+t.avg_entry_price, color:'#5c6ffb', lineWidth:1, lineStyle:2, axisLabelVisible:true, title:'Entry' });
+  if(t.sl_price) series.createPriceLine({ price:+t.sl_price, color:'#f05272', lineWidth:1, lineStyle:2, axisLabelVisible:true, title:'SL' });
+  series.createPriceLine({ price:+t.avg_exit_price, color:'#ffd84d', lineWidth:1, lineStyle:2, axisLabelVisible:true, title:'Exit' });
+
+  // Markers: entry, pyramids, partials, final exit
+  const markers = [];
+  markers.push({ time:t.entry_date, position:'belowBar', color:'#5c6ffb', shape:'arrowUp', text:'Entry' });
+
+  // Pyramid legs via the original open-trade id
+  if(t.origin_open_trade_id){
+    const { data: pyr } = await sb.from('trade_entries')
+      .select('entry_date,entry_price').eq('open_trade_id', t.origin_open_trade_id).order('entry_date');
+    (pyr||[]).forEach(p => markers.push({
+      time:p.entry_date, position:'belowBar', color:'#a974ff', shape:'arrowUp', text:'Pyramid' }));
+  }
+  px.forEach(p => markers.push({
+    time:p.exit_date, position:'aboveBar', color:'#ffb020', shape:'arrowDown', text:'Partial' }));
+  markers.push({ time:t.exit_date, position:'aboveBar', color:'#f05272', shape:'arrowDown', text:'Exit' });
+
+  markers.sort((a,b)=> a.time < b.time ? -1 : 1);
+  series.setMarkers(markers);
+  chart.timeScale().fitContent();
+  chart.timeScale().applyOptions({ rightOffset: 5 });
+  _closedCharts[id] = chart;
+}
+
+async function downloadClosedPDF(id){
+  const cache = _closedCache[id];
+  if(!cache) return;
+  const t = cache.trade, px = cache.partials || [];
+  const btn = document.getElementById('cpdf-' + id);
+  const orig = btn ? btn.innerHTML : '';
+  if(btn){ btn.innerHTML = 'Preparing…'; btn.disabled = true; }
+
+  try {
+    // Ensure chart is rendered (need it visible to capture)
+    const box = document.getElementById('cchart-' + id);
+    const wasHidden = box && box.style.display === 'none';
+    if(wasHidden){ box.style.display = 'block'; await renderClosedChart(id, t.symbol); await new Promise(r=>setTimeout(r,600)); }
+    else if(!_closedCharts[id]){ await renderClosedChart(id, t.symbol); await new Promise(r=>setTimeout(r,600)); }
+
+    await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:'pt', format:'a4' });
+    const W = doc.internal.pageSize.getWidth();
+
+    // Header
+    doc.setFontSize(16); doc.setTextColor(20,20,20);
+    doc.text(`${t.symbol} — ${t.company_name||''}`, 40, 48);
+    doc.setFontSize(10); doc.setTextColor(110,110,110);
+    doc.text(`Closed trade · ${t.entry_date} → ${t.exit_date} · ${t.holding_days||0} days held`, 40, 66);
+
+    // Chart image
+    const cv = document.getElementById('cchartcv-' + id);
+    if(cv){
+      const canvas = await html2canvas(cv, { backgroundColor:'#0e1528', scale:2 });
+      const img = canvas.toDataURL('image/png');
+      const iw = W - 80, ih = iw * (canvas.height / canvas.width);
+      doc.addImage(img, 'PNG', 40, 84, iw, ih);
+      var yPos = 84 + ih + 24;
+    } else { var yPos = 100; }
+
+    // Details table
+    const rows = [
+      ['Avg Entry', `Rs ${Number(t.avg_entry_price||0).toLocaleString('en-IN')}`],
+      ['Avg Exit',  `Rs ${Number(t.avg_exit_price||0).toLocaleString('en-IN')}`],
+      ['Stop Loss', t.sl_price?`Rs ${Number(t.sl_price).toLocaleString('en-IN')}`:'—'],
+      ['Total Qty', String(t.quantity||0)],
+      ['Realised P&L', `${t.realised_pnl>=0?'+':''}Rs ${Math.abs(t.realised_pnl||0).toLocaleString('en-IN')}`],
+      ['Return %', `${t.return_pct>=0?'+':''}${Number(t.return_pct||0).toFixed(2)}%`],
+      ['Exit Reason', t.exit_reason||'—'],
+      ['Partial Exits', px.length?String(px.length):'None'],
+    ];
+    doc.setFontSize(12); doc.setTextColor(20,20,20);
+    doc.text('Trade Details', 40, yPos); yPos += 8;
+    doc.setFontSize(10);
+    rows.forEach(([k,v]) => {
+      yPos += 18;
+      doc.setTextColor(110,110,110); doc.text(k, 48, yPos);
+      doc.setTextColor(20,20,20);    doc.text(String(v), 220, yPos);
+    });
+    if(px.length){
+      yPos += 26; doc.setFontSize(12); doc.text('Partial Exits', 40, yPos);
+      doc.setFontSize(9);
+      px.forEach(p => { yPos += 16; doc.setTextColor(90,90,90);
+        doc.text(`${p.exit_date}   Rs ${Number(p.exit_price).toLocaleString('en-IN')} × ${p.quantity}   P&L ${p.realised_pnl>=0?'+':''}Rs ${Math.abs(p.realised_pnl||0).toLocaleString('en-IN')}`, 48, yPos);
+      });
+    }
+    if(t.trade_notes){ yPos += 26; doc.setFontSize(10); doc.setTextColor(90,90,90);
+      doc.text('Notes: ' + t.trade_notes, 40, yPos, { maxWidth: W-80 }); }
+
+    doc.save(`${t.symbol}_${t.exit_date}_trade.pdf`);
+    if(wasHidden && box){ box.style.display = 'none'; const b=document.getElementById('cbtn-'+id); if(b) b.innerHTML='📈 View Chart'; }
+  } catch(err){
+    console.error('PDF export failed:', err);
+    alert('Could not generate PDF. Please try again.');
+  } finally {
+    if(btn){ btn.innerHTML = orig; btn.disabled = false; }
+  }
+}
+
+function loadScriptOnce(src){
+  return new Promise((resolve,reject)=>{
+    if(document.querySelector(`script[src="${src}"]`)) return resolve();
+    const s=document.createElement('script'); s.src=src;
+    s.onload=()=>resolve(); s.onerror=()=>reject(new Error('load failed: '+src));
+    document.head.appendChild(s);
+  });
 }
 
 
