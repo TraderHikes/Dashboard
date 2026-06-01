@@ -176,7 +176,7 @@ body{overflow-x:hidden;
 .sc-badge.dn{background:var(--red-dim);color:var(--red);border:1px solid var(--red-bd)}
 .sc-badge.info{background:var(--card2);color:var(--muted);border:1px solid var(--bdr)}
 .sc-badge.cyan{background:var(--cyan-dim);color:var(--cyan);border:1px solid rgba(46,232,220,.28)}
-.sc-badge.sky{background:linear-gradient(135deg,#38bdf8,#0ea5e9);color:#fff;border:1px solid rgba(56,189,248,.55);box-shadow:0 2px 12px rgba(56,189,248,.45),0 0 20px rgba(56,189,248,.25)}
+.sc-badge.sky{background:rgba(56,189,248,.14);color:#5ec8f5;border:1px solid rgba(56,189,248,.30)}
 
 /* ═══ SECTION HEAD ═══ */
 .sh{display:flex;align-items:baseline;gap:12px;margin-bottom:18px}
@@ -3196,7 +3196,7 @@ async function renderOpen(){
 
   // ── Deployed ──────────────────────────────────
   setT('os-deployed', fmtL(totalDeployed));
-  setT('os-deployed-badge', `${trades.length} position${trades.length!==1?'s':''}`);
+  setT('os-deployed-badge', `◆ ${trades.length} position${trades.length!==1?'s':''}`);
 
   // ── Net Open P&L badge ────────────────────────
   const netPct = totalDeployed > 0 ? (totalPnl/totalDeployed*100) : 0;
