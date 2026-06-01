@@ -14,6 +14,41 @@ NOW_IST  = datetime.now(IST)
 TODAY    = date.today().isoformat()
 HOUR_IST = NOW_IST.hour
 
+# ── NSE trading-day gate ─────────────────────────────────────
+# Markets are closed on weekends and exchange-declared holidays.
+# On any non-trading day the pipeline must NOT write dated rows
+# (otherwise weekend/holiday runs duplicate Friday's data under a
+# new date). Source: NSE equity-segment holiday calendar.
+NSE_HOLIDAYS_2026 = {
+    "2026-01-15",  # Municipal Corp Election (Maharashtra)
+    "2026-01-26",  # Republic Day
+    "2026-03-03",  # Holi
+    "2026-03-26",  # Shri Ram Navami
+    "2026-03-31",  # Shri Mahavir Jayanti
+    "2026-04-03",  # Good Friday
+    "2026-04-14",  # Dr. Ambedkar Jayanti
+    "2026-05-01",  # Maharashtra Day
+    "2026-05-28",  # Bakri Id
+    "2026-06-26",  # Muharram
+    "2026-09-14",  # Ganesh Chaturthi
+    "2026-10-02",  # Mahatma Gandhi Jayanti
+    "2026-10-20",  # Dussehra
+    "2026-11-10",  # Diwali-Balipratipada
+    "2026-11-24",  # Guru Nanak Jayanti
+    "2026-12-25",  # Christmas
+}
+# Note: a special Muhurat session runs on Sun 2026-11-08, but that's an
+# exception we deliberately ignore (the pipeline treats it as a normal Sunday).
+
+def is_trading_day(d=None):
+    """True only on Mon–Fri that are not NSE holidays."""
+    d = d or NOW_IST.date()
+    if d.weekday() >= 5:                 # 5=Sat, 6=Sun
+        return False
+    if d.isoformat() in NSE_HOLIDAYS_2026:
+        return False
+    return True
+
 from supabase import create_client
 SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
@@ -838,6 +873,17 @@ def fetch_candles_for_watchlist():
 
 
 if __name__ == "__main__":
+    # ── Trading-day gate ──────────────────────────────────────
+    # Skip ALL runs (intraday, FII/DII, EOD) on weekends & NSE holidays,
+    # so no indicator records data for a non-trading day.
+    if not is_trading_day():
+        print(f"{'='*56}")
+        print(f"  MARKET CLOSED on {TODAY} ({NOW_IST.strftime('%A')}) — "
+              f"weekend or NSE holiday.")
+        print(f"  Skipping pipeline; no data written.")
+        print(f"{'='*56}\n")
+        sys.exit(0)
+
     try:
         if RUN_MODE == "intraday":
             print("⚡ INTRADAY\n")
