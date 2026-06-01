@@ -3662,7 +3662,7 @@ async function renderClosedChart(id, symbol){
     layout: { background:{ type:'solid', color:'transparent' }, textColor:'#8b9bb4' },
     grid: { vertLines:{ color:'rgba(255,255,255,.04)' }, horzLines:{ color:'rgba(255,255,255,.04)' } },
     rightPriceScale: { borderColor:'rgba(255,255,255,.1)' },
-    timeScale: { borderColor:'rgba(255,255,255,.1)', rightOffset: 10, fixLeftEdge:true },
+    timeScale: { borderColor:'rgba(255,255,255,.1)', rightOffset: 4, fixLeftEdge:true },
     handleScroll:false, handleScale:false,
   });
   const series = chart.addCandlestickSeries({
@@ -3697,20 +3697,22 @@ async function renderClosedChart(id, symbol){
   markers.sort((a,b)=> a.time < b.time ? -1 : 1);
   series.setMarkers(markers);
 
-  // Default to ~2 months of trading days ending at the exit; widen if the
-  // position was held longer so the whole trade arc stays visible.
+  // Zoom to the last ~N trading bars (default ~2 months), widening for
+  // longer holds. Using a LOGICAL range (bar indices) rather than a time
+  // range — logical range respects rightOffset cleanly and won't rescale
+  // the whole series the way setVisibleRange+offset does.
   const totalC = candles.length;
   let lookback = 42;                       // ~2 months
   const heldDays = (new Date(t.exit_date) - new Date(t.entry_date)) / 86400000;
   if(heldDays > 60)  lookback = 63;        // ~3 months
   if(heldDays > 120) lookback = 105;       // ~5 months
   if(heldDays > 200) lookback = 168;       // ~8 months
-  const fromIdx = Math.max(0, totalC - lookback);
-  chart.timeScale().setVisibleRange({
-    from: candles[fromIdx].time,
-    to:   candles[totalC - 1].time,
+  const RO = 4;                            // small right gap (bars)
+  chart.timeScale().applyOptions({ rightOffset: RO });
+  chart.timeScale().setVisibleLogicalRange({
+    from: Math.max(0, totalC - lookback),
+    to:   totalC - 1 + RO,                 // include the offset gap on the right
   });
-  chart.timeScale().applyOptions({ rightOffset: 10 });
   _closedCharts[id] = chart;
 }
 
@@ -3730,7 +3732,6 @@ async function downloadClosedPDF(id){
     else if(!_closedCharts[id]){ await renderClosedChart(id, t.symbol); await new Promise(r=>setTimeout(r,600)); }
 
     await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
-    await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit:'pt', format:'a4' });
     const W = doc.internal.pageSize.getWidth();
@@ -3767,15 +3768,20 @@ async function downloadClosedPDF(id){
     doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(110,110,110);
     doc.text(`${t.company_name||''}${t.sector?'  ·  '+t.sector:''}`, M, 116);
 
-    // Chart image
-    const cv = document.getElementById('cchartcv-' + id);
+    // Chart image — use Lightweight Charts' own takeScreenshot() (html2canvas
+    // cannot reliably capture another library's <canvas>).
     var yPos = 134;
-    if(cv){
-      const canvas = await html2canvas(cv, { backgroundColor:'#0e1528', scale:2 });
-      const img = canvas.toDataURL('image/png');
-      const iw = W - 2*M, ih = iw * (canvas.height / canvas.width);
-      doc.addImage(img, 'PNG', M, yPos, iw, ih);
-      yPos += ih + 26;
+    const chartInst = _closedCharts[id];
+    if(chartInst && typeof chartInst.takeScreenshot === 'function'){
+      try {
+        const canvas = chartInst.takeScreenshot();
+        const img = canvas.toDataURL('image/png');
+        const iw = W - 2*M, ih = iw * (canvas.height / canvas.width);
+        doc.addImage(img, 'PNG', M, yPos, iw, ih);
+        yPos += ih + 26;
+      } catch(capErr){
+        console.warn('Chart capture failed, continuing without image:', capErr);
+      }
     }
 
     // ── Trade Details (two-column grid) ──
