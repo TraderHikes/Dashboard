@@ -623,15 +623,21 @@ canvas.tc{display:block;width:100%;height:100%}
 /* ══ STOCK FILTER TAB ══ */
 .sf-wrap{padding:20px 28px}
 .sf-nav{display:flex;gap:10px;margin-bottom:18px}
-.sf-nav-btn{flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 16px;border-radius:11px;cursor:pointer;border:1px solid var(--bdr2);background:var(--card2);transition:all .2s;text-align:left}
+.sf-nav-btn{flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 16px;border-radius:11px;cursor:pointer;border:1px solid var(--bdr2);background:var(--card2);transition:all .2s;text-align:left;position:relative}
 .sf-nav-btn .sf-nav-t{font-family:var(--f);font-size:13px;font-weight:700;color:var(--text2);transition:color .2s}
 .sf-nav-btn .sf-nav-n{font-family:var(--fm);font-size:10px;color:var(--muted);transition:color .2s}
 .sf-nav-btn:hover{border-color:var(--bdr3)}
-.sf-nav-btn.active{border-color:transparent;background:linear-gradient(135deg,#5c6ffb,#3a4bd6);box-shadow:0 4px 16px rgba(92,111,251,.35)}
-.sf-nav-btn.active .sf-nav-t,.sf-nav-btn.active .sf-nav-n{color:#fff}
+.sf-nav-btn.active .sf-nav-t{color:#fff}
 .sf-nav-btn.active .sf-nav-n{color:rgba(255,255,255,.85)}
+/* Focused = green */
+#sfnav-focused.active{border-color:transparent;background:linear-gradient(135deg,#1ba87a,#0f7d5a);box-shadow:0 4px 18px rgba(46,216,160,.5),0 0 34px rgba(46,216,160,.3)}
+/* Full = blue/purple */
+#sfnav-full.active{border-color:transparent;background:linear-gradient(135deg,#5c6ffb,#3a4bd6);box-shadow:0 4px 18px rgba(92,111,251,.5),0 0 34px rgba(92,111,251,.3)}
 .sf-scroll{max-height:580px;overflow-y:auto}
 .sf-scroll thead th{position:sticky;top:0;z-index:2;background:var(--bg)}
+/* Illuminated table borders */
+#sf-view-focused .sf-scroll{border:1.5px solid rgba(46,216,160,.45);border-radius:12px;box-shadow:0 0 22px rgba(46,216,160,.12),inset 0 0 18px rgba(46,216,160,.04)}
+#sf-view-full .sf-scroll{border:1.5px solid rgba(92,111,251,.45);border-radius:12px;box-shadow:0 0 22px rgba(92,111,251,.12),inset 0 0 18px rgba(92,111,251,.04)}
 .sf-section-title{font-family:var(--f);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:10px}
 .sf-section-title::after{content:'';flex:1;height:1px;background:var(--bdr)}
 
@@ -1565,13 +1571,6 @@ canvas.tc{display:block;width:100%;height:100%}
 
     <!-- View 2: Full Watchlist Table -->
     <div id="sf-view-full" style="display:none">
-    <div class="sf-filters">
-      <button class="sf-filter-chip on" data-sf="all">All</button>
-      <button class="sf-filter-chip" data-sf="above_21">Above 21 EMA</button>
-      <button class="sf-filter-chip" data-sf="above_200">Above 200 EMA</button>
-      <button class="sf-filter-chip" data-sf="bull_sector">Bull Sector</button>
-      <input type="text" class="sf-search" id="sf-search" placeholder="Search symbol…" oninput="sfRenderTable()">
-    </div>
     <div class="sf-table-wrap sf-scroll">
       <table class="sf-table">
         <thead><tr>
