@@ -630,7 +630,7 @@ canvas.tc{display:block;width:100%;height:100%}
 .sf-nav-btn.active{border-color:transparent;background:linear-gradient(135deg,#5c6ffb,#3a4bd6);box-shadow:0 4px 16px rgba(92,111,251,.35)}
 .sf-nav-btn.active .sf-nav-t,.sf-nav-btn.active .sf-nav-n{color:#fff}
 .sf-nav-btn.active .sf-nav-n{color:rgba(255,255,255,.85)}
-.sf-scroll{max-height:1950px;overflow-y:auto}
+.sf-scroll{max-height:580px;overflow-y:auto}
 .sf-scroll thead th{position:sticky;top:0;z-index:2;background:var(--bg)}
 .sf-section-title{font-family:var(--f);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:10px}
 .sf-section-title::after{content:'';flex:1;height:1px;background:var(--bdr)}
@@ -1578,12 +1578,9 @@ canvas.tc{display:block;width:100%;height:100%}
           <th onclick="sfSort('symbol')">Symbol</th>
           <th onclick="sfSort('company_name')">Company</th>
           <th onclick="sfSort('rs_rating')">RS</th>
-          <th onclick="sfSort('sector_name')">Sector</th>
-          <th onclick="sfSort('sector_score')">Sector Score</th>
           <th onclick="sfSort('pct_from_21ema')">vs 21 EMA</th>
           <th onclick="sfSort('pct_from_10wema')">vs 10W EMA</th>
           <th onclick="sfSort('pct_from_200ema')">vs 200 EMA</th>
-          <th>Status</th>
         </tr></thead>
         <tbody id="sf-tbody">
           <tr><td colspan="11" class="sf-empty">Loading…</td></tr>
@@ -4711,22 +4708,18 @@ function sfRenderTable() {
   if (countEl) countEl.textContent = `${rows.length} stocks`;
 
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="11" class="sf-empty">No stocks match filter</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="sf-empty">No stocks match filter</td></tr>';
     return;
   }
 
   tbody.innerHTML = rows.map(s => {
-    const stage2 = s.pct_from_200ema != null && s.pct_from_200ema >= 0;
     return `<tr>
       <td class="sf-sym-cell">${s.symbol}</td>
       <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis">${s.company_name||'—'}</td>
       <td style="color:var(--white);font-weight:600">${s.rs_rating||'—'}</td>
-      <td>${s.sector_name||'—'}</td>
-      <td>${s.sector_score ? Math.round(s.sector_score) : '—'}</td>
       <td>${sfPct(s.pct_from_21ema)}</td>
       <td>${sfPct(s.pct_from_10wema)}</td>
       <td>${sfPct(s.pct_from_200ema)}</td>
-      <td style="color:${stage2?'var(--text2)':'rgba(255,255,255,.25)'};font-size:11px">${stage2?'Stage 2':'—'}</td>
     </tr>`;
   }).join('');
 }
