@@ -3662,7 +3662,7 @@ async function renderClosedChart(id, symbol){
     layout: { background:{ type:'solid', color:'transparent' }, textColor:'#8b9bb4' },
     grid: { vertLines:{ color:'rgba(255,255,255,.04)' }, horzLines:{ color:'rgba(255,255,255,.04)' } },
     rightPriceScale: { borderColor:'rgba(255,255,255,.1)' },
-    timeScale: { borderColor:'rgba(255,255,255,.1)', rightOffset: 5, fixLeftEdge:true, fixRightEdge:true },
+    timeScale: { borderColor:'rgba(255,255,255,.1)', rightOffset: 10, fixLeftEdge:true },
     handleScroll:false, handleScale:false,
   });
   const series = chart.addCandlestickSeries({
@@ -3696,8 +3696,21 @@ async function renderClosedChart(id, symbol){
 
   markers.sort((a,b)=> a.time < b.time ? -1 : 1);
   series.setMarkers(markers);
-  chart.timeScale().fitContent();
-  chart.timeScale().applyOptions({ rightOffset: 5 });
+
+  // Default to ~2 months of trading days ending at the exit; widen if the
+  // position was held longer so the whole trade arc stays visible.
+  const totalC = candles.length;
+  let lookback = 42;                       // ~2 months
+  const heldDays = (new Date(t.exit_date) - new Date(t.entry_date)) / 86400000;
+  if(heldDays > 60)  lookback = 63;        // ~3 months
+  if(heldDays > 120) lookback = 105;       // ~5 months
+  if(heldDays > 200) lookback = 168;       // ~8 months
+  const fromIdx = Math.max(0, totalC - lookback);
+  chart.timeScale().setVisibleRange({
+    from: candles[fromIdx].time,
+    to:   candles[totalC - 1].time,
+  });
+  chart.timeScale().applyOptions({ rightOffset: 10 });
   _closedCharts[id] = chart;
 }
 
@@ -3721,51 +3734,137 @@ async function downloadClosedPDF(id){
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit:'pt', format:'a4' });
     const W = doc.internal.pageSize.getWidth();
+    const M = 40;                                   // left/right margin
+    const fmtINR = n => 'Rs ' + Math.abs(Number(n)||0).toLocaleString('en-IN', {maximumFractionDigits:0});
+    const sign   = n => (Number(n)>=0?'+':'-');
 
-    // Header
-    doc.setFontSize(16); doc.setTextColor(20,20,20);
-    doc.text(`${t.symbol} — ${t.company_name||''}`, 40, 48);
-    doc.setFontSize(10); doc.setTextColor(110,110,110);
-    doc.text(`Closed trade · ${t.entry_date} → ${t.exit_date} · ${t.holding_days||0} days held`, 40, 66);
+    // ── Brand header band: MB logo + Market Basecamp ──
+    doc.setFillColor(14,21,40);                     // #0e1528
+    doc.rect(0, 0, W, 70, 'F');
+    // MB logo tile
+    doc.setFillColor(26,32,64);                     // #1a2040
+    doc.roundedRect(M, 18, 34, 34, 7, 7, 'F');
+    doc.setTextColor(143,163,255);                  // #8fa3ff
+    doc.setFont('helvetica','bold'); doc.setFontSize(15);
+    doc.text('MB', M + 17, 40, { align:'center' });
+    // Brand name
+    doc.setTextColor(235,238,250); doc.setFontSize(15);
+    doc.text('Market Basecamp', M + 46, 34);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    doc.setTextColor(150,160,190);
+    doc.text('Trade Archive', M + 46, 50);
+    // Result chip (right side of band)
+    const pnlPos = (t.realised_pnl||0) >= 0;
+    doc.setTextColor(pnlPos?120:240, pnlPos?215:90, pnlPos?160:110);
+    doc.setFont('helvetica','bold'); doc.setFontSize(15);
+    doc.text(`${sign(t.realised_pnl)}${fmtINR(t.realised_pnl)}`, W-M, 34, { align:'right' });
+    doc.setFontSize(10);
+    doc.text(`${t.return_pct>=0?'+':''}${Number(t.return_pct||0).toFixed(2)}%`, W-M, 50, { align:'right' });
+
+    // ── Report title: symbol — company ──
+    doc.setTextColor(20,20,20); doc.setFont('helvetica','bold'); doc.setFontSize(17);
+    doc.text(`${t.symbol}`, M, 100);
+    doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(110,110,110);
+    doc.text(`${t.company_name||''}${t.sector?'  ·  '+t.sector:''}`, M, 116);
 
     // Chart image
     const cv = document.getElementById('cchartcv-' + id);
+    var yPos = 134;
     if(cv){
       const canvas = await html2canvas(cv, { backgroundColor:'#0e1528', scale:2 });
       const img = canvas.toDataURL('image/png');
-      const iw = W - 80, ih = iw * (canvas.height / canvas.width);
-      doc.addImage(img, 'PNG', 40, 84, iw, ih);
-      var yPos = 84 + ih + 24;
-    } else { var yPos = 100; }
-
-    // Details table
-    const rows = [
-      ['Avg Entry', `Rs ${Number(t.avg_entry_price||0).toLocaleString('en-IN')}`],
-      ['Avg Exit',  `Rs ${Number(t.avg_exit_price||0).toLocaleString('en-IN')}`],
-      ['Stop Loss', t.sl_price?`Rs ${Number(t.sl_price).toLocaleString('en-IN')}`:'—'],
-      ['Total Qty', String(t.quantity||0)],
-      ['Realised P&L', `${t.realised_pnl>=0?'+':''}Rs ${Math.abs(t.realised_pnl||0).toLocaleString('en-IN')}`],
-      ['Return %', `${t.return_pct>=0?'+':''}${Number(t.return_pct||0).toFixed(2)}%`],
-      ['Exit Reason', t.exit_reason||'—'],
-      ['Partial Exits', px.length?String(px.length):'None'],
-    ];
-    doc.setFontSize(12); doc.setTextColor(20,20,20);
-    doc.text('Trade Details', 40, yPos); yPos += 8;
-    doc.setFontSize(10);
-    rows.forEach(([k,v]) => {
-      yPos += 18;
-      doc.setTextColor(110,110,110); doc.text(k, 48, yPos);
-      doc.setTextColor(20,20,20);    doc.text(String(v), 220, yPos);
-    });
-    if(px.length){
-      yPos += 26; doc.setFontSize(12); doc.text('Partial Exits', 40, yPos);
-      doc.setFontSize(9);
-      px.forEach(p => { yPos += 16; doc.setTextColor(90,90,90);
-        doc.text(`${p.exit_date}   Rs ${Number(p.exit_price).toLocaleString('en-IN')} × ${p.quantity}   P&L ${p.realised_pnl>=0?'+':''}Rs ${Math.abs(p.realised_pnl||0).toLocaleString('en-IN')}`, 48, yPos);
-      });
+      const iw = W - 2*M, ih = iw * (canvas.height / canvas.width);
+      doc.addImage(img, 'PNG', M, yPos, iw, ih);
+      yPos += ih + 26;
     }
-    if(t.trade_notes){ yPos += 26; doc.setFontSize(10); doc.setTextColor(90,90,90);
-      doc.text('Notes: ' + t.trade_notes, 40, yPos, { maxWidth: W-80 }); }
+
+    // ── Trade Details (two-column grid) ──
+    const sectionTitle = (txt) => {
+      doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(30,30,30);
+      doc.text(txt, M, yPos);
+      doc.setDrawColor(225,228,235); doc.setLineWidth(0.8);
+      doc.line(M, yPos+5, W-M, yPos+5);
+      yPos += 20;
+    };
+    sectionTitle('Trade Details');
+
+    const finalPnl = (t.realised_pnl||0) - px.reduce((s,p)=>s+(p.realised_pnl||0),0);
+    const detail = [
+      ['Entry Date', String(t.entry_date)],          ['Avg Entry', fmtINR(t.avg_entry_price)],
+      ['Exit Date',  String(t.exit_date)],            ['Avg Exit',  fmtINR(t.avg_exit_price)],
+      ['Duration',   `${t.holding_days||0} days`],    ['Stop Loss', t.sl_price?fmtINR(t.sl_price):'—'],
+      ['Total Qty',  String(t.quantity||0)],          ['Realised P&L', `${sign(t.realised_pnl)}${fmtINR(t.realised_pnl)}`],
+      ['Return %',   `${t.return_pct>=0?'+':''}${Number(t.return_pct||0).toFixed(2)}%`], ['Partial Exits', px.length?String(px.length):'None'],
+    ];
+    doc.setFont('helvetica','normal'); doc.setFontSize(10);
+    const colX = [M+4, M+90, W/2+4, W/2+90];        // label/val for left & right columns
+    for(let i=0;i<detail.length;i+=2){
+      const rowY = yPos + (i/2)*18 + 12;
+      // left pair
+      doc.setTextColor(120,120,120); doc.text(detail[i][0], colX[0], rowY);
+      doc.setTextColor(25,25,25);    doc.text(detail[i][1], colX[1], rowY);
+      // right pair
+      if(detail[i+1]){
+        doc.setTextColor(120,120,120); doc.text(detail[i+1][0], colX[2], rowY);
+        doc.setTextColor(25,25,25);    doc.text(detail[i+1][1], colX[3], rowY);
+      }
+    }
+    yPos += Math.ceil(detail.length/2)*18 + 22;
+
+    // ── Partial Exits (with reasons) ──
+    if(px.length){
+      sectionTitle('Partial Exits');
+      doc.setFontSize(9.5);
+      px.forEach((p,idx) => {
+        doc.setTextColor(40,40,40); doc.setFont('helvetica','bold');
+        doc.text(`${idx+1}.  ${p.exit_date}`, M+4, yPos);
+        doc.setFont('helvetica','normal'); doc.setTextColor(70,70,70);
+        doc.text(`${fmtINR(p.exit_price)} × ${p.quantity}`, M+120, yPos);
+        doc.setTextColor(p.realised_pnl>=0?30:170, p.realised_pnl>=0?140:40, p.realised_pnl>=0?90:40);
+        doc.text(`${sign(p.realised_pnl)}${fmtINR(p.realised_pnl)} (${p.return_pct>=0?'+':''}${Number(p.return_pct||0).toFixed(2)}%)`, W-M, yPos, {align:'right'});
+        yPos += 14;
+        if(p.notes){
+          doc.setTextColor(120,120,120); doc.setFont('helvetica','italic'); doc.setFontSize(9);
+          const lines = doc.splitTextToSize('Reason: ' + p.notes, W-2*M-10);
+          doc.text(lines, M+14, yPos); yPos += lines.length*11 + 4;
+          doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
+        } else { yPos += 4; }
+      });
+      yPos += 10;
+    }
+
+    // ── Final Exit (with reason) ──
+    sectionTitle('Final Exit');
+    doc.setFontSize(9.5);
+    const finalQty = (t.quantity||0) - px.reduce((s,p)=>s+(p.quantity||0),0);
+    doc.setTextColor(40,40,40); doc.setFont('helvetica','bold');
+    doc.text(`${t.exit_date}`, M+4, yPos);
+    doc.setFont('helvetica','normal'); doc.setTextColor(70,70,70);
+    doc.text(`${fmtINR(t.avg_exit_price)} × ${finalQty}`, M+120, yPos);
+    doc.setTextColor(finalPnl>=0?30:170, finalPnl>=0?140:40, finalPnl>=0?90:40);
+    doc.text(`${sign(finalPnl)}${fmtINR(finalPnl)}`, W-M, yPos, {align:'right'});
+    yPos += 14;
+    if(t.exit_reason){
+      doc.setTextColor(120,120,120); doc.setFont('helvetica','italic'); doc.setFontSize(9);
+      const lines = doc.splitTextToSize('Reason: ' + t.exit_reason, W-2*M-10);
+      doc.text(lines, M+14, yPos); yPos += lines.length*11 + 6;
+      doc.setFont('helvetica','normal');
+    }
+
+    // ── Notes ──
+    if(t.trade_notes){
+      yPos += 8; sectionTitle('Notes');
+      doc.setFont('helvetica','italic'); doc.setFontSize(9.5); doc.setTextColor(90,90,90);
+      const lines = doc.splitTextToSize(t.trade_notes, W-2*M-8);
+      doc.text(lines, M+4, yPos); yPos += lines.length*12;
+    }
+
+    // ── Footer ──
+    const PH = doc.internal.pageSize.getHeight();
+    doc.setDrawColor(225,228,235); doc.setLineWidth(0.8); doc.line(M, PH-40, W-M, PH-40);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(150,150,150);
+    doc.text('Market Basecamp · Trade Archive', M, PH-26);
+    doc.text(`Generated ${new Date().toLocaleDateString('en-IN')}`, W-M, PH-26, {align:'right'});
 
     doc.save(`${t.symbol}_${t.exit_date}_trade.pdf`);
     if(wasHidden && box){ box.style.display = 'none'; const b=document.getElementById('cbtn-'+id); if(b) b.innerHTML='📈 View Chart'; }
