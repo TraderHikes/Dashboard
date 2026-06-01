@@ -2629,7 +2629,7 @@ async function renderTVChart(tradeId, symbol, entryPrice, slPrice, cmp, entryDat
         timeVisible:     false,   // no date labels
         secondsVisible:  false,
         barSpacing:      7,
-        rightOffset:     15,
+        rightOffset:     3,
         fixLeftEdge:     true,
         lockVisibleTimeRangeOnResize: true,
         visible:         false,   // hide entire time axis bar
@@ -2756,8 +2756,8 @@ async function renderTVChart(tradeId, symbol, entryPrice, slPrice, cmp, entryDat
       to:   ohlcData[totalCandles - 1].time,
     });
     // setVisibleRange pins the right edge to the last candle; re-apply the
-    // 15-candle gap so the latest candle isn't jammed against the price axis.
-    chart.timeScale().applyOptions({ rightOffset: 15 });
+    // 3-candle gap so the latest candle isn't jammed against the price axis.
+    chart.timeScale().applyOptions({ rightOffset: 3 });
     tvCharts[tradeId] = chart;
 
     // Responsive resize
