@@ -273,15 +273,17 @@ def fetch_index_levels():
     n500_val = None; nifty50_val = None
     for col_key, ticker in INDEX_MAP.items():
         try:
-            # Fetch ~1y so the 200-EMA is well-defined. Some newer NSE index
-            # tickers reject "1y" but return data for "2y"/"max" — fall back.
-            close = get_close_series(ticker, period="1y")
-            if close is None or len(close) < 2:
-                for alt in ("2y", "max", "6mo"):
-                    close = get_close_series(ticker, period=alt)
-                    if close is not None and len(close) >= 2:
-                        print(f"   ℹ️  {col_key}: used period={alt}")
-                        break
+            # Try longest first (needed for 200-EMA) down to short windows.
+            # Some NSE index tickers only serve short periods — accept the
+            # first that returns data so the index at least shows level/%chg.
+            close = None
+            for per in ("1y", "2y", "6mo", "1mo", "5d"):
+                c = get_close_series(ticker, period=per)
+                if c is not None and len(c) >= 2:
+                    close = c
+                    if per != "1y":
+                        print(f"   ℹ️  {col_key}: used period={per} ({len(c)} bars)")
+                    break
             if close is None or len(close) < 2:
                 print(f"   ⚠️  {col_key}: not enough data"); continue
             current = round(float(close.iloc[-1]), 2)
