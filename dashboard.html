@@ -1463,7 +1463,7 @@ canvas.tc{display:block;width:100%;height:100%}
     <div class="sc">
       <div class="scl">Day's P&amp;L</div>
       <div class="scv" id="os-daypnl">—</div>
-      <div class="scs">Change from prev session</div>
+      <div class="scs">Today's mark-to-market</div>
       <div class="sc-badge" id="os-daypnl-badge">—</div>
     </div>
     <div class="sc">
@@ -3222,40 +3222,70 @@ async function renderOpen(){
     riskBadge.textContent = '▼ '+riskPctDeployed.toFixed(1)+'% of deployed';
     riskBadge.className = 'sc-badge dn';
   }
-  // Compare the two most RECENT snapshots that are consecutive trading days
-  // Also filter out old dummy data by only using snapshots from last 7 days
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-  const cutoff = sevenDaysAgo.toISOString().split('T')[0];
+  // ── Day's P&L: true mark-to-market move across open positions ──
+  // For each open trade: (today's CMP − yesterday's close) × remaining qty.
+  // Yesterday's close comes from trade_candles (last close before today).
+  // Badge shows Day's P&L ÷ yesterday's portfolio_value × 100.
+  (async () => {
+    const dayChgEl = document.getElementById('os-daypnl');
+    const dayBadge = document.getElementById('os-daypnl-badge');
+    const dayScs   = document.querySelector('#os-sstrip .sc:nth-child(2) .scs');
+    try {
+      const syms = [...new Set(trades.map(t => (t.symbol||'').toUpperCase()).filter(Boolean))];
+      // Pull recent candles for all open symbols (last ~5 trading days each)
+      const { data: candles } = await sb
+        .from('trade_candles')
+        .select('symbol,date,close')
+        .in('symbol', syms)
+        .order('date', { ascending: false })
+        .limit(syms.length * 6);
 
-  sb.from('portfolio_snapshots')
-    .select('portfolio_value, snapshot_date')
-    .gte('snapshot_date', cutoff)
-    .order('snapshot_date', { ascending: false })
-    .limit(2)
-    .then(({ data: snaps }) => {
-      const dayChgEl  = document.getElementById('os-daypnl');
-      const dayBadge  = document.getElementById('os-daypnl-badge');
-      if(snaps && snaps.length >= 2) {
-        const dayChg = snaps[0].portfolio_value - snaps[1].portfolio_value;
-        const dayPct = snaps[1].portfolio_value > 0
-          ? (dayChg / snaps[1].portfolio_value * 100) : 0;
-        if(dayChgEl){
-          dayChgEl.textContent = (dayChg>=0?'+':'')+fmt(dayChg);
-          dayChgEl.style.color = dayChg>=0?'var(--green)':'var(--red)';
-        }
-        if(dayBadge){
-          dayBadge.textContent = (dayChg>=0?'\u25b2 +':'\u25bc ')+Math.abs(dayPct).toFixed(2)+'% from prev session';
-          dayBadge.className = 'sc-badge ' + (dayChg>=0?'up':'dn');
-        }
-      } else {
-        if(dayChgEl){
-          dayChgEl.textContent = (totalPnl>=0?'+':'')+fmt(totalPnl);
-          dayChgEl.style.color = totalPnl>=0?'var(--green)':'var(--red)';
-        }
-        if(dayBadge){ dayBadge.textContent = 'Unrealised open P&L'; dayBadge.className = 'sc-badge info'; }
+      // Group → newest two distinct dates per symbol
+      const bySym = {};
+      (candles || []).forEach(c => {
+        const s = (c.symbol||'').toUpperCase();
+        (bySym[s] = bySym[s] || []).push(c);
+      });
+
+      let dayPnl = 0;
+      trades.forEach(t => {
+        const s  = (t.symbol||'').toUpperCase();
+        const rq = t.remaining_qty || t.quantity || 0;
+        const rows = bySym[s] || [];               // already newest-first
+        if(rows.length < 1 || !t.cmp) return;
+        // yesterday's close = the most recent candle strictly before today
+        const today = new Date().toISOString().split('T')[0];
+        const prev  = rows.find(r => r.date < today) || rows[1] || rows[0];
+        if(!prev) return;
+        dayPnl += (t.cmp - prev.close) * rq;
+      });
+
+      if(dayChgEl){
+        dayChgEl.textContent = (dayPnl>=0?'+':'')+fmt(dayPnl);
+        dayChgEl.style.color = dayPnl>=0?'var(--green)':'var(--red)';
       }
-    });
+      if(dayScs) dayScs.textContent = "Today's mark-to-market";
+
+      // Badge: return on yesterday's portfolio value
+      const { data: snaps } = await sb.from('portfolio_snapshots')
+        .select('portfolio_value, snapshot_date')
+        .order('snapshot_date', { ascending: false })
+        .limit(2);
+      let basePV = null;
+      if(snaps && snaps.length >= 2)      basePV = snaps[1].portfolio_value;  // yesterday
+      else if(snaps && snaps.length === 1) basePV = snaps[0].portfolio_value;
+      const dayPct = (basePV && basePV > 0) ? (dayPnl / basePV * 100) : null;
+      if(dayBadge){
+        dayBadge.className = 'sc-badge ' + (dayPnl>=0?'up':'dn');
+        dayBadge.textContent = (dayPnl>=0?'▲ +':'▼ ')
+          + (dayPct!=null ? Math.abs(dayPct).toFixed(2)+'% Return on Portfolio Value' : 'Return on Portfolio Value');
+      }
+    } catch(err){
+      console.warn("Day's P&L calc failed:", err);
+      if(dayChgEl){ dayChgEl.textContent = '—'; }
+      if(dayBadge){ dayBadge.textContent = 'Return on Portfolio Value'; dayBadge.className = 'sc-badge info'; }
+    }
+  })();
 
 
   // ── Open Risk ─────────────────────────────────
