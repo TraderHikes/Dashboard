@@ -300,7 +300,7 @@ def fetch_index_levels():
             # table (those have the DB columns). None when not enough history.
             if col_key in EMA_FLAG_INDICES:
                 n = len(close)
-                for p in (21, 50, 200):
+                for p in (10, 21, 50):
                     if n >= p:
                         ema_val = float(compute_ema(close, p).iloc[-1])
                         row[f"{col_key}_above_{p}ema"] = bool(current > ema_val)
