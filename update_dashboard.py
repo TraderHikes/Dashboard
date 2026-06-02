@@ -316,6 +316,7 @@ def fetch_index_levels():
 # ════════════════════════════════════════════════════════════
 def save_portfolio_snapshot(cmp_map, n500_val):
     print("📸 Saving portfolio snapshot...")
+    cmp_map = cmp_map or {}          # tolerate a failed cmp fetch (None)
     try:
         trades = sb.table("open_trades").select("*").execute().data or []
         deployed = unreal = 0.0
@@ -346,6 +347,9 @@ def save_portfolio_snapshot(cmp_map, n500_val):
 # MARKET BREADTH
 # ════════════════════════════════════════════════════════════
 def calculate_market_breadth(symbols, nifty50_close=None):
+    if not symbols:
+        print("   ⚠️  No symbols (upstream fetch failed) — skipping breadth.")
+        return
     print(f"🔬 Computing market breadth ({len(symbols)} stocks)...")
     a21=a50=a200=h52=l52=adv=dec=unch=valid = 0
     BATCH = 50
@@ -533,6 +537,7 @@ def fetch_sector_breadth(sector_map):
     """
     print("🗺️  Computing sectoral breadth...")
 
+    sector_map = sector_map or {}    # tolerate a failed NSE fetch (None)
     # If sector_map is empty (NSE fetch failed), load from Supabase
     if not sector_map:
         print("   ℹ️  Loading sector_stocks from Supabase (NSE unavailable)...")
@@ -912,37 +917,72 @@ if __name__ == "__main__":
         print(f"{'='*56}\n")
         sys.exit(0)
 
+    # ── Step runner: isolates each step so one failure can't abort the run ──
+    # Each step runs in its own try/except. A failure is logged and recorded,
+    # the pipeline continues, and existing DB data for that indicator is left
+    # untouched (upserts never delete). A summary prints at the end.
+    _results = []   # (step_name, "ok" | "FAILED")
+    def run_step(name, fn, *args, **kwargs):
+        try:
+            out = fn(*args, **kwargs)
+            _results.append((name, "ok"))
+            return out
+        except Exception as e:
+            _results.append((name, "FAILED"))
+            print(f"   ❌ {name} failed (continuing): {e}")
+            import traceback; traceback.print_exc()
+            return None
+
     try:
         if RUN_MODE == "intraday":
             print("⚡ INTRADAY\n")
-            fetch_cmp_for_open_trades()
-            fetch_index_levels()
+            run_step("cmp_open_trades", fetch_cmp_for_open_trades)
+            run_step("index_levels",    fetch_index_levels)
 
         elif RUN_MODE == "fii_dii":
             print("🏦 FII/DII ONLY\n")
-            fetch_fii_dii()
+            run_step("fii_dii", fetch_fii_dii)
 
         else:
             print("🌙 FULL EOD\n")
-            symbols = fetch_nifty500_symbols()
-            cmp_map = fetch_cmp_for_open_trades()
-            idx_row, n500_val, nifty50_val = fetch_index_levels()
-            save_portfolio_snapshot(cmp_map, n500_val)
-            calculate_market_breadth(symbols, nifty50_val)
-            fetch_candles_for_open_trades()
-            fetch_fii_dii(nifty50_val)
-            # Step 1: Refresh sector constituents from NSE (live, always current)
-            sector_map = fetch_sector_stocks_from_nse()
-            # Step 2: Compute breadth using those constituents
-            fetch_sector_breadth(sector_map)
-            # Step 3: Enrich watchlist
-            enrich_watchlist()
-            # Step 4: Fetch 24-month candles for watchlist charts
-            fetch_candles_for_watchlist()
+            # Independent fetches first; each isolated.
+            symbols = run_step("nifty500_symbols", fetch_nifty500_symbols)
+            cmp_map = run_step("cmp_open_trades",  fetch_cmp_for_open_trades)
+            idx     = run_step("index_levels",     fetch_index_levels)
+            # index_levels returns (row, n500_val, nifty50_val); unpack safely
+            n500_val   = idx[1] if idx else None
+            nifty50_val= idx[2] if idx else None
 
-        print(f"\n{'='*56}\n✅  {RUN_MODE.upper()} complete\n{'='*56}\n")
+            # Downstream steps — each guarded; they tolerate missing inputs
+            # (params are optional / None-safe from earlier hardening).
+            run_step("portfolio_snapshot", save_portfolio_snapshot, cmp_map, n500_val)
+            run_step("market_breadth",     calculate_market_breadth, symbols, nifty50_val)
+            run_step("open_trade_candles", fetch_candles_for_open_trades)
+            run_step("fii_dii",            fetch_fii_dii, nifty50_val)
+            sector_map = run_step("sector_stocks", fetch_sector_stocks_from_nse)
+            run_step("sector_breadth",     fetch_sector_breadth, sector_map)
+            run_step("watchlist_enrich",   enrich_watchlist)
+            run_step("watchlist_candles",  fetch_candles_for_watchlist)
+
+        # ── Run summary ──────────────────────────────────────
+        ok     = [n for n, s in _results if s == "ok"]
+        failed = [n for n, s in _results if s == "FAILED"]
+        print(f"\n{'='*56}")
+        print(f"  {RUN_MODE.upper()} complete — {len(ok)}/{len(_results)} steps ok")
+        if failed:
+            print(f"  ⚠️  FAILED: {', '.join(failed)}")
+            print(f"  (existing data for failed steps left untouched; "
+                  f"will refresh on next successful run)")
+        print(f"{'='*56}\n")
+
+        # Exit non-zero only if EVERYTHING failed (a real outage worth alerting on).
+        # Partial success is a success — the dashboard still updates.
+        if _results and len(failed) == len(_results):
+            print("❌ All steps failed — flagging run as failed.")
+            sys.exit(1)
 
     except Exception as e:
-        print(f"\n❌ Pipeline crashed: {e}")
+        # Safety net for anything outside the per-step guards (shouldn't happen).
+        print(f"\n❌ Pipeline crashed (outside step guards): {e}")
         import traceback; traceback.print_exc()
         sys.exit(1)
