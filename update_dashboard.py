@@ -260,28 +260,44 @@ INDEX_MAP = {
     "nifty_realty": "^CNXREALTY","nifty_fmcg":   "^CNXFMCG",
 }
 
+# Indices shown in the Key Indices table — only these have *_above_*ema
+# columns in index_levels, so only these get EMA flags written.
+EMA_FLAG_INDICES = {
+    "nifty50", "sensex", "nifty500",
+    "nifty_midcap", "nifty_smallcap", "nifty_microcap",
+}
+
 def fetch_index_levels():
     print("📊 Fetching index levels...")
     row = {"snapshot_date": TODAY}
     n500_val = None; nifty50_val = None
     for col_key, ticker in INDEX_MAP.items():
         try:
-            # Fetch ~1y so the 200-EMA is well-defined; fall back gracefully.
+            # Fetch ~1y so the 200-EMA is well-defined. Some newer NSE index
+            # tickers reject "1y" but return data for "2y"/"max" — fall back.
             close = get_close_series(ticker, period="1y")
+            if close is None or len(close) < 2:
+                for alt in ("2y", "max", "6mo"):
+                    close = get_close_series(ticker, period=alt)
+                    if close is not None and len(close) >= 2:
+                        print(f"   ℹ️  {col_key}: used period={alt}")
+                        break
             if close is None or len(close) < 2:
                 print(f"   ⚠️  {col_key}: not enough data"); continue
             current = round(float(close.iloc[-1]), 2)
             prev    = round(float(close.iloc[-2]), 2)
             row[col_key]           = current
             row[f"{col_key}_prev"] = prev
-            # Above-EMA flags (None when not enough history for that EMA)
-            n = len(close)
-            for p in (21, 50, 200):
-                if n >= p:
-                    ema_val = float(compute_ema(close, p).iloc[-1])
-                    row[f"{col_key}_above_{p}ema"] = bool(current > ema_val)
-                else:
-                    row[f"{col_key}_above_{p}ema"] = None
+            # Above-EMA flags — only for indices shown in the Key Indices
+            # table (those have the DB columns). None when not enough history.
+            if col_key in EMA_FLAG_INDICES:
+                n = len(close)
+                for p in (21, 50, 200):
+                    if n >= p:
+                        ema_val = float(compute_ema(close, p).iloc[-1])
+                        row[f"{col_key}_above_{p}ema"] = bool(current > ema_val)
+                    else:
+                        row[f"{col_key}_above_{p}ema"] = None
             if col_key == "nifty500": n500_val    = current
             if col_key == "nifty50":  nifty50_val = current
             print(f"   ✓ {col_key}: {current:,.2f}")
