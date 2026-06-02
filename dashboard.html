@@ -1359,9 +1359,9 @@ canvas.tc{display:block;width:100%;height:100%}
         <th>Index</th>
         <th class="r">Day Close</th>
         <th class="r">% Change</th>
+        <th class="r">Above 10d EMA</th>
         <th class="r">Above 21d EMA</th>
         <th class="r">Above 50d EMA</th>
-        <th class="r">Above 200d EMA</th>
       </tr></thead>
       <tbody id="idx-tbody"></tbody>
     </table>
@@ -1445,15 +1445,6 @@ canvas.tc{display:block;width:100%;height:100%}
     <div style="padding:10px 20px;font-size:10px;color:var(--muted);border-top:1px solid var(--bdr)">
       Source: NSE India · Updated daily at 7:30 PM IST · * Provisional data
     </div>
-  </div>
-
-  <!-- ── Sector Heatmap ── -->
-  <div class="card">
-    <div class="ch">
-      <span class="ct">Sector Heatmap — % Stocks above 50 EMA</span>
-      <div class="ch-r"><span class="chip">12 sectors</span><span class="chip">Indicative</span></div>
-    </div>
-    <div class="heatmap-grid"><div class="hm-cell hm-s5"><div class="hmn" style="color:var(--green)">Capital Goods</div><div class="hmp" style="color:var(--green)">81%</div><div class="hmc" style="color:var(--green)">203 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:81%;background:var(--green)"></div></div></div><div class="hm-cell hm-s5"><div class="hmn" style="color:var(--green)">IT / Tech</div><div class="hmp" style="color:var(--green)">76%</div><div class="hmc" style="color:var(--green)">118 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:76%;background:var(--green)"></div></div></div><div class="hm-cell hm-s4"><div class="hmn" style="color:var(--green)">Pharma</div><div class="hmp" style="color:var(--green)">69%</div><div class="hmc" style="color:var(--green)">142 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:69%;background:var(--green)"></div></div></div><div class="hm-cell hm-s4"><div class="hmn" style="color:var(--green)">Consumption</div><div class="hmp" style="color:var(--green)">66%</div><div class="hmc" style="color:var(--green)">97 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:66%;background:var(--green)"></div></div></div><div class="hm-cell hm-s3"><div class="hmn" style="color:var(--amber)">FMCG</div><div class="hmp" style="color:var(--amber)">55%</div><div class="hmc" style="color:var(--amber)">76 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:55%;background:var(--amber)"></div></div></div><div class="hm-cell hm-s3"><div class="hmn" style="color:var(--amber)">Pvt Banks</div><div class="hmp" style="color:var(--amber)">52%</div><div class="hmc" style="color:var(--amber)">22 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:52%;background:var(--amber)"></div></div></div><div class="hm-cell hm-s3"><div class="hmn" style="color:var(--amber)">Automobiles</div><div class="hmp" style="color:var(--amber)">50%</div><div class="hmc" style="color:var(--amber)">88 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:50%;background:var(--amber)"></div></div></div><div class="hm-cell hm-s3"><div class="hmn" style="color:var(--amber)">Realty</div><div class="hmp" style="color:var(--amber)">48%</div><div class="hmc" style="color:var(--amber)">52 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:48%;background:var(--amber)"></div></div></div><div class="hm-cell hm-s2"><div class="hmn" style="color:var(--red)">PSU Banks</div><div class="hmp" style="color:var(--red)">38%</div><div class="hmc" style="color:var(--red)">14 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:38%;background:var(--red)"></div></div></div><div class="hm-cell hm-s2"><div class="hmn" style="color:var(--red)">Oil & Gas</div><div class="hmp" style="color:var(--red)">36%</div><div class="hmc" style="color:var(--red)">48 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:36%;background:var(--red)"></div></div></div><div class="hm-cell hm-s1"><div class="hmn" style="color:var(--red)">Metals</div><div class="hmp" style="color:var(--red)">29%</div><div class="hmc" style="color:var(--red)">68 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:29%;background:var(--red)"></div></div></div><div class="hm-cell hm-s1"><div class="hmn" style="color:var(--red)">Media</div><div class="hmp" style="color:var(--red)">22%</div><div class="hmc" style="color:var(--red)">34 stocks</div><div class="hm-bar"><div class="hm-fill" style="width:22%;background:var(--red)"></div></div></div></div>
   </div>
 
 </div><!-- /breadth -->
@@ -4317,9 +4308,9 @@ async function buildIdxTableLive() {
       const chg  = fmtChg(cur, prev);
       return {
         ...item, cur, prev, chg,
+        a10:  row[`${item.key}_above_10ema`],
         a21:  row[`${item.key}_above_21ema`],
         a50:  row[`${item.key}_above_50ema`],
-        a200: row[`${item.key}_above_200ema`],
       };
     }).filter(r => r.cur); // skip any that have no data
 
@@ -4338,9 +4329,9 @@ async function buildIdxTableLive() {
         <td><div class="idx-name">${r.name}</div></td>
         <td class="r" style="font-weight:700;color:var(--white);font-family:var(--fm)">${fmtNum(r.cur)}</td>
         <td class="r"><span class="idx-pct ${r.chg.pos?'g':'r'}">${r.chg.pctStr||'—'}</span></td>
+        <td class="r">${mark(r.a10)}</td>
         <td class="r">${mark(r.a21)}</td>
         <td class="r">${mark(r.a50)}</td>
-        <td class="r">${mark(r.a200)}</td>
       </tr>`;
     }).join('');
 
