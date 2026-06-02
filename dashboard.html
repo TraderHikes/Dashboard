@@ -1494,10 +1494,10 @@ canvas.tc{display:block;width:100%;height:100%}
       <div class="sc-badge dn" id="os-riskpct">—</div>
     </div>
     <div class="sc">
-      <div class="scl">Cash Margin</div>
-      <div class="scv c" id="os-cash">—</div>
-      <div class="scs">Free capital for new trades</div>
-      <div class="sc-badge cyan" id="os-cashpct">—</div>
+      <div class="scl">Total Realised P&L</div>
+      <div class="scv" id="os-realised">—</div>
+      <div class="scs">All closed trades</div>
+      <div class="sc-badge info" id="os-realised-badge">—</div>
     </div>
   </div>
   <div class="card">
@@ -3276,18 +3276,30 @@ async function renderOpen(){
     riskBadgeEl.className = 'sc-badge dn';
   }
 
-  // ── Cash Margin ───────────────────────────────
+  // ── Total Realised P&L (sum of all closed trades) ──────────
+  sb.from('closed_trades')
+    .select('realised_pnl')
+    .then(({ data: closed }) => {
+      const totalRealised = (closed || []).reduce((s,t)=> s + (t.realised_pnl||0), 0);
+      const pos = totalRealised >= 0;
+      setT('os-realised', (pos?'+':'')+'₹'+Math.abs(totalRealised).toLocaleString('en-IN',{maximumFractionDigits:0}),
+           pos?'var(--green)':'var(--red)');
+      const rBadge = document.getElementById('os-realised-badge');
+      if(rBadge){
+        rBadge.className = 'sc-badge ' + (pos?'up':'dn');
+        rBadge.textContent = (pos?'▲':'▼') + ' FY26-27';
+      }
+      const rScs = document.querySelector('#os-sstrip .sc:last-child .scs');
+      if(rScs && closed) rScs.textContent = closed.length + ' closed trade' + (closed.length!==1?'s':'');
+    });
+
+  // Header capital figure (was previously updated alongside cash margin)
   sb.from('portfolio_snapshots')
-    .select('total_capital, cash_available')
+    .select('total_capital')
     .order('snapshot_date', { ascending: false })
     .limit(1).single()
     .then(({ data: snap }) => {
-      const totalCap  = Math.max(snap?.total_capital||0, 8500000);
-      const cashAvail = snap?.cash_available || Math.max(0, totalCap - totalDeployed);
-      const cashPct   = totalCap > 0 ? (cashAvail/totalCap*100).toFixed(1) : 0;
-      setT('os-cash', cashPct + '%', 'var(--cyan)');
-      const cashBadge = document.getElementById('os-cashpct');
-      if(cashBadge){ cashBadge.textContent = '\u25b2 '+cashPct+'% of capital'; }
+      const totalCap = Math.max(snap?.total_capital||0, 8500000);
       const hdrCap = document.getElementById('hdr-capital');
       if(hdrCap) hdrCap.textContent = '\u20b9'+(totalCap/100000).toFixed(2)+'L';
     });
@@ -3451,7 +3463,7 @@ async function renderClosed(){
   const pnlScs=document.querySelector('#ct-strip .sc:nth-child(1) .scs');
   if(pnlScs)pnlScs.textContent=trades.length+' closed trade'+(trades.length!==1?'s':'');
   _cls('cs-pnl-badge','sc-badge '+(totalPnl>=0?'up':'dn'));
-  _set('cs-pnl-badge',(totalPnl>=0?'▲':'▼')+' All time');
+  _set('cs-pnl-badge',(totalPnl>=0?'▲':'▼')+' FY26-27');
   // Box 2 Win Rate
   _cls('cs-wr','scv '+(winRate>=50?'g':'r'));_set('cs-wr',winRate+'%');
   _set('cs-wr-sub',wins.length+'W · '+losses.length+'L');
