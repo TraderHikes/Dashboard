@@ -3248,6 +3248,7 @@ async function renderOpen(){
       });
 
       let dayPnl = 0;
+      let prevMktValue = 0;          // Σ (yesterday's close × remaining qty)
       trades.forEach(t => {
         const s  = (t.symbol||'').toUpperCase();
         const rq = t.remaining_qty || t.quantity || 0;
@@ -3257,7 +3258,8 @@ async function renderOpen(){
         const today = new Date().toISOString().split('T')[0];
         const prev  = rows.find(r => r.date < today) || rows[1] || rows[0];
         if(!prev) return;
-        dayPnl += (t.cmp - prev.close) * rq;
+        dayPnl       += (t.cmp - prev.close) * rq;
+        prevMktValue += prev.close * rq;
       });
 
       if(dayChgEl){
@@ -3266,24 +3268,17 @@ async function renderOpen(){
       }
       if(dayScs) dayScs.textContent = "Today's mark-to-market";
 
-      // Badge: return on yesterday's portfolio value
-      const { data: snaps } = await sb.from('portfolio_snapshots')
-        .select('portfolio_value, snapshot_date')
-        .order('snapshot_date', { ascending: false })
-        .limit(2);
-      let basePV = null;
-      if(snaps && snaps.length >= 2)      basePV = snaps[1].portfolio_value;  // yesterday
-      else if(snaps && snaps.length === 1) basePV = snaps[0].portfolio_value;
-      const dayPct = (basePV && basePV > 0) ? (dayPnl / basePV * 100) : null;
+      // Badge: return on the previous-close market value of holdings
+      const dayPct = (prevMktValue > 0) ? (dayPnl / prevMktValue * 100) : null;
       if(dayBadge){
         dayBadge.className = 'sc-badge ' + (dayPnl>=0?'up':'dn');
         dayBadge.textContent = (dayPnl>=0?'▲ +':'▼ ')
-          + (dayPct!=null ? Math.abs(dayPct).toFixed(2)+'% Return on Portfolio Value' : 'Return on Portfolio Value');
+          + (dayPct!=null ? Math.abs(dayPct).toFixed(2)+'% Return on Current Portfolio Value' : 'Return on Current Portfolio Value');
       }
     } catch(err){
       console.warn("Day's P&L calc failed:", err);
       if(dayChgEl){ dayChgEl.textContent = '—'; }
-      if(dayBadge){ dayBadge.textContent = 'Return on Portfolio Value'; dayBadge.className = 'sc-badge info'; }
+      if(dayBadge){ dayBadge.textContent = 'Return on Current Portfolio Value'; dayBadge.className = 'sc-badge info'; }
     }
   })();
 
