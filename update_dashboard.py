@@ -54,9 +54,15 @@ SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
 sb = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-if   HOUR_IST in [10,12,14]: RUN_MODE = "intraday"
-elif HOUR_IST in [19,20]:    RUN_MODE = "fii_dii"
-else:                         RUN_MODE = "full_eod"
+# RUN_MODE is normally passed explicitly by the workflow (per cron slot).
+# This hour-based fallback only applies if RUN_MODE env is empty — kept in
+# sync with the workflow schedule so a manual/bare run still picks sanely.
+#   intraday : 9–14 IST (light CMP+index touch-ups during market hours)
+#   fii_dii  : 19–20 IST (evening institutional-flow pull)
+#   full_eod : everything else (incl. the 15–16 IST close runs)
+if   9 <= HOUR_IST <= 14:     RUN_MODE = "intraday"
+elif HOUR_IST in [19, 20]:    RUN_MODE = "fii_dii"
+else:                          RUN_MODE = "full_eod"
 RUN_MODE = os.environ.get("RUN_MODE", RUN_MODE) or RUN_MODE
 
 print(f"{'='*56}\n  MARKET BASECAMP [{RUN_MODE.upper()}]")
