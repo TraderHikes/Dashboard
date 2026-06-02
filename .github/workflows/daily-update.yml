@@ -2,11 +2,19 @@ name: TraderHikes Daily Data Pipeline
 
 on:
   schedule:
-    - cron: '30 4 * * 1-5'   # 10:00 AM IST
-    - cron: '31 6 * * 1-5'   # 12:01 PM IST
-    - cron: '30 8 * * 1-5'   #  2:00 PM IST
-    - cron: '0 11 * * 1-5'   #  4:30 PM IST — full EOD
-    - cron: '0 14 * * 1-5'   #  7:30 PM IST — FII/DII
+    # All times shifted off the top-of-hour to avoid GitHub's scheduled-run
+    # congestion (runs at :00 UTC are most often delayed/dropped).
+    # Cron is in UTC; IST = UTC + 5:30.
+    - cron: '13 4 * * 1-5'    #  9:43 AM IST — intraday
+    - cron: '13 5 * * 1-5'    # 10:43 AM IST — intraday
+    - cron: '13 6 * * 1-5'    # 11:43 AM IST — intraday
+    - cron: '13 7 * * 1-5'    # 12:43 PM IST — intraday
+    - cron: '13 8 * * 1-5'    #  1:43 PM IST — intraday
+    - cron: '13 9 * * 1-5'    #  2:43 PM IST — intraday
+    - cron: '13 10 * * 1-5'   #  3:43 PM IST — full EOD (market close)
+    - cron: '13 11 * * 1-5'   #  4:43 PM IST — full EOD (safety-net retry)
+    - cron: '23 14 * * 1-5'   #  7:53 PM IST — FII/DII
+    - cron: '43 14 * * 1-5'   #  8:13 PM IST — FII/DII (retry)
 
   workflow_dispatch:
     inputs:
@@ -40,11 +48,32 @@ jobs:
           python -m pip install --upgrade pip
           pip install yfinance supabase pandas pytz requests
 
+      # Decide RUN_MODE explicitly per slot so the pipeline never has to guess.
+      # Manual runs use the dispatch input; scheduled runs are mapped by IST hour
+      # to match the cron schedule above.
+      - name: Determine run mode
+        id: mode
+        run: |
+          MANUAL="${{ github.event.inputs.run_mode }}"
+          if [ -n "$MANUAL" ]; then
+            MODE="$MANUAL"
+          else
+            HOUR=$(TZ='Asia/Kolkata' date '+%H')   # IST hour, 24h, zero-padded
+            HOUR=$((10#$HOUR))                      # force base-10 (avoid octal)
+            if   [ "$HOUR" -ge 9 ]  && [ "$HOUR" -le 14 ]; then MODE="intraday"
+            elif [ "$HOUR" -eq 15 ] || [ "$HOUR" -eq 16 ]; then MODE="full_eod"
+            elif [ "$HOUR" -eq 19 ] || [ "$HOUR" -eq 20 ]; then MODE="fii_dii"
+            else MODE="full_eod"
+            fi
+          fi
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "Resolved RUN_MODE=$MODE (IST $(TZ='Asia/Kolkata' date '+%H:%M'))"
+
       - name: Run data pipeline
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          RUN_MODE: ${{ github.event.inputs.run_mode || '' }}
+          RUN_MODE: ${{ steps.mode.outputs.mode }}
         run: |
           python update_dashboard.py
 
