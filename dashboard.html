@@ -1689,7 +1689,7 @@ canvas.tc{display:block;width:100%;height:100%}
 /* ── Big view toggle (Watchlists-style, with smudge glow) ── */
 .sb-mode{display:flex;gap:10px;padding:16px 24px 6px}
 .sb-mode-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:15px 17px;border-radius:13px;cursor:pointer;border:1px solid var(--bdr2);background:var(--card2);position:relative;overflow:hidden;transition:all .22s;text-align:center}
-.sb-mode-btn .sb-mode-t{font-family:var(--f);font-size:15px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text2);position:relative;z-index:1;transition:color .2s}
+.sb-mode-btn .sb-mode-t{font-family:var(--f);font-size:13px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text2);position:relative;z-index:1;transition:color .2s}
 .sb-mode-btn .sb-mode-n{font-family:var(--fm);font-size:10.5px;color:var(--muted);position:relative;z-index:1;transition:color .2s}
 .sb-mode-btn::before{content:'';position:absolute;inset:0;background:radial-gradient(130% 130% at 0% 0%,rgba(143,163,255,.28),transparent 58%);opacity:0;transition:opacity .25s;pointer-events:none}
 .sb-mode-btn:hover{border-color:var(--bdr3);transform:translateY(-1px)}
@@ -1705,11 +1705,14 @@ canvas.tc{display:block;width:100%;height:100%}
 .sb-htg{padding:5px 12px;font-size:10px;font-weight:700;font-family:var(--fm);background:transparent;color:var(--muted);border:none;cursor:pointer;transition:all .15s}
 .sb-htg.on{background:var(--blue);color:#fff}
 .sb-heat-legend{display:flex;align-items:center;gap:7px;margin-left:auto;font-size:9px;color:var(--muted);font-family:var(--fm)}
-.sb-heat-gradient{width:128px;height:8px;border-radius:4px;background:linear-gradient(90deg,hsl(2,66%,47%),hsl(58,66%,47%),hsl(150,62%,44%))}
-.sb-heat-tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.sb-heat-gradient{width:128px;height:8px;border-radius:4px;background:linear-gradient(90deg,hsl(8,52%,47%),hsl(54,52%,46%),hsl(150,52%,42%))}
+.sb-heat-tw{overflow:auto;max-height:62vh;-webkit-overflow-scrolling:touch}
+.sb-heat thead th{position:sticky;z-index:3;background:var(--card);box-shadow:0 0 0 6px var(--card)}
+.sb-heat thead .sb-heat-grp th{top:0}
+.sb-heat thead .sb-heat-cols th{top:17px;box-shadow:0 0 0 6px var(--card),0 9px 9px -7px rgba(0,0,0,.55)}
 .sb-heat{width:100%;table-layout:fixed;border-collapse:separate;border-spacing:6px;font-family:var(--fm);min-width:560px}
-.sb-heat-grp th{font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:0 0 3px;text-align:center}
-.sb-heat-cols th{font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:4px 6px 7px;text-align:center;cursor:pointer;user-select:none;white-space:nowrap}
+.sb-heat-grp th{font-family:var(--f);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:0 0 3px;text-align:center}
+.sb-heat-cols th{font-family:var(--f);font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--text2);font-weight:700;padding:4px 6px 7px;text-align:center;cursor:pointer;user-select:none;white-space:nowrap}
 .sb-heat-cols th:hover{color:var(--blue-lt)}
 .sb-heat-cols th.on{color:var(--blue-lt)}
 .sb-heat-sec{text-align:left!important;min-width:178px}
@@ -1933,9 +1936,9 @@ const SB=(()=>{
   // Diverging breadth heat scale: 0%→red, 50%→yellow (neutral pivot), 100%→green
   const heatC=p=>{ if(p==null||isNaN(p))return 'var(--card2)';
     p=Math.max(0,Math.min(100,parseFloat(p)));
-    const h = p>=50 ? 58+(p-50)*1.84 : (p/50)*58;          // hue 0→58→150
-    const l = p>=50 ? 47-(p-50)*0.06 : 47;                  // deepen greens slightly
-    return `hsl(${h.toFixed(0)},66%,${l.toFixed(0)}%)`;
+    const h = p>=50 ? 54+(p-50)*1.92 : 8+(p/50)*46;        // hue 8(red)→54(yellow)→150(green)
+    const l = p>=50 ? 44-(p-50)*0.05 : 47;                  // greens a touch deeper
+    return `hsl(${h.toFixed(0)},52%,${l.toFixed(0)}%)`;      // lower sat = less neon
   };
   const rS=v=>v>2?'pos-rs':v<-2?'neg-rs':'neu-rs';
   const sg=v=>v>0?'+':'';
@@ -2026,7 +2029,7 @@ const SB=(()=>{
             <div class="nm">${cleanName(s.sector_name)}</div>
             <div class="sub">${s.total_stocks||0} stocks</div>
           </div></td>
-          <td class="cell" style="background:${sC(s.regime_score)}" title="Regime score ${f0(s.regime_score)} / 100">${f0(s.regime_score)}</td>
+          <td class="cell" style="background:${heatC(s.regime_score)}" title="Regime score ${f0(s.regime_score)} / 100">${f0(s.regime_score)}</td>
           ${cell(s.pct_above_21ema,s.total_stocks)}
           ${cell(s.pct_above_50ema,s.total_stocks)}
           ${cell(s.pct_above_200ema,s.total_stocks)}
