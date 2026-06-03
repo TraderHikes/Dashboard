@@ -5346,7 +5346,7 @@ async function renderChart(symbol){
         horzLines: { color: 'rgba(255,255,255,0.05)' },
       },
       rightPriceScale: { borderColor: 'rgba(255,255,255,0.10)' },
-      timeScale:       { borderColor: 'rgba(255,255,255,0.10)', rightOffset: 10 },
+      timeScale:       { borderColor: 'rgba(255,255,255,0.10)', rightOffset: (_chartTf === 'weekly' ? 4 : 10) },
       crosshair:       { mode: LightweightCharts.CrosshairMode.Normal },
     });
     _lwChart = chart;
@@ -5448,15 +5448,16 @@ async function renderChart(symbol){
 function applyRange(r){
   if(!_lwChart || !_lwCandles.length) return;
   const ts = _lwChart.timeScale();
-  if(r === 'all'){ ts.fitContent(); ts.applyOptions({ rightOffset: 10 }); return; }
+  if(r === 'all'){ ts.fitContent(); ts.applyOptions({ rightOffset: (_chartTf === 'weekly' ? 4 : 10) }); return; }
   let bars = parseInt(r, 10);                 // r is in trading DAYS (126/252/504)
   if(_chartTf === 'weekly') bars = Math.ceil(bars / 5);  // ~5 trading days per week
   const from = _lwCandles[Math.max(0, _lwCandles.length - bars)].time;
   const to   = _lwCandles[_lwCandles.length - 1].time;
   ts.setVisibleRange({ from, to });
   // setVisibleRange pins the right edge to the last candle; re-apply the
-  // 10-candle gap so the latest candle isn't jammed against the price axis.
-  ts.applyOptions({ rightOffset: 10 });
+  // right gap so the latest candle isn't jammed against the price axis.
+  // Weekly bars are wide, so 4 weeks reads like daily's 10 days.
+  ts.applyOptions({ rightOffset: (_chartTf === 'weekly' ? 4 : 10) });
 }
 
 function setChartRange(r, el){
