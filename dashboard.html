@@ -625,7 +625,7 @@ canvas.tc{display:block;width:100%;height:100%}
 
 /* ══ STOCK FILTER TAB ══ */
 .sf-wrap{padding:20px 28px}
-.sf-nav{display:flex;gap:10px;margin-bottom:18px}
+.sf-nav{display:flex;gap:10px;margin:0 auto 18px;max-width:430px}
 .sf-nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:10px 16px;border-radius:11px;cursor:pointer;border:1px solid var(--bdr2);background:var(--card2);transition:all .2s;text-align:center;position:relative}
 .sf-nav-btn .sf-nav-t{font-family:var(--f);font-size:13px;font-weight:700;color:var(--text2);transition:color .2s}
 .sf-nav-btn .sf-nav-n{font-family:var(--fm);font-size:10px;color:var(--muted);transition:color .2s}
@@ -1560,7 +1560,7 @@ canvas.tc{display:block;width:100%;height:100%}
         <thead><tr>
           <th onclick="sfSortFocused('symbol')">Symbol</th>
           <th onclick="sfSortFocused('company_name')">Company</th>
-          <th onclick="sfSortFocused('rs_rating')" class="sf-srt">RS ↕</th>
+          <th onclick="sfSortFocused('rs_rating')" class="sf-srt">Price Strength ↕</th>
           <th onclick="sfSortFocused('pct_from_21ema')">vs 21 EMA ↕</th>
           <th onclick="sfSortFocused('pct_from_10wema')">vs 10W EMA ↕</th>
           <th onclick="sfSortFocused('pct_from_200ema')">vs 200 EMA</th>
@@ -1579,7 +1579,7 @@ canvas.tc{display:block;width:100%;height:100%}
         <thead><tr>
           <th onclick="sfSort('symbol')">Symbol</th>
           <th onclick="sfSort('company_name')">Company</th>
-          <th onclick="sfSort('rs_rating')">RS</th>
+          <th onclick="sfSort('rs_rating')">Price Strength</th>
           <th onclick="sfSort('pct_from_21ema')">vs 21 EMA</th>
           <th onclick="sfSort('pct_from_10wema')">vs 10W EMA</th>
           <th onclick="sfSort('pct_from_200ema')">vs 200 EMA</th>
@@ -1696,7 +1696,7 @@ canvas.tc{display:block;width:100%;height:100%}
 .sb-ld{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:56px;gap:14px;color:var(--muted)}
 .sb-sp{width:32px;height:32px;border:3px solid var(--bdr);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}
 /* ── Big view toggle (Watchlists-style, with smudge glow) ── */
-.sb-mode{display:flex;gap:10px;padding:16px 24px 6px}
+.sb-mode{display:flex;gap:10px;padding:16px 24px 6px;max-width:580px;margin:0 auto}
 .sb-mode-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:15px 17px;border-radius:13px;cursor:pointer;border:1px solid var(--bdr2);background:var(--card2);position:relative;overflow:hidden;transition:all .22s;text-align:center}
 .sb-mode-btn .sb-mode-t{font-family:var(--f);font-size:13px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text2);position:relative;z-index:1;transition:color .2s}
 .sb-mode-btn .sb-mode-n{font-family:var(--fm);font-size:10.5px;color:var(--muted);position:relative;z-index:1;transition:color .2s}
@@ -5174,7 +5174,7 @@ function renderChartsList(rows){
     return;
   }
   listEl.innerHTML = rows.map(r => {
-    const rs   = r.rs_rating != null ? '<span class="ch-rs">RS ' + r.rs_rating + '</span>' : '';
+    const rs   = r.rs_rating != null ? '<span class="ch-rs">' + r.rs_rating + '</span>' : '';
     const safe = String(r.symbol).replace(/'/g, "\\'");
     return '<div class="ch-item" data-sym="' + r.symbol + '" onclick="selectChart(\'' + safe + '\')">' +
       '<div class="ch-item-top"><span class="ch-sym">' + r.symbol + '</span>' + rs + '</div>' +
@@ -5410,7 +5410,7 @@ async function renderChart(symbol){
       const val = rs != null
         ? '<span class="ch-rsbadge">' + rs + '</span>'
         : '—';
-      return '<tr><td>RS Rating</td><td>' + val + '</td></tr>';
+      return '<tr><td>Price Strength Rating</td><td>' + val + '</td></tr>';
     })();
     const emaTb = document.querySelector('#ch-ema-tbl tbody');
     if(emaTb) emaTb.innerHTML =
