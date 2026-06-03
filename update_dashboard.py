@@ -72,8 +72,29 @@ print(f"  {NOW_IST.strftime('%d %b %Y · %I:%M %p IST')}\n{'='*56}\n")
 # ════════════════════════════════════════════════════════════
 # HELPERS
 # ════════════════════════════════════════════════════════════
+
+# Known NSE symbol renames — applied transparently before any Yahoo fetch.
+# Add new entries here as NSE renames companies (the bare symbol, no .NS).
+SYMBOL_RENAMES = {
+    "GMRINFRA":     "GMRAIRPORT",    # renamed to GMR Airports
+    "AMBUJACEMENT": "AMBUJACEM",     # correct NSE symbol
+}
+
+def _remap(ticker_str):
+    """Apply known renames; preserves any .NS / .BO suffix and index (^) tickers."""
+    if not ticker_str:
+        return ticker_str
+    # Index tickers (start with ^) and suffixed forms pass through the map by base.
+    base = ticker_str
+    suffix = ""
+    for sfx in (".NS", ".BO"):
+        if ticker_str.endswith(sfx):
+            base = ticker_str[: -len(sfx)]; suffix = sfx; break
+    return SYMBOL_RENAMES.get(base, base) + suffix
+
 def get_close_series(ticker_str, period="5d"):
     """Download a single ticker → clean 1-D Close Series."""
+    ticker_str = _remap(ticker_str)
     data = yf.download(ticker_str, period=period, progress=False, auto_adjust=True)
     if data is None or data.empty:
         return pd.Series(dtype=float)
@@ -147,7 +168,7 @@ SECTOR_CSV_MAP = {
     # Mid/Small cap indices
     "DEFENCE":     ("Defence",          "midsmall", "ind_niftyindiadefencelist.csv"),
     "CHEMICALS":   ("Chemicals",        "midsmall", "ind_niftychemicalslist.csv"),
-    "CAP_GOODS":   ("Capital Goods",    "midsmall", "ind_niftycapitalgoods list.csv"),
+    "CAP_GOODS":   ("Capital Goods",    "midsmall", "ind_niftycapitalgoodslist.csv"),
     "MFG":         ("Manufacturing",    "midsmall", "ind_niftyindiamfglist.csv"),
 }
 
@@ -258,8 +279,7 @@ def fetch_cmp_for_open_trades():
 # ════════════════════════════════════════════════════════════
 INDEX_MAP = {
     "nifty50":      "^NSEI",     "sensex":       "^BSESN",
-    "nifty500":     "^CRSLDX",   "nifty_midcap": "^NSEMDCP150",
-    "nifty_smallcap":"NIFTYSMLCAP250.NS", "nifty_microcap":"NIFTY_MICROCAP250.NS",
+    "nifty500":     "^CRSLDX",
     "nifty_it":     "^CNXIT",    "nifty_bank":   "^NSEBANK",
     "nifty_pharma": "^CNXPHARMA","nifty_auto":   "^CNXAUTO",
     "nifty_psubank":"^CNXPSUBANK","nifty_metal":  "^CNXMETAL",
@@ -268,9 +288,9 @@ INDEX_MAP = {
 
 # Indices shown in the Key Indices table — only these have *_above_*ema
 # columns in index_levels, so only these get EMA flags written.
+# (Midcap/Smallcap/Microcap removed — their Yahoo symbols 404 / don't exist.)
 EMA_FLAG_INDICES = {
     "nifty50", "sensex", "nifty500",
-    "nifty_midcap", "nifty_smallcap", "nifty_microcap",
 }
 
 def fetch_index_levels():
