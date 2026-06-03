@@ -1686,10 +1686,17 @@ canvas.tc{display:block;width:100%;height:100%}
 .pos-rs{color:#2ed8a0}.neg-rs{color:#ff5d7a}.neu-rs{color:var(--muted)}
 .sb-ld{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:56px;gap:14px;color:var(--muted)}
 .sb-sp{width:32px;height:32px;border:3px solid var(--bdr);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}
-/* ── View toggle (Tiles / Heatmap) ── */
-.sb-viewseg{display:inline-flex;border:1px solid var(--bdr2);border-radius:8px;overflow:hidden}
-.sb-vbtn{padding:5px 14px;font-size:10px;font-weight:700;font-family:var(--fm);background:transparent;color:var(--muted);border:none;cursor:pointer;transition:all .15s;letter-spacing:.03em}
-.sb-vbtn.on{background:var(--blue);color:#fff}
+/* ── Big view toggle (Watchlists-style, with smudge glow) ── */
+.sb-mode{display:flex;gap:10px;padding:16px 24px 6px}
+.sb-mode-btn{flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:13px 17px;border-radius:13px;cursor:pointer;border:1px solid var(--bdr2);background:var(--card2);position:relative;overflow:hidden;transition:all .22s;text-align:left}
+.sb-mode-btn .sb-mode-t{font-family:var(--f);font-size:13.5px;font-weight:700;letter-spacing:.01em;color:var(--text2);position:relative;z-index:1;transition:color .2s}
+.sb-mode-btn .sb-mode-n{font-family:var(--fm);font-size:10.5px;color:var(--muted);position:relative;z-index:1;transition:color .2s}
+.sb-mode-btn::before{content:'';position:absolute;inset:0;background:radial-gradient(130% 130% at 0% 0%,rgba(143,163,255,.28),transparent 58%);opacity:0;transition:opacity .25s;pointer-events:none}
+.sb-mode-btn:hover{border-color:var(--bdr3);transform:translateY(-1px)}
+.sb-mode-btn.active{border-color:transparent;background:linear-gradient(135deg,#5c6ffb,#3a4bd6);box-shadow:0 6px 22px rgba(92,111,251,.4)}
+.sb-mode-btn.active::before{opacity:1}
+.sb-mode-btn.active .sb-mode-t{color:#fff}
+.sb-mode-btn.active .sb-mode-n{color:rgba(255,255,255,.85)}
 /* ── EMA Breadth Heatmap (StockEdge-style matrix) ── */
 .sb-heat-wrap{padding:18px 24px 30px}
 .sb-heat-bar{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap}
@@ -1716,20 +1723,18 @@ canvas.tc{display:block;width:100%;height:100%}
 .sb-heat tbody tr:hover .cell{transform:scale(.97);box-shadow:0 0 0 1px rgba(255,255,255,.18) inset}
 .sb-heat .cell.na{background:var(--card2)!important;color:var(--muted)}
 </style>
+<div class="sb-mode">
+  <button class="sb-mode-btn active" data-v="heat" onclick="SB.setView('heat',this)">
+    <span class="sb-mode-t">Sectoral Breadth</span>
+    <span class="sb-mode-n">Heatmap grid · % of stocks above EMAs</span>
+  </button>
+  <button class="sb-mode-btn" data-v="tiles" onclick="SB.setView('tiles',this)">
+    <span class="sb-mode-t">Sectoral Terrain Map</span>
+    <span class="sb-mode-n">Regime tiles &amp; comparison table</span>
+  </button>
+</div>
 <div class="sb-bar">
-  <span class="sb-bar-title">Sector Terrain</span>
-  <div class="sb-pills">
-    <button class="sb-pill on" data-f="all">All Sectors</button>
-    <button class="sb-pill" data-f="largecap">Large Cap</button>
-    <button class="sb-pill" data-f="midsmall">Mid / Small</button>
-    <button class="sb-pill" data-f="bull">Bull Only</button>
-    <button class="sb-pill" data-f="bear">Bear Only</button>
-  </div>
-  <div class="sb-viewseg">
-    <button class="sb-vbtn on" data-v="tiles" onclick="SB.setView('tiles',this)">Tiles</button>
-    <button class="sb-vbtn" data-v="heat" onclick="SB.setView('heat',this)">Heatmap</button>
-  </div>
-  <div class="sb-sort-wrap">
+  <div class="sb-sort-wrap" style="margin-left:0">
     <span class="sb-sort-lbl">Sort:</span>
     <select class="sb-sort-sel" id="sb-sort">
       <option value="score_desc">Regime Score ↓</option>
@@ -1738,9 +1743,9 @@ canvas.tc{display:block;width:100%;height:100%}
       <option value="name">Name A–Z</option>
     </select>
   </div>
-  <span class="sb-updated" id="sb-updated"></span>
+  <span class="sb-updated" id="sb-updated" style="margin-left:auto"></span>
 </div>
-<div id="sb-view-tiles">
+<div id="sb-view-tiles" style="display:none">
 <div class="sb-terrain">
   <div class="sb-terrain-lbl">⛰ SECTOR TERRAIN MAP — click any tile for full detail</div>
   <div class="sb-grid" id="sb-grid">
@@ -1752,7 +1757,7 @@ canvas.tc{display:block;width:100%;height:100%}
   <div id="sb-tbl"></div>
 </div>
 </div><!-- /sb-view-tiles -->
-<div id="sb-view-heat" style="display:none">
+<div id="sb-view-heat">
   <div class="sb-heat-wrap">
     <div class="sb-heat-bar">
       <span class="sb-terrain-lbl" style="margin:0">🔥 EMA Breadth Heatmap — % of each sector's stocks above its EMAs</span>
@@ -1920,7 +1925,7 @@ function sw(id,el){
 
 /* ══ SECTORAL BREADTH CONTROLLER ══ */
 const SB=(()=>{
-  let all=[],fil=[],filt='all',srt='score_desc',actTile=null,loaded=false,view='tiles',heatMode='pct';
+  let all=[],fil=[],filt='all',srt='score_desc',actTile=null,loaded=false,view='heat',heatMode='pct';
   const rC=l=>({'STRONG BULL':'rc-sb','BULL':'rc-b','NEUTRAL':'rc-n','BEAR':'rc-br','STRONG BEAR':'rc-sd'}[l]||'rc-n');
   const bC=l=>({'STRONG BULL':'sba-sb','BULL':'sba-b','NEUTRAL':'sba-n','BEAR':'sba-br','STRONG BEAR':'sba-sd'}[l]||'sba-n');
   const sC=s=>s>=80?'#2ed8a0':s>=60?'#2ee8dc':s>=40?'#ffb340':s>=20?'#ff8c42':'#ff5d7a';
@@ -2030,7 +2035,7 @@ const SB=(()=>{
   }
   function setView(v,el){
     view=v;
-    document.querySelectorAll('.sb-vbtn').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+    document.querySelectorAll('.sb-mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.v===v));
     const t=document.getElementById('sb-view-tiles'),h=document.getElementById('sb-view-heat');
     if(t)t.style.display=v==='tiles'?'':'none';
     if(h)h.style.display=v==='heat'?'':'none';
