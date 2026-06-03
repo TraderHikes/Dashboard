@@ -71,10 +71,12 @@ body{overflow-x:hidden;
     radial-gradient(ellipse 45% 35% at 90% 15%,rgba(0,212,200,.06) 0%,transparent 60%),
     radial-gradient(ellipse 30% 20% at 10% 80%,rgba(92,111,251,.04) 0%,transparent 60%);
 }
-::-webkit-scrollbar{width:4px;height:4px}
-::-webkit-scrollbar-track{background:var(--bg2)}
-::-webkit-scrollbar-thumb{background:var(--card4);border-radius:2px}
-::-webkit-scrollbar-thumb:hover{background:var(--blue)}
+::-webkit-scrollbar{width:11px;height:11px}
+::-webkit-scrollbar-track{background:rgba(255,255,255,.04);border-radius:8px}
+::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#8fa3ff,#5c6ffb 55%,#3a4bd6);border-radius:8px;border:2px solid var(--bg2);background-clip:padding-box;box-shadow:0 0 8px rgba(92,111,251,.6);min-height:42px}
+::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#aab8ff,#7c8cff 55%,#5c6ffb);box-shadow:0 0 13px rgba(92,111,251,.95)}
+::-webkit-scrollbar-corner{background:transparent}
+*{scrollbar-color:#5c6ffb rgba(255,255,255,.05)}
 
 /* ═══ HEADER ═══ */
 .hdr{display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:62px;background:var(--bg2);border-bottom:1px solid var(--bdr);position:sticky;top:0;z-index:200;backdrop-filter:blur(20px)}
