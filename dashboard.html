@@ -626,7 +626,7 @@ canvas.tc{display:block;width:100%;height:100%}
 /* ══ STOCK FILTER TAB ══ */
 .sf-wrap{padding:20px 28px}
 .sf-nav{display:flex;gap:10px;margin-bottom:18px}
-.sf-nav-btn{flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 16px;border-radius:11px;cursor:pointer;border:1px solid var(--bdr2);background:var(--card2);transition:all .2s;text-align:left;position:relative}
+.sf-nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:10px 16px;border-radius:11px;cursor:pointer;border:1px solid var(--bdr2);background:var(--card2);transition:all .2s;text-align:center;position:relative}
 .sf-nav-btn .sf-nav-t{font-family:var(--f);font-size:13px;font-weight:700;color:var(--text2);transition:color .2s}
 .sf-nav-btn .sf-nav-n{font-family:var(--fm);font-size:10px;color:var(--muted);transition:color .2s}
 .sf-nav-btn:hover{border-color:var(--bdr3)}
@@ -781,7 +781,7 @@ canvas.tc{display:block;width:100%;height:100%}
 .ch-mode-btn:hover{border-color:var(--bdr3)}
 .ch-mode-btn.active .ch-mode-t,.ch-mode-btn.active .ch-mode-n{color:#fff}
 #ch-mode-full.active{border-color:transparent;background:linear-gradient(135deg,#5c6ffb,#3a4bd6);box-shadow:0 4px 16px rgba(92,111,251,.35)}
-#ch-mode-focused.active{border-color:transparent;background:linear-gradient(135deg,#5c6ffb,#3a4bd6);box-shadow:0 4px 16px rgba(92,111,251,.35)}
+#ch-mode-focused.active{border-color:transparent;background:linear-gradient(135deg,#1ba87a,#0f7d5a);box-shadow:0 4px 18px rgba(46,216,160,.5),0 0 34px rgba(46,216,160,.3)}
 #ch-mode-focused.active .ch-mode-n{color:rgba(255,255,255,.85)}
 .ch-ohlc .oh-k{color:var(--muted);margin-left:9px;margin-right:3px;font-weight:600}
 .ch-ohlc .oh-k:first-child{margin-left:0}
@@ -1796,13 +1796,13 @@ canvas.tc{display:block;width:100%;height:100%}
   <div class="ch-wrap">
     <div class="ch-side">
       <div class="ch-mode">
-        <button class="ch-mode-btn active" id="ch-mode-full"    onclick="setWatchMode('full',this)">
-          <span class="ch-mode-t">Full Watchlist</span>
-          <span class="ch-mode-n" id="ch-mode-full-n">—</span>
-        </button>
-        <button class="ch-mode-btn" id="ch-mode-focused" onclick="setWatchMode('focused',this)">
+        <button class="ch-mode-btn active" id="ch-mode-focused" onclick="setWatchMode('focused',this)">
           <span class="ch-mode-t">Focused Watchlist</span>
           <span class="ch-mode-n" id="ch-mode-focused-n">—</span>
+        </button>
+        <button class="ch-mode-btn" id="ch-mode-full"    onclick="setWatchMode('full',this)">
+          <span class="ch-mode-t">Full Watchlist</span>
+          <span class="ch-mode-n" id="ch-mode-full-n">—</span>
         </button>
       </div>
       <div class="ch-search-wrap">
@@ -5000,7 +5000,7 @@ let _chartsLoaded    = false;
 let _chartsData      = [];
 let _chartsAsOf      = null;
 let _chartsActiveSym = null;
-let _watchMode       = 'full';   // 'full' | 'focused' (focused = in_buy_range)
+let _watchMode       = 'focused';   // 'full' | 'focused' (focused = in_buy_range)
 let _chartsVisible   = [];        // currently-visible rows (for prev/next nav)
 
 /* Lightweight Charts runtime state */
