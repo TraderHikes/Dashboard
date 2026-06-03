@@ -773,6 +773,22 @@ canvas.tc{display:block;width:100%;height:100%}
 .ch-wrap.wm-full .ch-tbl-h{color:#8fa3ff;border-bottom-color:rgba(92,111,251,.4);background:rgba(92,111,251,.07)}
 .ch-wrap.wm-full .ch-symbadge{color:#e6ecff;background:linear-gradient(135deg,#1a2a6b 0%,#3a4bd6 45%,#5c6ffb 100%);border-color:rgba(92,111,251,.6);box-shadow:0 0 0 1px rgba(92,111,251,.18),0 4px 22px rgba(92,111,251,.55),0 0 38px rgba(92,111,251,.35),inset 0 1px 0 rgba(255,255,255,.25),inset 0 -2px 8px rgba(0,10,40,.4);text-shadow:0 0 14px rgba(230,236,255,.6),0 1px 1px rgba(0,8,30,.5)}
 .ch-wrap.wm-full .ch-symbadge::after{background:radial-gradient(ellipse at center,rgba(92,111,251,.45) 0%,rgba(92,111,251,.12) 45%,transparent 72%)}
+/* selected list item */
+.ch-wrap.wm-focused .ch-item.active{background:rgba(46,216,160,.13);border-left-color:#2ed8a0}
+.ch-wrap.wm-full .ch-item.active{background:var(--blue-dim);border-left-color:var(--blue)}
+/* list score badge */
+.ch-wrap.wm-focused .ch-rs{color:#7ff0c8;background:rgba(46,216,160,.16)}
+.ch-wrap.wm-full .ch-rs{color:var(--blue-lt);background:var(--blue-dim)}
+/* technicals score badge */
+.ch-wrap.wm-focused .ch-rsbadge{background:linear-gradient(135deg,#1ba87a,#0f7d5a);box-shadow:0 2px 10px rgba(46,216,160,.45)}
+.ch-wrap.wm-full .ch-rsbadge{background:linear-gradient(135deg,#5c6ffb,#7c4dff);box-shadow:0 2px 10px rgba(92,111,251,.4)}
+/* search box border */
+.ch-wrap.wm-focused .ch-search{border-color:rgba(46,216,160,.55)}
+.ch-wrap.wm-full .ch-search{border-color:rgba(92,111,251,.6)}
+.ch-wrap.wm-focused .ch-search:focus{border-color:#2ed8a0}
+.ch-wrap.wm-full .ch-search:focus{border-color:var(--blue)}
+/* whole Screen Charts tab in display sans (no mono) */
+#pane-charts, #pane-charts *{font-family:var(--f)}
 .ch-title{overflow:visible}
 .ch-sub{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--fm);font-size:11px;color:var(--text)}
 .ch-sub b{color:var(--white);font-weight:600}
@@ -1813,7 +1829,7 @@ canvas.tc{display:block;width:100%;height:100%}
         </button>
       </div>
       <div class="ch-search-wrap">
-        <input class="ch-search" id="ch-search" type="text" placeholder="Search watchlist…" oninput="filterCharts()" autocomplete="off">
+        <input class="ch-search" id="ch-search" type="text" placeholder="Search" oninput="filterCharts()" autocomplete="off">
       </div>
       <div class="ch-count" id="ch-count">—</div>
       <div class="ch-list" id="ch-list"><div class="ch-empty">Loading…</div></div>
@@ -5338,7 +5354,7 @@ async function renderChart(symbol){
       layout: {
         background: { type: 'solid', color: '#0e1528' },
         textColor:  '#cdd6f0',
-        fontFamily: "'DM Mono', monospace",
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
         fontSize: 11,
       },
       grid: {
