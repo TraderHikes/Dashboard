@@ -766,6 +766,13 @@ canvas.tc{display:block;width:100%;height:100%}
   background:radial-gradient(ellipse at center,rgba(46,216,160,.45) 0%,rgba(46,216,160,.12) 45%,transparent 72%);
   filter:blur(8px);pointer-events:none;
 }
+/* Screen Charts — mode-aware accent: Focused=green, Full=blue */
+.ch-wrap.wm-focused .ch-side,.ch-wrap.wm-focused .ch-main{border-color:rgba(46,216,160,.55);box-shadow:0 0 22px rgba(46,216,160,.18),inset 0 0 24px rgba(46,216,160,.05)}
+.ch-wrap.wm-full .ch-side,.ch-wrap.wm-full .ch-main{border-color:rgba(92,111,251,.6);box-shadow:0 0 22px rgba(92,111,251,.2),inset 0 0 24px rgba(92,111,251,.05)}
+.ch-wrap.wm-focused .ch-tbl-h{color:#2ed8a0;border-bottom-color:rgba(46,216,160,.4);background:rgba(46,216,160,.06)}
+.ch-wrap.wm-full .ch-tbl-h{color:#8fa3ff;border-bottom-color:rgba(92,111,251,.4);background:rgba(92,111,251,.07)}
+.ch-wrap.wm-full .ch-symbadge{color:#e6ecff;background:linear-gradient(135deg,#1a2a6b 0%,#3a4bd6 45%,#5c6ffb 100%);border-color:rgba(92,111,251,.6);box-shadow:0 0 0 1px rgba(92,111,251,.18),0 4px 22px rgba(92,111,251,.55),0 0 38px rgba(92,111,251,.35),inset 0 1px 0 rgba(255,255,255,.25),inset 0 -2px 8px rgba(0,10,40,.4);text-shadow:0 0 14px rgba(230,236,255,.6),0 1px 1px rgba(0,8,30,.5)}
+.ch-wrap.wm-full .ch-symbadge::after{background:radial-gradient(ellipse at center,rgba(92,111,251,.45) 0%,rgba(92,111,251,.12) 45%,transparent 72%)}
 .ch-title{overflow:visible}
 .ch-sub{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--fm);font-size:11px;color:var(--text)}
 .ch-sub b{color:var(--white);font-weight:600}
@@ -1793,7 +1800,7 @@ canvas.tc{display:block;width:100%;height:100%}
   <div class="sb-pb" id="sb-pb"></div>
 </div>
 <div class="pane" id="pane-charts">
-  <div class="ch-wrap">
+  <div class="ch-wrap wm-focused" id="ch-wrap">
     <div class="ch-side">
       <div class="ch-mode">
         <button class="ch-mode-btn active" id="ch-mode-focused" onclick="setWatchMode('focused',this)">
@@ -5204,6 +5211,8 @@ function filterCharts(){ applyChartsFilter(); }
 
 function setWatchMode(mode, el){
   _watchMode = mode;
+  const wrap = document.getElementById('ch-wrap');
+  if(wrap){ wrap.classList.toggle('wm-focused', mode==='focused'); wrap.classList.toggle('wm-full', mode==='full'); }
   document.querySelectorAll('.ch-mode-btn').forEach(b => b.classList.remove('active'));
   if(el) el.classList.add('active');
 
