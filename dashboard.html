@@ -1688,8 +1688,8 @@ canvas.tc{display:block;width:100%;height:100%}
 .sb-sp{width:32px;height:32px;border:3px solid var(--bdr);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}
 /* ── Big view toggle (Watchlists-style, with smudge glow) ── */
 .sb-mode{display:flex;gap:10px;padding:16px 24px 6px}
-.sb-mode-btn{flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:13px 17px;border-radius:13px;cursor:pointer;border:1px solid var(--bdr2);background:var(--card2);position:relative;overflow:hidden;transition:all .22s;text-align:left}
-.sb-mode-btn .sb-mode-t{font-family:var(--f);font-size:13.5px;font-weight:700;letter-spacing:.01em;color:var(--text2);position:relative;z-index:1;transition:color .2s}
+.sb-mode-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:15px 17px;border-radius:13px;cursor:pointer;border:1px solid var(--bdr2);background:var(--card2);position:relative;overflow:hidden;transition:all .22s;text-align:center}
+.sb-mode-btn .sb-mode-t{font-family:var(--f);font-size:15px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text2);position:relative;z-index:1;transition:color .2s}
 .sb-mode-btn .sb-mode-n{font-family:var(--fm);font-size:10.5px;color:var(--muted);position:relative;z-index:1;transition:color .2s}
 .sb-mode-btn::before{content:'';position:absolute;inset:0;background:radial-gradient(130% 130% at 0% 0%,rgba(143,163,255,.28),transparent 58%);opacity:0;transition:opacity .25s;pointer-events:none}
 .sb-mode-btn:hover{border-color:var(--bdr3);transform:translateY(-1px)}
@@ -1699,6 +1699,7 @@ canvas.tc{display:block;width:100%;height:100%}
 .sb-mode-btn.active .sb-mode-n{color:rgba(255,255,255,.85)}
 /* ── EMA Breadth Heatmap (StockEdge-style matrix) ── */
 .sb-heat-wrap{padding:18px 24px 30px}
+.sb-heat-panel{background:var(--card);border:1px solid var(--blue-lt);border-radius:14px;box-shadow:0 0 24px rgba(92,111,251,.18),inset 0 0 26px rgba(92,111,251,.05);padding:16px 18px 18px}
 .sb-heat-bar{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap}
 .sb-heat-toggle{display:inline-flex;border:1px solid var(--bdr2);border-radius:8px;overflow:hidden}
 .sb-htg{padding:5px 12px;font-size:10px;font-weight:700;font-family:var(--fm);background:transparent;color:var(--muted);border:none;cursor:pointer;transition:all .15s}
@@ -1706,7 +1707,7 @@ canvas.tc{display:block;width:100%;height:100%}
 .sb-heat-legend{display:flex;align-items:center;gap:7px;margin-left:auto;font-size:9px;color:var(--muted);font-family:var(--fm)}
 .sb-heat-gradient{width:128px;height:8px;border-radius:4px;background:linear-gradient(90deg,hsl(2,66%,47%),hsl(58,66%,47%),hsl(150,62%,44%))}
 .sb-heat-tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.sb-heat{border-collapse:separate;border-spacing:5px;font-family:var(--fm);min-width:520px}
+.sb-heat{width:100%;table-layout:fixed;border-collapse:separate;border-spacing:6px;font-family:var(--fm);min-width:560px}
 .sb-heat-grp th{font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:0 0 3px;text-align:center}
 .sb-heat-cols th{font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:4px 6px 7px;text-align:center;cursor:pointer;user-select:none;white-space:nowrap}
 .sb-heat-cols th:hover{color:var(--blue-lt)}
@@ -1718,7 +1719,7 @@ canvas.tc{display:block;width:100%;height:100%}
 .sb-heat .sec .nm{font-family:var(--f);font-size:12px;font-weight:700;color:var(--white);letter-spacing:.02em;line-height:1.2}
 .sb-heat .sec .sub{font-size:9px;color:var(--muted);margin-top:3px;display:flex;align-items:center;gap:6px}
 .sb-heat .sec .chip{font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px;background:var(--card2);letter-spacing:.04em}
-.sb-heat .cell{text-align:center;border-radius:9px;font-size:14px;font-weight:800;color:#06140d;min-width:104px;height:48px;vertical-align:middle;transition:transform .12s,box-shadow .12s}
+.sb-heat .cell{text-align:center;border-radius:9px;font-size:14px;font-weight:800;color:#06140d;height:48px;vertical-align:middle;transition:transform .12s,box-shadow .12s}
 .sb-heat .cell .cw{display:block;font-size:8px;font-weight:600;opacity:.7;margin-top:1px;letter-spacing:.03em}
 .sb-heat tbody tr:hover .cell{transform:scale(.97);box-shadow:0 0 0 1px rgba(255,255,255,.18) inset}
 .sb-heat .cell.na{background:var(--card2)!important;color:var(--muted)}
@@ -1726,11 +1727,9 @@ canvas.tc{display:block;width:100%;height:100%}
 <div class="sb-mode">
   <button class="sb-mode-btn active" data-v="heat" onclick="SB.setView('heat',this)">
     <span class="sb-mode-t">Sectoral Breadth</span>
-    <span class="sb-mode-n">Heatmap grid · % of stocks above EMAs</span>
   </button>
   <button class="sb-mode-btn" data-v="tiles" onclick="SB.setView('tiles',this)">
     <span class="sb-mode-t">Sectoral Terrain Map</span>
-    <span class="sb-mode-n">Regime tiles &amp; comparison table</span>
   </button>
 </div>
 <div class="sb-bar">
@@ -1759,17 +1758,18 @@ canvas.tc{display:block;width:100%;height:100%}
 </div><!-- /sb-view-tiles -->
 <div id="sb-view-heat">
   <div class="sb-heat-wrap">
-    <div class="sb-heat-bar">
-      <span class="sb-terrain-lbl" style="margin:0">🔥 EMA Breadth Heatmap — % of each sector's stocks above its EMAs</span>
-      <div class="sb-heat-toggle">
-        <button class="sb-htg on" data-m="pct" onclick="SB.setHeatMode('pct',this)">Per (%)</button>
-        <button class="sb-htg" data-m="count" onclick="SB.setHeatMode('count',this)">Count</button>
+    <div class="sb-heat-panel">
+      <div class="sb-heat-bar">
+        <div class="sb-heat-toggle">
+          <button class="sb-htg on" data-m="pct" onclick="SB.setHeatMode('pct',this)">Per (%)</button>
+          <button class="sb-htg" data-m="count" onclick="SB.setHeatMode('count',this)">Count</button>
+        </div>
+        <div class="sb-heat-legend">
+          <span>Bearish</span><div class="sb-heat-gradient"></div><span>Bullish</span>
+        </div>
       </div>
-      <div class="sb-heat-legend">
-        <span>Bearish</span><div class="sb-heat-gradient"></div><span>Bullish</span>
-      </div>
+      <div class="sb-heat-tw" id="sb-heat-tw"></div>
     </div>
-    <div class="sb-heat-tw" id="sb-heat-tw"></div>
   </div>
 </div><!-- /sb-view-heat -->
 </div><!-- /pane-sectoral -->
@@ -2005,28 +2005,28 @@ const SB=(()=>{
   function renderHeat(){
     const tw=document.getElementById('sb-heat-tw');if(!tw)return;
     if(!fil.length){tw.innerHTML='<div class="sb-ld"><div style="font-size:28px;opacity:.4">🔍</div><div>No sectors match this filter</div></div>';return;}
+    const cleanName=n=>(n||'').replace(/^nifty\s+/i,'').toUpperCase();
     const ch=(k,l)=>`<th class="${srt===k?'on':''}" onclick="SB.sort('${k}')">${l}${srt===k?' ▼':''}</th>`;
+    const scoreActive=(srt==='score_desc'||srt==='score_asc');
     const cell=(v,tot)=>{
       if(v==null||isNaN(v))return '<td class="cell na">—</td>';
       const n=Math.round(parseFloat(v)/100*(tot||0));
-      const body = heatMode==='count'
-        ? `${n}<span class="cw">of ${tot||0}</span>`
-        : `${f0(v)}%`;
+      const body = heatMode==='count' ? `${n}` : `${f0(v)}%`;
       return `<td class="cell" style="background:${heatC(v)}" title="${f1(v)}% · ${n}/${tot||0} stocks">${body}</td>`;
     };
     tw.innerHTML=`<table class="sb-heat">
+      <colgroup><col style="width:26%"><col style="width:18.5%"><col style="width:18.5%"><col style="width:18.5%"><col style="width:18.5%"></colgroup>
       <thead>
-        <tr class="sb-heat-grp"><th class="sb-heat-sec"></th><th colspan="3">% Stocks Above EMA</th></tr>
-        <tr class="sb-heat-cols"><th class="sb-heat-sec">Sector</th>${ch('ema21','21 EMA')}${ch('ema50','50 EMA')}${ch('ema200','200 EMA')}</tr>
+        <tr class="sb-heat-grp"><th class="sb-heat-sec"></th><th></th><th colspan="3">% Stocks Above EMA</th></tr>
+        <tr class="sb-heat-cols"><th class="sb-heat-sec">Sector</th><th class="${scoreActive?'on':''}" onclick="SB.sort('score_desc')">Score${scoreActive?' ▼':''}</th>${ch('ema21','21 EMA')}${ch('ema50','50 EMA')}${ch('ema200','200 EMA')}</tr>
       </thead>
       <tbody>${fil.map(s=>{
-        const cat=s.category==='largecap'?'LC':'MS';
-        const col=sC(s.regime_score);
         return `<tr onclick="SB.open('${s.sector_key}')">
           <td class="sb-heat-sec"><div class="sec">
-            <div class="nm">${s.sector_name}</div>
-            <div class="sub"><span class="chip">${cat}</span>${s.total_stocks||0} stocks<span style="color:${col};font-weight:700">· Score ${f0(s.regime_score)}</span></div>
+            <div class="nm">${cleanName(s.sector_name)}</div>
+            <div class="sub">${s.total_stocks||0} stocks</div>
           </div></td>
+          <td class="cell" style="background:${sC(s.regime_score)}" title="Regime score ${f0(s.regime_score)} / 100">${f0(s.regime_score)}</td>
           ${cell(s.pct_above_21ema,s.total_stocks)}
           ${cell(s.pct_above_50ema,s.total_stocks)}
           ${cell(s.pct_above_200ema,s.total_stocks)}
