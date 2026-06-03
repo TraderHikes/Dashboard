@@ -1683,7 +1683,7 @@ canvas.tc{display:block;width:100%;height:100%}
 .sb-sw{display:flex;align-items:center;gap:6px}.sb-sn{min-width:28px;font-weight:700}
 .sb-sk{width:66px;height:4px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden}
 .sb-sf{height:100%;border-radius:2px}
-.pos-rs{color:#2ed8a0}.neg-rs{color:#ff5d7a}.neu-rs{color:var(--muted)}
+.pos-rs{color:#2ed8a0}.neg-rs{color:#ef5350}.neu-rs{color:var(--muted)}
 .sb-ld{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:56px;gap:14px;color:var(--muted)}
 .sb-sp{width:32px;height:32px;border:3px solid var(--bdr);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}
 /* ── Big view toggle (Watchlists-style, with smudge glow) ── */
@@ -1700,6 +1700,11 @@ canvas.tc{display:block;width:100%;height:100%}
 /* ── EMA Breadth Heatmap (StockEdge-style matrix) ── */
 .sb-heat-wrap{padding:18px 24px 30px}
 .sb-heat-panel{background:var(--card);border:1px solid var(--blue-lt);border-radius:14px;box-shadow:0 0 24px rgba(92,111,251,.18),inset 0 0 26px rgba(92,111,251,.05);padding:16px 18px 18px}
+/* Sectoral Terrain Map → all text in display sans */
+#sb-view-tiles, #sb-view-tiles *, #sb-pan, #sb-pan *{font-family:var(--f)}
+/* Comparison table → illuminated panel + internal scroll (Watchlists-style) */
+#sb-tbl{background:var(--card);border:1px solid var(--blue-lt);border-radius:14px;box-shadow:0 0 24px rgba(92,111,251,.18),inset 0 0 26px rgba(92,111,251,.05);max-height:62vh;overflow:auto;padding:2px 14px 10px;-webkit-overflow-scrolling:touch}
+#sb-tbl .sb-tb thead th{position:sticky;top:0;z-index:3;background:var(--card);box-shadow:0 2px 0 0 var(--bdr)}
 .sb-heat-bar{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap}
 .sb-heat-toggle{display:inline-flex;border:1px solid var(--bdr2);border-radius:8px;overflow:hidden}
 .sb-htg{padding:5px 12px;font-size:10px;font-weight:700;font-family:var(--fm);background:transparent;color:var(--muted);border:none;cursor:pointer;transition:all .15s}
@@ -1943,6 +1948,8 @@ const SB=(()=>{
   const rS=v=>v>2?'pos-rs':v<-2?'neg-rs':'neu-rs';
   const sg=v=>v>0?'+':'';
   const f1=v=>v==null?'—':parseFloat(v).toFixed(1);
+  const pf=v=>(v==null||v===''||isNaN(v))?'—':parseFloat(v).toFixed(1)+'%';
+  const rf=v=>{if(v==null||v===''||isNaN(v))return '—';const n=parseFloat(v);return (n>0?'+':'')+n.toFixed(1)+'%';};
   const f0=v=>v==null?'—':Math.round(v);
   async function load(){
     if(loaded)return;loaded=true;
@@ -1989,19 +1996,16 @@ const SB=(()=>{
     const wrap=document.getElementById('sb-tbl');if(!wrap||!fil.length){if(wrap)wrap.innerHTML='';return;}
     const h=(k,l)=>`<th class="${srt===k?'sb-srt':''}" onclick="SB.sort('${k}')">${l} ${srt===k?'▼':'⇅'}</th>`;
     wrap.innerHTML=`<table class="sb-tb"><thead><tr>
-      <th class="sb-rk">#</th><th>Sector</th>${h('score_desc','Score')}<th>Regime</th>
-      ${h('ema200','200E%')}<th>50E%</th><th>21E%</th><th>Stocks</th>
+      <th class="sb-rk">#</th><th>Sector</th><th>Stocks</th>${h('score_desc','Score')}${h('ema21','21 EMA')}${h('ema50','50 EMA')}${h('ema200','200 EMA')}
     </tr></thead><tbody>${fil.map((s,i)=>{
-      const col=sC(s.regime_score),bc=bC(s.regime_label);
-      const cat=s.category==='largecap'?'<span class="c-lc">LC</span>':'<span class="c-ms">MS</span>';
+      const col=sC(s.regime_score);
       return `<tr onclick="SB.open('${s.sector_key}')">
-        <td class="sb-rk">${i+1}</td><td class="sb-nm">${s.sector_name}${cat}</td>
-        <td><div class="sb-sw"><span class="sb-sn" style="color:${col}">${f0(s.regime_score)}</span><div class="sb-sk"><div class="sb-sf" style="width:${s.regime_score}%;background:${col}"></div></div></div></td>
-        <td><span class="sb-bdg ${bc}">${s.regime_label}</span></td>
-        <td style="color:${eC(s.pct_above_200ema)}">${f1(s.pct_above_200ema)}%</td>
-        <td style="color:${eC(s.pct_above_50ema)}">${f1(s.pct_above_50ema)}%</td>
-        <td style="color:${eC(s.pct_above_21ema)}">${f1(s.pct_above_21ema)}%</td>
+        <td class="sb-rk">${i+1}</td><td class="sb-nm">${s.sector_name}</td>
         <td style="color:var(--muted)">${s.total_stocks||'—'}</td>
+        <td><div class="sb-sw"><span class="sb-sn" style="color:${col}">${f0(s.regime_score)}</span><div class="sb-sk"><div class="sb-sf" style="width:${s.regime_score}%;background:${col}"></div></div></div></td>
+        <td style="color:${eC(s.pct_above_21ema)}">${f1(s.pct_above_21ema)}%</td>
+        <td style="color:${eC(s.pct_above_50ema)}">${f1(s.pct_above_50ema)}%</td>
+        <td style="color:${eC(s.pct_above_200ema)}">${f1(s.pct_above_200ema)}%</td>
       </tr>`;
     }).join('')}</tbody></table>`;
   }
@@ -2081,17 +2085,17 @@ const SB=(()=>{
       </div>
       <div><div class="sb-pl">Advance / Decline</div>
         <div class="sb-ab"><div class="sb-an" style="color:${s.ad_ratio>=1.5?'var(--green)':s.ad_ratio<0.7?'var(--red)':'var(--amber)'}">${f1(s.ad_ratio)}</div>
-          <div class="sb-abs">${[['Adv',adw,s.advances,'var(--green)'],['Dec',ddw,s.declines,'var(--red)'],['Unch',Math.max(0,100-adw-ddw),s.unchanged||0,'var(--muted)']].map(([l,w,n,c])=>`<div class="sb-ar"><div class="sb-al" style="color:${c}">${l}</div><div class="sb-at"><div class="sb-af" style="width:${w}%;background:${c}"></div></div><div class="sb-av" style="color:${c}">${n}</div></div>`).join('')}</div>
+          <div class="sb-abs">${[['Adv',adw,s.advances,'var(--green)'],['Dec',ddw,s.declines,'#ef5350']].map(([l,w,n,c])=>`<div class="sb-ar"><div class="sb-al" style="color:${c}">${l}</div><div class="sb-at"><div class="sb-af" style="width:${w}%;background:${c}"></div></div><div class="sb-av" style="color:${c}">${n}</div></div>`).join('')}</div>
         </div>
       </div>
       <div><div class="sb-pl">52-Week Proximity</div>
         <div class="sb-wg">
-          <div class="sb-wc" style="border-left:3px solid var(--green)"><div class="sb-wv" style="color:var(--green)">${f1(s.pct_near_52w_high)}%</div><div class="sb-wl">Near 52W High</div></div>
-          <div class="sb-wc" style="border-left:3px solid var(--red)"><div class="sb-wv" style="color:var(--red)">${f1(s.pct_near_52w_low)}%</div><div class="sb-wl">Near 52W Low</div></div>
+          <div class="sb-wc" style="border-left:3px solid var(--green)"><div class="sb-wv" style="color:var(--green)">${pf(s.pct_near_52w_high)}</div><div class="sb-wl">Near 52W High</div></div>
+          <div class="sb-wc" style="border-left:3px solid #ef5350"><div class="sb-wv" style="color:#ef5350">${pf(s.pct_near_52w_low)}</div><div class="sb-wl">Near 52W Low</div></div>
         </div>
       </div>
       <div><div class="sb-pl">Relative Strength vs Nifty 500</div>
-        <div class="sb-rg">${[['1 Month','rs_1m'],['3 Months','rs_3m'],['6 Months','rs_6m']].map(([l,k])=>`<div class="sb-rc"><div class="sb-rv ${rS(s[k])}">${sg(s[k])}${f1(s[k])}%</div><div class="sb-rl">${l}</div></div>`).join('')}</div>
+        <div class="sb-rg">${[['1 Month','rs_1m'],['3 Months','rs_3m'],['6 Months','rs_6m']].map(([l,k])=>`<div class="sb-rc"><div class="sb-rv ${rS(s[k])}">${rf(s[k])}</div><div class="sb-rl">${l}</div></div>`).join('')}</div>
         <div style="font-size:9px;color:var(--muted);margin-top:8px">+ve = outperforming Nifty 500</div>
       </div>
       <div><div class="sb-pl">Score Breakdown</div>
