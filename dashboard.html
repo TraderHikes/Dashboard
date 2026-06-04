@@ -3081,9 +3081,9 @@ async function buildAllocList(){
     const ae  = t.avg_entry_price||0;
     const rq  = t.remaining_qty||0;
     const val = ae*rq;
-    const pct = t.position_size_pct
-      ? parseFloat(t.position_size_pct)
-      : (totalCap>0 ? val/totalCap*100 : 0);
+    // Dynamic: current exposure (avg entry x remaining qty) / capital — moves with pyramids & partials.
+    const pct = totalCap>0 ? val/totalCap*100
+      : (t.position_size_pct ? parseFloat(t.position_size_pct) : 0);
     return { name:t.symbol, pct:parseFloat(pct.toFixed(1)), c:colours[i%colours.length] };
   });
 
@@ -3474,7 +3474,7 @@ async function renderOpen(){
         <div class="tc-metrics">
           <div class="tc-met">
             <div class="tc-met-l">Position Size</div>
-            <div class="tc-met-v" style="color:var(--blue-lt);font-family:var(--fm)">${t.position_size_pct ? t.position_size_pct+'%' : (t.capital_at_entry ? (posValue/t.capital_at_entry*100).toFixed(1)+'%' : '—')}</div>
+            <div class="tc-met-v" style="color:var(--blue-lt);font-family:var(--fm)">${t.capital_at_entry ? (posValue/t.capital_at_entry*100).toFixed(2)+'%' : (t.position_size_pct ? Number(t.position_size_pct).toFixed(2)+'%' : '—')}</div>
             <div style="font-size:8px;color:var(--white);margin-top:1px">\u20B9${(posValue/100000).toFixed(2)}L value</div>
           </div>
           <div class="tc-met">
