@@ -18,6 +18,13 @@
     --white:#f4f8ff; --text:#cdd6f0; --text2:#dce5f8; --muted:#6478a0;
     --f:'Plus Jakarta Sans',sans-serif; --fm:'DM Mono',monospace;
   }
+  /* Illuminated blue scrollbars — identical to the dashboard */
+  ::-webkit-scrollbar{width:11px;height:11px}
+  ::-webkit-scrollbar-track{background:rgba(255,255,255,.04);border-radius:8px}
+  ::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#8fa3ff,#5c6ffb 55%,#3a4bd6);border-radius:8px;border:2px solid var(--bg);background-clip:padding-box;box-shadow:0 0 8px rgba(92,111,251,.6);min-height:42px}
+  ::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#aab8ff,#7c8cff 55%,#5c6ffb);box-shadow:0 0 13px rgba(92,111,251,.95)}
+  ::-webkit-scrollbar-corner{background:transparent}
+  *{scrollbar-color:#5c6ffb rgba(255,255,255,.05)}
   html,body { min-height:100vh; background:var(--bg); font-family:var(--f); font-size:13px; color:var(--text2); }
   body { background-image:radial-gradient(ellipse 80% 50% at 50% -5%,rgba(92,111,251,.11) 0%,transparent 70%); }
 
