@@ -155,6 +155,15 @@
 
   /* ── CARDS ── */
   .card { background:var(--card); border:1px solid var(--bdr); border-radius:12px; overflow:hidden; margin-bottom:16px; }
+  /* Constrain & centre the wide table panes so they match the form tabs (Pyramid Buy, etc.) */
+  #tab-students, #tab-breadth, #tab-snapshot { max-width:960px; margin:0 auto; }
+  /* Closed-trades & watchlist editor panes live outside .app — give them page margin + padding */
+  #tab-closed-edit, #tab-watchlist { max-width:960px; margin:24px auto; padding:0 32px; }
+  /* Illuminated blue border on every main panel/table card (matches the dashboard) */
+  .form-tab-wrap > .card, .tab-pane > .card {
+    border-color:rgba(92,111,251,.5);
+    box-shadow:0 0 22px rgba(92,111,251,.15), inset 0 0 24px rgba(92,111,251,.04);
+  }
   .card-hdr {
     padding:14px 20px; border-bottom:1px solid var(--bdr);
     background:linear-gradient(135deg,var(--card2),var(--card));
@@ -1854,8 +1863,8 @@ async function loadIndexFlags() {
     const ph  = ix.auto ? 'auto (pipeline)' : 'enter close';
     return `<tr style="border-top:1px solid var(--bdr)">
       <td style="padding:11px 8px;font-weight:700;color:var(--white);white-space:nowrap">${ix.name}</td>
-      <td style="padding:11px 6px;text-align:center"><input class="form-input" id="idx-${ix.key}-close" type="number" step="0.01" value="${cv}" placeholder="${ph}" style="min-width:90px;margin:0 auto"></td>
-      <td style="padding:11px 6px;text-align:center"><input class="form-input" id="idx-${ix.key}-chg" type="number" step="0.01" value="${pv}" placeholder="opt." style="width:56px;min-width:0;margin:0 auto;text-align:center"></td>
+      <td style="padding:11px 6px;text-align:center"><input class="form-input" id="idx-${ix.key}-close" type="number" step="0.01" value="${cv}" placeholder="${ph}" style="min-width:78px;margin:0 auto"></td>
+      <td style="padding:11px 6px;text-align:center"><input class="form-input" id="idx-${ix.key}-chg" type="number" step="0.01" value="${pv}" placeholder="opt." style="width:78px;min-width:0;margin:0 auto;text-align:center"></td>
       <td style="padding:11px 6px;text-align:center">${sel(ix.key,10,cur)}</td>
       <td style="padding:11px 6px;text-align:center">${sel(ix.key,21,cur)}</td>
       <td style="padding:11px 6px;text-align:center">${sel(ix.key,50,cur)}</td>
@@ -2291,20 +2300,20 @@ async function loadClosedTradesForEdit() {
   closedTradesCache = data;
   listEl.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:12px">
     <thead><tr style="border-bottom:1px solid var(--bdr)">
-      ${['Symbol','Entry','Exit Date','Avg Entry','Avg Exit','P&L','Return %','Action'].map(h=>`<th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:600">${h}</th>`).join('')}
+      ${['Symbol','Entry','Exit Date','Avg Entry','Avg Exit','P&L','Return %','Action'].map(h=>`<th style="padding:7px 10px;text-align:center;font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:600">${h}</th>`).join('')}
     </tr></thead>
     <tbody>${data.map(t => {
       const pnl = t.realised_pnl||0; const ret = t.return_pct||0;
       const pc  = pnl>=0?'var(--green)':'var(--red)';
       return `<tr style="border-bottom:1px solid rgba(255,255,255,.04)">
-        <td style="padding:9px 10px;font-weight:700;color:var(--white);font-family:var(--fm)">${t.symbol}</td>
-        <td style="padding:9px 10px;color:var(--muted);font-family:var(--fm)">${t.entry_date||'—'}</td>
-        <td style="padding:9px 10px;font-family:var(--fm)">${t.exit_date||'—'}</td>
-        <td style="padding:9px 10px;text-align:right;font-family:var(--fm)">₹${Number(t.avg_entry_price||0).toLocaleString('en-IN',{maximumFractionDigits:2})}</td>
-        <td style="padding:9px 10px;text-align:right;font-family:var(--fm)">₹${Number(t.avg_exit_price||0).toLocaleString('en-IN',{maximumFractionDigits:2})}</td>
-        <td style="padding:9px 10px;text-align:right;font-weight:700;color:${pc};font-family:var(--fm)">${pnl>=0?'+':''}₹${Math.abs(pnl).toLocaleString('en-IN',{maximumFractionDigits:0})}</td>
-        <td style="padding:9px 10px;text-align:right;font-weight:700;color:${pc};font-family:var(--fm)">${ret>=0?'+':''}${ret}%</td>
-        <td style="padding:9px 10px"><button class="btn btn-ghost btn-sm" onclick="openClosedEdit('${t.id}')">✎ Edit</button></td>
+        <td style="padding:9px 10px;text-align:center;font-weight:700;color:var(--white);font-family:var(--fm)">${t.symbol}</td>
+        <td style="padding:9px 10px;text-align:center;color:var(--muted);font-family:var(--fm)">${t.entry_date||'—'}</td>
+        <td style="padding:9px 10px;text-align:center;font-family:var(--fm)">${t.exit_date||'—'}</td>
+        <td style="padding:9px 10px;text-align:center;font-family:var(--fm)">₹${Number(t.avg_entry_price||0).toLocaleString('en-IN',{maximumFractionDigits:2})}</td>
+        <td style="padding:9px 10px;text-align:center;font-family:var(--fm)">₹${Number(t.avg_exit_price||0).toLocaleString('en-IN',{maximumFractionDigits:2})}</td>
+        <td style="padding:9px 10px;text-align:center;font-weight:700;color:${pc};font-family:var(--fm)">${pnl>=0?'+':''}₹${Math.abs(pnl).toLocaleString('en-IN',{maximumFractionDigits:0})}</td>
+        <td style="padding:9px 10px;text-align:center;font-weight:700;color:${pc};font-family:var(--fm)">${ret>=0?'+':''}${ret}%</td>
+        <td style="padding:9px 10px;text-align:center"><button class="btn btn-ghost btn-sm" onclick="openClosedEdit('${t.id}')">✎ Edit</button></td>
       </tr>`;
     }).join('')}</tbody></table>`;
 }
