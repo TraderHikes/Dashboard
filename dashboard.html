@@ -1388,6 +1388,7 @@ canvas.tc{display:block;width:100%;height:100%}
         <th class="r">Above 10d EMA</th>
         <th class="r">Above 21d EMA</th>
         <th class="r">Above 50d EMA</th>
+        <th class="r">Above 200d EMA</th>
       </tr></thead>
       <tbody id="idx-tbody"></tbody>
     </table>
@@ -1440,28 +1441,16 @@ canvas.tc{display:block;width:100%;height:100%}
       <table class="idx-table" id="fii-dii-history">
         <thead>
           <tr>
-            <th style="min-width:90px">Date</th>
-            <th style="min-width:100px;text-align:center" colspan="2">FII (₹ Cr)</th>
-            <th style="min-width:200px;text-align:center">Net Buy / (Sell)</th>
-            <th style="min-width:100px;text-align:center" colspan="2">DII (₹ Cr)</th>
-            <th style="min-width:200px;text-align:center">Net Buy / (Sell)</th>
+            <th style="min-width:120px">Period</th>
+            <th class="r" style="min-width:120px">FII Net (₹ Cr)</th>
+            <th class="r" style="min-width:120px">DII Net (₹ Cr)</th>
+            <th style="min-width:230px;text-align:center">Combined Flow</th>
             <th class="r" style="min-width:100px">Nifty Close</th>
-            <th class="r" style="min-width:70px">Chg %</th>
-          </tr>
-          <tr style="background:var(--card3)">
-            <th></th>
-            <th class="r" style="font-size:9px;color:var(--green);font-weight:600">Net Buy</th>
-            <th class="r" style="font-size:9px;color:var(--red);font-weight:600">Net Sell</th>
-            <th></th>
-            <th class="r" style="font-size:9px;color:var(--green);font-weight:600">Net Buy</th>
-            <th class="r" style="font-size:9px;color:var(--red);font-weight:600">Net Sell</th>
-            <th></th>
-            <th></th>
-            <th></th>
+            <th class="r" style="min-width:74px">Chg %</th>
           </tr>
         </thead>
         <tbody id="fii-dii-tbody">
-          <tr><td colspan="9" style="text-align:center;color:var(--muted);padding:24px;font-size:12px">
+          <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;font-size:12px">
             Loading FII/DII data...
           </td></tr>
         </tbody>
@@ -2173,12 +2162,12 @@ function setFiiPeriod(period, btn) {
 
 async function loadFiiDii() {
   try {
-    // Fetch last 60 days for daily, enough for monthly/yearly aggregation
+    // Fetch all rows across daily / monthly / yearly (manual + CSV-fed)
     const { data: rows, error } = await sb
       .from('fii_dii_activity')
       .select('*')
-      .order('activity_date', { ascending: false })
-      .limit(60);
+      .order('period_key', { ascending: false })
+      .limit(400);
 
     if(error || !rows || rows.length === 0) {
       document.getElementById('fii-latest-date').textContent = 'No data yet';
@@ -2192,8 +2181,12 @@ async function loadFiiDii() {
 
     fiiAllData = rows;
 
-    // ── Update summary strip from latest row ──
-    const latest = rows[0];
+    // ── Update summary strip from the latest DAILY row ──
+    const dailyRows = rows
+      .filter(r => (r.period_type || 'daily') === 'daily')
+      .sort((a,b) => (b.period_key||'').localeCompare(a.period_key||''));
+    const latest = dailyRows[0];
+    if(!latest){ renderFiiTable(rows, fiiCurrentPeriod); return; }
     const fiiNet = latest.fii_cash_net || 0;
     const diiNet = latest.dii_cash_net || 0;
     const combined = fiiNet + diiNet;
@@ -2240,126 +2233,61 @@ function renderFiiTable(rows, period) {
   const tbody = document.getElementById('fii-dii-tbody');
   if(!tbody) return;
 
-  let displayData = [];
+  // Read the rows for this period directly (no aggregation) — daily/monthly/yearly
+  // are all fed manually, so we just filter by period_type and sort by period_key.
+  const limit = period === 'daily' ? 20 : (period === 'monthly' ? 15 : 20);
+  const data = rows
+    .filter(r => (r.period_type || 'daily') === period)
+    .sort((a,b) => (b.period_key || '').localeCompare(a.period_key || ''))
+    .slice(0, limit);
 
-  if(period === 'daily') {
-    // Show last 20 trading days
-    displayData = rows.slice(0, 20).map(r => ({
-      label: new Date(r.activity_date).toLocaleDateString('en-IN',
-        {weekday:'short', day:'numeric', month:'short'}),
-      fii:   r.fii_cash_net || 0,
-      dii:   r.dii_cash_net || 0,
-      nifty: r.nifty_close,
-      date:  r.activity_date,
-    }));
-
-  } else if(period === 'monthly') {
-    // Aggregate by month
-    const months = {};
-    rows.forEach(r => {
-      const d   = new Date(r.activity_date);
-      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-      if(!months[key]) months[key] = { fii:0, dii:0, nifty:null, count:0, date:r.activity_date };
-      months[key].fii += (r.fii_cash_net || 0);
-      months[key].dii += (r.dii_cash_net || 0);
-      months[key].count++;
-      if(!months[key].nifty && r.nifty_close) months[key].nifty = r.nifty_close;
-    });
-    displayData = Object.entries(months)
-      .sort((a,b) => b[0].localeCompare(a[0]))
-      .slice(0, 12)
-      .map(([key, v]) => {
-        const [yr, mo] = key.split('-');
-        const label = new Date(yr, mo-1, 1)
-          .toLocaleDateString('en-IN', {month:'short', year:'numeric'});
-        return { label, fii: v.fii, dii: v.dii, nifty: v.nifty };
-      });
-
-  } else {
-    // Aggregate by year
-    const years = {};
-    rows.forEach(r => {
-      const yr = new Date(r.activity_date).getFullYear();
-      if(!years[yr]) years[yr] = { fii:0, dii:0, nifty:null };
-      years[yr].fii += (r.fii_cash_net || 0);
-      years[yr].dii += (r.dii_cash_net || 0);
-      if(!years[yr].nifty && r.nifty_close) years[yr].nifty = r.nifty_close;
-    });
-    displayData = Object.entries(years)
-      .sort((a,b) => b[0]-a[0])
-      .map(([yr, v]) => ({ label: yr, fii: v.fii, dii: v.dii, nifty: v.nifty }));
-  }
-
-  if(displayData.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:24px">
-      No data available for this period yet.</td></tr>`;
+  if(data.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:26px;font-size:12px;line-height:1.8">
+      No ${period} data yet.<br>
+      <span style="font-size:11px">Import the ${period} CSV in Supabase to populate this view.</span>
+    </td></tr>`;
     return;
   }
 
-  // Max absolute value for bar scaling
-  const maxAbs = Math.max(...displayData.map(r => Math.max(Math.abs(r.fii), Math.abs(r.dii))), 1000);
+  const maxAbs = Math.max(...data.map(r => Math.abs((r.fii_cash_net||0) + (r.dii_cash_net||0))), 1000);
+  const fmtN  = (n) => (n >= 0 ? '+' : '\u2212') + Math.abs(n).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+  const GRN = 'var(--green)', RED = '#ef5350';
 
-  // For daily: compute nifty change %
-  const niftyPrev = {};
-  if(period === 'daily' && rows.length > 1) {
-    rows.forEach((r, i) => {
-      if(i < rows.length - 1) {
-        niftyPrev[r.activity_date] = rows[i+1].nifty_close;
-      }
-    });
-  }
-
-  const fmtBar = (val, maxV) => {
-    const pct = Math.min(Math.abs(val) / maxV * 50, 50); // max 50% of half-width
-    const isBull = val >= 0;
-    return `<div class="fii-bar-wrap">
-      <div class="fii-bar-center"></div>
-      <div class="fii-bar-fill ${isBull?'bull':'bear'}" style="width:${pct}%"></div>
-    </div>`;
+  // Diverging bar centred on zero: green fills right, red fills left.
+  const bar = (val) => {
+    const pct = Math.min(Math.abs(val) / maxAbs * 50, 50);
+    return `<div class="fii-bar-wrap"><div class="fii-bar-center"></div>` +
+           `<div class="fii-bar-fill ${val >= 0 ? 'bull' : 'bear'}" style="width:${pct}%"></div></div>`;
   };
 
-  tbody.innerHTML = displayData.map(r => {
-    const fCol = r.fii >= 0 ? 'var(--green)' : 'var(--red)';
-    const dCol = r.dii >= 0 ? 'var(--green)' : 'var(--red)';
-    const fmtN = (n) => n != null
-      ? n.toLocaleString('en-IN', { maximumFractionDigits: 2 }) : '—';
+  tbody.innerHTML = data.map((r, i) => {
+    const fii  = r.fii_cash_net || 0;
+    const dii  = r.dii_cash_net || 0;
+    const comb = fii + dii;
+    const label = r.period_label
+      || (r.activity_date ? new Date(r.activity_date).toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'}) : (r.period_key || '—'));
+    const nifty = r.nifty_close;
 
-    let chgCell = '<td class="r" style="color:var(--muted)">—</td>';
-    if(period === 'daily' && r.date && niftyPrev[r.date] && r.nifty) {
-      const chgPct = ((r.nifty - niftyPrev[r.date]) / niftyPrev[r.date] * 100);
-      const chgCol = chgPct >= 0 ? 'var(--green)' : 'var(--red)';
-      chgCell = `<td class="r" style="color:${chgCol};font-weight:700;font-family:var(--fm)">
-        ${chgPct >= 0 ? '▲' : '▼'} ${Math.abs(chgPct).toFixed(1)}%</td>`;
+    // Chg % = this period's Nifty vs the next (older) period's Nifty.
+    let chgCell = '<td class="r" style="color:var(--muted)">\u2014</td>';
+    const prevNifty = data[i+1] ? data[i+1].nifty_close : null;
+    if(nifty && prevNifty) {
+      const p = (nifty - prevNifty) / prevNifty * 100;
+      const c = p >= 0 ? GRN : RED;
+      chgCell = `<td class="r" style="color:${c};font-weight:700">${p >= 0 ? '\u25B2' : '\u25BC'} ${Math.abs(p).toFixed(1)}%</td>`;
     }
 
-    // FII/DII split columns: positive = buy side, negative = sell side
-    const fiiBuyVal  = r.fii >= 0 ? fmtN(r.fii) : '—';
-    const fiiSellVal = r.fii < 0  ? fmtN(Math.abs(r.fii)) : '—';
-    const diiBuyVal  = r.dii >= 0 ? fmtN(r.dii) : '—';
-    const diiSellVal = r.dii < 0  ? fmtN(Math.abs(r.dii)) : '—';
-
     return `<tr>
-      <td style="font-weight:600;color:var(--text2);white-space:nowrap">${r.label}</td>
-      <td class="r" style="color:var(--green);font-family:var(--fm);font-size:12px">${fiiBuyVal}</td>
-      <td class="r" style="color:var(--red);font-family:var(--fm);font-size:12px">${fiiSellVal}</td>
-      <td style="padding:6px 8px">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
-          <span style="font-size:11px;font-weight:700;color:${fCol};font-family:var(--fm);min-width:70px;text-align:right">
-            ${(r.fii>=0?'+':'')}${fmtN(r.fii)}</span>
-          ${fmtBar(r.fii, maxAbs)}
+      <td style="font-weight:600;color:var(--text2);white-space:nowrap">${label}</td>
+      <td class="r" style="color:${fii >= 0 ? GRN : RED};font-weight:700">${fmtN(fii)}</td>
+      <td class="r" style="color:${dii >= 0 ? GRN : RED};font-weight:700">${fmtN(dii)}</td>
+      <td style="padding:8px 12px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="min-width:80px;text-align:right;font-weight:800;color:${comb >= 0 ? GRN : RED}">${fmtN(comb)}</span>
+          ${bar(comb)}
         </div>
       </td>
-      <td class="r" style="color:var(--green);font-family:var(--fm);font-size:12px">${diiBuyVal}</td>
-      <td class="r" style="color:var(--red);font-family:var(--fm);font-size:12px">${diiSellVal}</td>
-      <td style="padding:6px 8px">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
-          <span style="font-size:11px;font-weight:700;color:${dCol};font-family:var(--fm);min-width:70px;text-align:right">
-            ${(r.dii>=0?'+':'')}${fmtN(r.dii)}</span>
-          ${fmtBar(r.dii, maxAbs)}
-        </div>
-      </td>
-      <td class="r" style="font-family:var(--fm);color:var(--white)">
-        ${r.nifty ? r.nifty.toLocaleString('en-IN',{maximumFractionDigits:0}) : '—'}</td>
+      <td class="r" style="color:var(--white)">${nifty ? nifty.toLocaleString('en-IN',{maximumFractionDigits:0}) : '\u2014'}</td>
       ${chgCell}
     </tr>`;
   }).join('');
@@ -4432,7 +4360,7 @@ async function buildIdxTableLive() {
   const tb = document.getElementById('idx-tbody');
   if(!tb) return;
 
-  tb.innerHTML = `<tr><td colspan="6" style="text-align:center;
+  tb.innerHTML = `<tr><td colspan="7" style="text-align:center;
     color:var(--muted);padding:20px;font-size:12px">
     Loading index data...</td></tr>`;
 
@@ -4446,6 +4374,11 @@ async function buildIdxTableLive() {
       .single();
 
     if(error || !row) throw new Error('No index data in database yet');
+
+    // EMA above/below flags are admin-fed (manual) — index_ema_flags table.
+    const { data: flagRows } = await sb.from('index_ema_flags').select('*');
+    const flags = {};
+    (flagRows || []).forEach(f => { flags[f.index_key] = f; });
 
     const updDate = new Date(row.snapshot_date).toLocaleDateString('en-IN',
       { day:'numeric', month:'short', year:'numeric' });
@@ -4471,9 +4404,10 @@ async function buildIdxTableLive() {
       const chg  = fmtChg(cur, prev);
       return {
         ...item, cur, prev, chg,
-        a10:  row[`${item.key}_above_10ema`],
-        a21:  row[`${item.key}_above_21ema`],
-        a50:  row[`${item.key}_above_50ema`],
+        a10:  flags[item.key]?.above_10ema,
+        a21:  flags[item.key]?.above_21ema,
+        a50:  flags[item.key]?.above_50ema,
+        a200: flags[item.key]?.above_200ema,
       };
     }).filter(r => r.cur); // skip any that have no data
 
@@ -4495,12 +4429,13 @@ async function buildIdxTableLive() {
         <td class="r">${mark(r.a10)}</td>
         <td class="r">${mark(r.a21)}</td>
         <td class="r">${mark(r.a50)}</td>
+        <td class="r">${mark(r.a200)}</td>
       </tr>`;
     }).join('');
 
   } catch(err) {
     console.warn('Index table error:', err.message);
-    tb.innerHTML = `<tr><td colspan="6" style="text-align:center;
+    tb.innerHTML = `<tr><td colspan="7" style="text-align:center;
       color:var(--muted);padding:24px;font-size:12px;line-height:1.8">
       Index data not available yet.<br>
       <span style="font-size:11px;color:var(--muted)">
