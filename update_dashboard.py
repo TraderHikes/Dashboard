@@ -316,16 +316,10 @@ def fetch_index_levels():
             prev    = round(float(close.iloc[-2]), 2)
             row[col_key]           = current
             row[f"{col_key}_prev"] = prev
-            # Above-EMA flags — only for indices shown in the Key Indices
-            # table (those have the DB columns). None when not enough history.
-            if col_key in EMA_FLAG_INDICES:
-                n = len(close)
-                for p in (10, 21, 50):
-                    if n >= p:
-                        ema_val = float(compute_ema(close, p).iloc[-1])
-                        row[f"{col_key}_above_{p}ema"] = bool(current > ema_val)
-                    else:
-                        row[f"{col_key}_above_{p}ema"] = None
+            # NOTE: Above/Below-EMA flags are NO LONGER written by the pipeline.
+            # They are fed manually from the Admin panel into the
+            # index_ema_flags table (10 / 21 / 50 / 200-EMA). The pipeline keeps
+            # only Day Close (current) and previous close (for % change) here.
             if col_key == "nifty500": n500_val    = current
             if col_key == "nifty50":  nifty50_val = current
             print(f"   ✓ {col_key}: {current:,.2f}")
@@ -966,8 +960,9 @@ if __name__ == "__main__":
             run_step("index_levels",    fetch_index_levels)
 
         elif RUN_MODE == "fii_dii":
-            print("🏦 FII/DII ONLY\n")
-            run_step("fii_dii", fetch_fii_dii)
+            # FII/DII is now fed MANUALLY via CSV import (daily / monthly /
+            # yearly) into fii_dii_activity. The auto-fetch is disabled.
+            print("🏦 FII/DII is manual now (CSV-fed) — nothing to do.\n")
 
         else:
             print("🌙 FULL EOD\n")
@@ -984,7 +979,8 @@ if __name__ == "__main__":
             run_step("portfolio_snapshot", save_portfolio_snapshot, cmp_map, n500_val)
             run_step("market_breadth",     calculate_market_breadth, symbols, nifty50_val)
             run_step("open_trade_candles", fetch_candles_for_open_trades)
-            run_step("fii_dii",            fetch_fii_dii, nifty50_val)
+            # FII/DII fed manually via CSV import — pipeline step disabled.
+            # run_step("fii_dii",            fetch_fii_dii, nifty50_val)
             sector_map = run_step("sector_stocks", fetch_sector_stocks_from_nse)
             run_step("sector_breadth",     fetch_sector_breadth, sector_map)
             run_step("watchlist_enrich",   enrich_watchlist)
