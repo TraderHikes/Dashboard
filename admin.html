@@ -604,7 +604,7 @@
           </div>
           <div style="display:flex;justify-content:flex-end;gap:10px">
             <button type="reset" class="btn btn-ghost" onclick="resetPyramidForm()">Clear</button>
-            <button type="submit" class="btn btn-primary" id="pyramid-btn">Add Entry & Update Position</button>
+            <button type="submit" class="btn btn-primary" id="pyramid-btn">Confirm Pyramid Buy</button>
           </div>
         </form>
       </div>
@@ -711,7 +711,7 @@
           </div>
           <div style="display:flex;justify-content:flex-end;gap:10px">
             <button type="reset" class="btn btn-ghost" onclick="resetPartialForm()">Clear</button>
-            <button type="submit" class="btn btn-success" id="partial-btn">Book Partial Exit</button>
+            <button type="submit" class="btn btn-primary" id="partial-btn">Confirm Partial Exit</button>
           </div>
         </form>
       </div>
@@ -810,8 +810,8 @@
           </div>
           <div style="display:flex;justify-content:flex-end;gap:10px">
             <button type="reset" class="btn btn-ghost">Clear</button>
-            <button type="submit" class="btn btn-success" id="close-trade-btn">
-              Final Exit → Move to Closed Trades
+            <button type="submit" class="btn btn-primary" id="close-trade-btn">
+              Confirm Final Exit
             </button>
           </div>
         </form>
@@ -1312,7 +1312,7 @@ document.getElementById('form-pyramid').addEventListener('submit', async e => {
   } catch(err) {
     showAlert('pyramid-error', '✗ Error: ' + err.message, 'error');
   }
-  btn.disabled = false; btn.textContent = 'Add Entry & Update Position';
+  btn.disabled = false; btn.textContent = 'Confirm Pyramid Buy';
 });
 
 // ════════════════════════════════════════════
@@ -1407,7 +1407,7 @@ document.getElementById('form-partial').addEventListener('submit', async e => {
     showAlert('partial-error',
       `⚠️ Qty (${sellQty}) ≥ remaining (${remQty}). Use "Final Exit" tab to close fully.`,
       'error');
-    btn.disabled = false; btn.textContent = 'Book Partial Exit';
+    btn.disabled = false; btn.textContent = 'Confirm Partial Exit';
     return;
   }
 
@@ -1450,7 +1450,7 @@ document.getElementById('form-partial').addEventListener('submit', async e => {
   } catch(err) {
     showAlert('partial-error', '✗ Error: ' + err.message, 'error');
   }
-  btn.disabled = false; btn.textContent = 'Book Partial Exit';
+  btn.disabled = false; btn.textContent = 'Confirm Partial Exit';
 });
 
 // ════════════════════════════════════════════
@@ -1696,7 +1696,7 @@ document.getElementById('form-close-trade').addEventListener('submit', async e =
 
   if (!openId) {
     showAlert('close-error', 'Please select a trade to close.', 'error');
-    btn.disabled = false; btn.textContent = 'Final Exit → Move to Closed Trades';
+    btn.disabled = false; btn.textContent = 'Confirm Final Exit';
     return;
   }
 
@@ -1705,7 +1705,7 @@ document.getElementById('form-close-trade').addEventListener('submit', async e =
 
   if (fetchErr || !t) {
     showAlert('close-error', 'Could not find that trade.', 'error');
-    btn.disabled = false; btn.textContent = 'Final Exit → Move to Closed Trades';
+    btn.disabled = false; btn.textContent = 'Confirm Final Exit';
     return;
   }
 
@@ -1765,7 +1765,7 @@ document.getElementById('form-close-trade').addEventListener('submit', async e =
     .from('closed_trades').insert(closedPayload).select('id').single();
   if (insertErr) {
     showAlert('close-error', 'Error: ' + insertErr.message, 'error');
-    btn.disabled = false; btn.textContent = 'Final Exit → Move to Closed Trades';
+    btn.disabled = false; btn.textContent = 'Confirm Final Exit';
     return;
   }
   const closedId = inserted && inserted.id;
@@ -1795,7 +1795,7 @@ document.getElementById('form-close-trade').addEventListener('submit', async e =
 
   // Delete from open_trades
   await sb.from('open_trades').delete().eq('id', openId);
-  btn.disabled = false; btn.textContent = 'Final Exit → Move to Closed Trades';
+  btn.disabled = false; btn.textContent = 'Confirm Final Exit';
 
   const pnlStr = (totalRealised >= 0 ? '+' : '') + '₹' +
     Math.abs(totalRealised).toLocaleString('en-IN', {maximumFractionDigits:0});
