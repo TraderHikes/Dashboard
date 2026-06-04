@@ -321,6 +321,7 @@
     <button class="tab-btn" onclick="openTab('tab-closed-edit',this);loadClosedTradesForEdit()">Closed Trades</button>
     <button class="tab-btn" onclick="openTab('tab-snapshot',this)">Portfolio Snapshot</button>
     <button class="tab-btn" onclick="openTab('tab-breadth',this)">Market Breadth</button>
+    <button class="tab-btn" onclick="openTab('tab-indices',this);loadIndexFlags()">Key Indices</button>
     <button class="tab-btn" onclick="openTab('tab-watchlist',this);loadWatchlistAdmin()">Watchlist</button>
     <button class="tab-btn" onclick="openTab('tab-students',this)">Students</button>
   </div>
@@ -887,6 +888,37 @@
       </div>
     </div>
   </div>
+
+  <!-- ════ TAB: KEY INDICES EMA FLAGS ════ -->
+  <div class="tab-pane" id="tab-indices"><div class="form-tab-wrap">
+    <div class="card">
+      <div class="card-hdr"><span class="card-title">Key Indices — Above / Below EMA Flags</span></div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--muted);margin-bottom:18px;line-height:1.7">
+          Day Close &amp; % Change are filled automatically by the pipeline. Here you set whether each
+          index is trading <b>above</b> or <b>below</b> its 10 / 21 / 50 / 200-day EMA.
+          Leave a cell as &ldquo;&mdash;&rdquo; if you don't want to show a flag.
+        </p>
+        <div class="alert alert-success" id="idx-success"></div>
+        <div class="alert alert-error"   id="idx-error"></div>
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr>
+            <th style="text-align:left;padding:8px 10px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Index</th>
+            <th style="padding:8px 10px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Above 10 EMA</th>
+            <th style="padding:8px 10px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Above 21 EMA</th>
+            <th style="padding:8px 10px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Above 50 EMA</th>
+            <th style="padding:8px 10px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Above 200 EMA</th>
+          </tr></thead>
+          <tbody id="idx-admin-body">
+            <tr><td colspan="5" style="padding:18px;text-align:center;color:var(--muted)">Loading…</td></tr>
+          </tbody>
+        </table>
+        <div style="display:flex;justify-content:flex-end;margin-top:18px">
+          <button type="button" class="btn btn-primary" onclick="saveIndexFlags()">Save EMA Flags</button>
+        </div>
+      </div>
+    </div>
+  </div></div>
 
   <!-- ════ TAB 5: PORTFOLIO SNAPSHOT ════ -->
   <div class="tab-pane" id="tab-snapshot">
@@ -1778,6 +1810,62 @@ document.getElementById('form-breadth').addEventListener('submit', async e => {
   if (error) { showAlert('breadth-error', '✗ ' + error.message, 'error'); return; }
   showAlert('breadth-success', '✓ Market breadth updated for today.', 'success');
 });
+
+// ════════════════════════════════════════════
+// KEY INDICES — manual EMA above/below flags
+// ════════════════════════════════════════════
+const IDX_ADMIN = [
+  { key:'nifty50',  name:'NIFTY 50'  },
+  { key:'sensex',   name:'SENSEX'    },
+  { key:'nifty500', name:'NIFTY 500' },
+];
+
+async function loadIndexFlags() {
+  const body = document.getElementById('idx-admin-body');
+  if(!body) return;
+  let map = {};
+  try {
+    const { data } = await sb.from('index_ema_flags').select('*');
+    (data || []).forEach(r => { map[r.index_key] = r; });
+  } catch(e) { /* table may be empty */ }
+
+  const sel = (key, p, cur) => {
+    const v   = cur ? cur['above_' + p + 'ema'] : null;
+    const val = v === true ? 'true' : (v === false ? 'false' : '');
+    return `<select class="form-input" id="idx-${key}-${p}" style="min-width:110px;margin:0 auto">
+      <option value=""      ${val === ''      ? 'selected' : ''}>—</option>
+      <option value="true"  ${val === 'true'  ? 'selected' : ''}>Above</option>
+      <option value="false" ${val === 'false' ? 'selected' : ''}>Below</option>
+    </select>`;
+  };
+
+  body.innerHTML = IDX_ADMIN.map(ix => {
+    const cur = map[ix.key];
+    return `<tr style="border-top:1px solid var(--bdr)">
+      <td style="padding:12px 10px;font-weight:700;color:var(--white)">${ix.name}</td>
+      <td style="padding:12px 10px;text-align:center">${sel(ix.key,10,cur)}</td>
+      <td style="padding:12px 10px;text-align:center">${sel(ix.key,21,cur)}</td>
+      <td style="padding:12px 10px;text-align:center">${sel(ix.key,50,cur)}</td>
+      <td style="padding:12px 10px;text-align:center">${sel(ix.key,200,cur)}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function saveIndexFlags() {
+  const parse = (s) => s === '' ? null : (s === 'true');
+  const rows = IDX_ADMIN.map(ix => ({
+    index_key:    ix.key,
+    index_name:   ix.name,
+    above_10ema:  parse(document.getElementById(`idx-${ix.key}-10`).value),
+    above_21ema:  parse(document.getElementById(`idx-${ix.key}-21`).value),
+    above_50ema:  parse(document.getElementById(`idx-${ix.key}-50`).value),
+    above_200ema: parse(document.getElementById(`idx-${ix.key}-200`).value),
+    updated_at:   new Date().toISOString(),
+  }));
+  const { error } = await sb.from('index_ema_flags').upsert(rows, { onConflict: 'index_key' });
+  if(error) { showAlert('idx-error', '✗ ' + error.message, 'error'); return; }
+  showAlert('idx-success', '✓ Index EMA flags saved.', 'success');
+}
 
 // ════════════════════════════════════════════
 // PORTFOLIO SNAPSHOT
