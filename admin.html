@@ -901,20 +901,22 @@
         </p>
         <div class="alert alert-success" id="idx-success"></div>
         <div class="alert alert-error"   id="idx-error"></div>
-        <table style="width:100%;border-collapse:collapse">
+        <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+        <table style="width:100%;border-collapse:collapse;min-width:740px">
           <thead><tr>
-            <th style="text-align:left;padding:8px 10px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Index</th>
-            <th style="padding:8px 10px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Closing Level</th>
-            <th style="padding:8px 10px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Chg %</th>
-            <th style="padding:8px 10px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Above 10 EMA</th>
-            <th style="padding:8px 10px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Above 21 EMA</th>
-            <th style="padding:8px 10px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Above 50 EMA</th>
-            <th style="padding:8px 10px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Above 200 EMA</th>
+            <th style="text-align:left;padding:8px 6px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">Index</th>
+            <th style="padding:8px 6px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">Closing Level</th>
+            <th style="padding:8px 6px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">Chg %</th>
+            <th style="padding:8px 6px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">Above 10 EMA</th>
+            <th style="padding:8px 6px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">Above 21 EMA</th>
+            <th style="padding:8px 6px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">Above 50 EMA</th>
+            <th style="padding:8px 6px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">Above 200 EMA</th>
           </tr></thead>
           <tbody id="idx-admin-body">
             <tr><td colspan="7" style="padding:18px;text-align:center;color:var(--muted)">Loading…</td></tr>
           </tbody>
         </table>
+        </div>
         <div style="display:flex;justify-content:flex-end;margin-top:18px">
           <button type="button" class="btn btn-primary" onclick="saveIndexFlags()">Save EMA Flags</button>
         </div>
@@ -1838,7 +1840,7 @@ async function loadIndexFlags() {
   const sel = (key, p, cur) => {
     const v   = cur ? cur['above_' + p + 'ema'] : null;
     const val = v === true ? 'true' : (v === false ? 'false' : '');
-    return `<select class="form-input" id="idx-${key}-${p}" style="min-width:110px;margin:0 auto">
+    return `<select class="form-input" id="idx-${key}-${p}" style="min-width:78px;margin:0 auto">
       <option value=""      ${val === ''      ? 'selected' : ''}>—</option>
       <option value="true"  ${val === 'true'  ? 'selected' : ''}>Above</option>
       <option value="false" ${val === 'false' ? 'selected' : ''}>Below</option>
@@ -1851,13 +1853,13 @@ async function loadIndexFlags() {
     const pv  = cur.pct_change != null ? cur.pct_change : '';
     const ph  = ix.auto ? 'auto (pipeline)' : 'enter close';
     return `<tr style="border-top:1px solid var(--bdr)">
-      <td style="padding:12px 10px;font-weight:700;color:var(--white)">${ix.name}</td>
-      <td style="padding:12px 10px;text-align:center"><input class="form-input" id="idx-${ix.key}-close" type="number" step="0.01" value="${cv}" placeholder="${ph}" style="min-width:120px;margin:0 auto"></td>
-      <td style="padding:12px 10px;text-align:center"><input class="form-input" id="idx-${ix.key}-chg" type="number" step="0.01" value="${pv}" placeholder="opt." style="min-width:80px;margin:0 auto"></td>
-      <td style="padding:12px 10px;text-align:center">${sel(ix.key,10,cur)}</td>
-      <td style="padding:12px 10px;text-align:center">${sel(ix.key,21,cur)}</td>
-      <td style="padding:12px 10px;text-align:center">${sel(ix.key,50,cur)}</td>
-      <td style="padding:12px 10px;text-align:center">${sel(ix.key,200,cur)}</td>
+      <td style="padding:11px 8px;font-weight:700;color:var(--white);white-space:nowrap">${ix.name}</td>
+      <td style="padding:11px 6px;text-align:center"><input class="form-input" id="idx-${ix.key}-close" type="number" step="0.01" value="${cv}" placeholder="${ph}" style="min-width:90px;margin:0 auto"></td>
+      <td style="padding:11px 6px;text-align:center"><input class="form-input" id="idx-${ix.key}-chg" type="number" step="0.01" value="${pv}" placeholder="opt." style="width:56px;min-width:0;margin:0 auto;text-align:center"></td>
+      <td style="padding:11px 6px;text-align:center">${sel(ix.key,10,cur)}</td>
+      <td style="padding:11px 6px;text-align:center">${sel(ix.key,21,cur)}</td>
+      <td style="padding:11px 6px;text-align:center">${sel(ix.key,50,cur)}</td>
+      <td style="padding:11px 6px;text-align:center">${sel(ix.key,200,cur)}</td>
     </tr>`;
   }).join('');
 }
