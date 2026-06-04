@@ -158,12 +158,21 @@
   /* Constrain & centre the wide table panes so they match the form tabs (Pyramid Buy, etc.) */
   #tab-students, #tab-breadth, #tab-snapshot { max-width:960px; margin:0 auto; }
   /* Closed-trades & watchlist editor panes live outside .app — give them page margin + padding */
-  #tab-closed-edit, #tab-watchlist { max-width:960px; margin:24px auto; padding:0 32px; }
+  #tab-closed-edit { max-width:1024px; margin:24px auto; padding:0 32px; }
+  #tab-watchlist   { max-width:960px;  margin:24px auto; padding:0 32px; }
   /* Illuminated blue border on every main panel/table card (matches the dashboard) */
   .form-tab-wrap > .card, .tab-pane > .card {
     border-color:rgba(92,111,251,.5);
     box-shadow:0 0 22px rgba(92,111,251,.15), inset 0 0 24px rgba(92,111,251,.04);
   }
+  /* Partial Exit pane wider (it has more columns) */
+  #tab-partial > .form-tab-wrap { max-width:1200px; }
+  /* Partial Exits — scroll after ~15 rows (rows are taller when Notes wrap) */
+  .pe-scroll { overflow:auto; max-height:700px; -webkit-overflow-scrolling:touch; }
+  .pe-scroll thead th { position:sticky; top:0; z-index:2; }
+  /* Closed Trades — scroll after ~15 rows */
+  #closed-edit-list { max-height:560px; overflow:auto; -webkit-overflow-scrolling:touch; }
+  #closed-edit-list thead th { position:sticky; top:0; background:var(--card); z-index:2; }
   .card-hdr {
     padding:14px 20px; border-bottom:1px solid var(--bdr);
     background:linear-gradient(135deg,var(--card2),var(--card));
@@ -709,7 +718,7 @@
           <button class="btn btn-ghost btn-sm" onclick="loadAllPartialExits()">↻ Refresh</button>
         </div>
       </div>
-      <div style="overflow-x:auto">
+      <div class="pe-scroll">
         <table class="data-table">
           <thead><tr>
             <th>Symbol</th><th>Company</th><th>Exit Date</th>
