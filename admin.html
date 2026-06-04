@@ -1511,7 +1511,12 @@ async function loadOpenTrades() {
       ? `<span style="color:${retPct>=0?'var(--green)':'var(--red)'};font-weight:700">${retPct>=0?'+':''}${retPct.toFixed(2)}%</span>`
       : '<span style="color:var(--muted)">—</span>';
     const badgeMap = { long:'badge-long', trail_sl:'badge-trail', watch:'badge-watch' };
-    const posPct   = t.position_size_pct ? t.position_size_pct+'%' : '\u2014';
+    // POS SIZE = CURRENT exposure (dynamic): avg entry x remaining qty / capital.
+    // Recomputes live as pyramids raise the position and partial exits cut it.
+    const capAtEntry = t.capital_at_entry || 0;
+    const posPctNum  = capAtEntry > 0 ? (avgEntry * remQty / capAtEntry * 100)
+                       : (t.position_size_pct != null ? parseFloat(t.position_size_pct) : null);
+    const posPct     = posPctNum != null ? posPctNum.toFixed(2) + '%' : '\u2014';
     const flags    = [
       t.has_pyramid      ? '<span class="badge badge-long" style="font-size:9px">P</span>' : '',
       t.has_partial_exit ? '<span class="badge badge-watch" style="font-size:9px">PE</span>' : '',
@@ -1677,9 +1682,13 @@ document.getElementById('form-close-trade').addEventListener('submit', async e =
     trade_notes:       fd.get('trade_notes').trim() || t.trade_notes,
     // Partial exit summary (first partial for display)
     partial_exit_qty:  partialQty > 0 ? partialQty : null,
-    // Position size
+    // Position size — capture PEAK (max) exposure ever held in this stock:
+    // the full pyramided position (total_quantity) before any partial exits,
+    // i.e. the higher of original-buy / post-pyramid / post-partial sizing.
     capital_at_entry:  t.capital_at_entry,
-    position_size_pct: t.position_size_pct,
+    position_size_pct: (t.capital_at_entry && t.capital_at_entry > 0)
+      ? Math.round(avgEntry * totalQty / t.capital_at_entry * 100 * 100) / 100
+      : t.position_size_pct,
     // Link back to the original open trade so its pyramid legs + partial
     // exits (still keyed by open_trade_id) can be found for the archive chart.
     origin_open_trade_id: openId,
@@ -2450,7 +2459,12 @@ function applyAdminOtSort() {
       ? `<span style="color:${retPct>=0?'var(--green)':'var(--red)'};font-weight:700">${retPct>=0?'+':''}${retPct.toFixed(2)}%</span>`
       : '<span style="color:var(--muted)">—</span>';
     const badgeMap = { long:'badge-long', trail_sl:'badge-trail', watch:'badge-watch' };
-    const posPct   = t.position_size_pct ? t.position_size_pct+'%' : '\u2014';
+    // POS SIZE = CURRENT exposure (dynamic): avg entry x remaining qty / capital.
+    // Recomputes live as pyramids raise the position and partial exits cut it.
+    const capAtEntry = t.capital_at_entry || 0;
+    const posPctNum  = capAtEntry > 0 ? (avgEntry * remQty / capAtEntry * 100)
+                       : (t.position_size_pct != null ? parseFloat(t.position_size_pct) : null);
+    const posPct     = posPctNum != null ? posPctNum.toFixed(2) + '%' : '\u2014';
     const flags    = [
       t.has_pyramid      ? '<span class="badge badge-long" style="font-size:9px">P</span>' : '',
       t.has_partial_exit ? '<span class="badge badge-watch" style="font-size:9px">PE</span>' : '',
