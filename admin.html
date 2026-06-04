@@ -904,13 +904,15 @@
         <table style="width:100%;border-collapse:collapse">
           <thead><tr>
             <th style="text-align:left;padding:8px 10px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Index</th>
+            <th style="padding:8px 10px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Closing Level</th>
+            <th style="padding:8px 10px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Chg %</th>
             <th style="padding:8px 10px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Above 10 EMA</th>
             <th style="padding:8px 10px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Above 21 EMA</th>
             <th style="padding:8px 10px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Above 50 EMA</th>
             <th style="padding:8px 10px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Above 200 EMA</th>
           </tr></thead>
           <tbody id="idx-admin-body">
-            <tr><td colspan="5" style="padding:18px;text-align:center;color:var(--muted)">Loading…</td></tr>
+            <tr><td colspan="7" style="padding:18px;text-align:center;color:var(--muted)">Loading…</td></tr>
           </tbody>
         </table>
         <div style="display:flex;justify-content:flex-end;margin-top:18px">
@@ -1815,9 +1817,13 @@ document.getElementById('form-breadth').addEventListener('submit', async e => {
 // KEY INDICES — manual EMA above/below flags
 // ════════════════════════════════════════════
 const IDX_ADMIN = [
-  { key:'nifty50',  name:'NIFTY 50'  },
-  { key:'sensex',   name:'SENSEX'    },
-  { key:'nifty500', name:'NIFTY 500' },
+  { key:'nifty50',          name:'NIFTY 50',           auto:true  },
+  { key:'sensex',           name:'SENSEX',             auto:true  },
+  { key:'nifty500',         name:'NIFTY 500',          auto:true  },
+  { key:'nifty_midcap100',  name:'NIFTY MIDCAP 100',   auto:false },
+  { key:'nifty_smallcap100',name:'NIFTY SMALLCAP 100', auto:false },
+  { key:'nifty_microcap250',name:'NIFTY MICROCAP 250', auto:false },
+  { key:'nifty_alpha50',    name:'NIFTY ALPHA 50',     auto:false },
 ];
 
 async function loadIndexFlags() {
@@ -1840,9 +1846,14 @@ async function loadIndexFlags() {
   };
 
   body.innerHTML = IDX_ADMIN.map(ix => {
-    const cur = map[ix.key];
+    const cur = map[ix.key] || {};
+    const cv  = cur.day_close  != null ? cur.day_close  : '';
+    const pv  = cur.pct_change != null ? cur.pct_change : '';
+    const ph  = ix.auto ? 'auto (pipeline)' : 'enter close';
     return `<tr style="border-top:1px solid var(--bdr)">
       <td style="padding:12px 10px;font-weight:700;color:var(--white)">${ix.name}</td>
+      <td style="padding:12px 10px;text-align:center"><input class="form-input" id="idx-${ix.key}-close" type="number" step="0.01" value="${cv}" placeholder="${ph}" style="min-width:120px;margin:0 auto"></td>
+      <td style="padding:12px 10px;text-align:center"><input class="form-input" id="idx-${ix.key}-chg" type="number" step="0.01" value="${pv}" placeholder="opt." style="min-width:80px;margin:0 auto"></td>
       <td style="padding:12px 10px;text-align:center">${sel(ix.key,10,cur)}</td>
       <td style="padding:12px 10px;text-align:center">${sel(ix.key,21,cur)}</td>
       <td style="padding:12px 10px;text-align:center">${sel(ix.key,50,cur)}</td>
@@ -1853,9 +1864,12 @@ async function loadIndexFlags() {
 
 async function saveIndexFlags() {
   const parse = (s) => s === '' ? null : (s === 'true');
+  const num   = (s) => s === '' || s == null ? null : parseFloat(s);
   const rows = IDX_ADMIN.map(ix => ({
     index_key:    ix.key,
     index_name:   ix.name,
+    day_close:    num(document.getElementById(`idx-${ix.key}-close`).value),
+    pct_change:   num(document.getElementById(`idx-${ix.key}-chg`).value),
     above_10ema:  parse(document.getElementById(`idx-${ix.key}-10`).value),
     above_21ema:  parse(document.getElementById(`idx-${ix.key}-21`).value),
     above_50ema:  parse(document.getElementById(`idx-${ix.key}-50`).value),
