@@ -4359,9 +4359,13 @@ const monthlyG=[
 
 /* ── Key Indices — from Supabase index_levels table ── */
 const IDX_CONFIG = [
-  { name:'NIFTY 50',          key:'nifty50'        },
-  { name:'SENSEX',            key:'sensex'         },
-  { name:'NIFTY 500',         key:'nifty500'       },
+  { name:'NIFTY 50',           key:'nifty50'          },
+  { name:'SENSEX',             key:'sensex'           },
+  { name:'NIFTY 500',          key:'nifty500'         },
+  { name:'NIFTY MIDCAP 100',   key:'nifty_midcap100'  },
+  { name:'NIFTY SMALLCAP 100', key:'nifty_smallcap100'},
+  { name:'NIFTY MICROCAP 250', key:'nifty_microcap250'},
+  { name:'NIFTY ALPHA 50',     key:'nifty_alpha50'    },
 ];
 
 async function buildIdxTableLive() {
@@ -4407,17 +4411,25 @@ async function buildIdxTableLive() {
     };
 
     const rows = IDX_CONFIG.map(item => {
-      const cur  = row[item.key];
+      const fl   = flags[item.key] || {};
+      // Manual close (admin) wins; otherwise the pipeline value from index_levels.
+      const cur  = (fl.day_close != null ? fl.day_close : row[item.key]);
       const prev = row[`${item.key}_prev`];
-      const chg  = fmtChg(cur, prev);
+      let chg;
+      if(fl.pct_change != null){
+        const pct = parseFloat(fl.pct_change);
+        chg = { pct, pctStr: (pct >= 0 ? '+' : '') + Math.abs(pct).toFixed(2) + '%', pos: pct >= 0 };
+      } else {
+        chg = fmtChg(cur, prev);
+      }
       return {
         ...item, cur, prev, chg,
-        a10:  flags[item.key]?.above_10ema,
-        a21:  flags[item.key]?.above_21ema,
-        a50:  flags[item.key]?.above_50ema,
-        a200: flags[item.key]?.above_200ema,
+        a10:  fl.above_10ema,
+        a21:  fl.above_21ema,
+        a50:  fl.above_50ema,
+        a200: fl.above_200ema,
       };
-    }).filter(r => r.cur); // skip any that have no data
+    }).filter(r => r.cur != null); // skip any with no close at all
 
     if(rows.length === 0) throw new Error('Index data not yet populated');
 
