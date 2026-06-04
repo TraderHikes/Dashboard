@@ -1621,6 +1621,45 @@ async function deleteTrade(id, symbol) {
 // ════════════════════════════════════════════
 // CLOSE A TRADE
 // ════════════════════════════════════════════
+// ── True peak (max) exposure — robust to INTERLEAVED pyramids & partial exits ──
+// Walks every buy (base + pyramid legs) and sell (partial exits) in real
+// chronological order (by date, then created_at for same-day events) and tracks
+// deployed capital under average-cost accounting. Deployed capital peaks right
+// after a buy; that maximum ÷ capital_at_entry is the largest position size the
+// stock ever carried — correct no matter how buys and sells are interleaved.
+async function computePeakExposurePct(openId, t) {
+  const cap = t && t.capital_at_entry;
+  const { data: pyr }   = await sb.from('trade_entries')
+    .select('entry_date,entry_price,quantity,created_at').eq('open_trade_id', openId);
+  const { data: exits } = await sb.from('partial_exits')
+    .select('exit_date,quantity,created_at').eq('open_trade_id', openId);
+
+  const ev = [];
+  ev.push({ d:t.entry_date, ts:t.created_at, k:'buy',  q:+t.quantity||0,  p:+t.entry_price||0 });
+  (pyr||[]).forEach(e => ev.push({ d:e.entry_date, ts:e.created_at, k:'buy',  q:+e.quantity||0, p:+e.entry_price||0 }));
+  (exits||[]).forEach(e => ev.push({ d:e.exit_date,  ts:e.created_at, k:'sell', q:+e.quantity||0 }));
+
+  ev.sort((a,b) => {
+    const dd = new Date(a.d)  - new Date(b.d);            if (dd) return dd;
+    const tt = new Date(a.ts||a.d) - new Date(b.ts||b.d); if (tt) return tt;
+    return (a.k==='buy'?0:1) - (b.k==='buy'?0:1);         // buy before sell on an exact tie
+  });
+
+  let qty = 0, cost = 0, peak = 0;
+  for (const e of ev) {
+    if (e.k === 'buy') {
+      cost += e.p * e.q; qty += e.q;
+      if (cost > peak) peak = cost;          // exposure maxes out right after a buy
+    } else {                                 // average-cost reduction on a sell
+      const avg = qty > 0 ? cost / qty : 0;
+      cost = Math.max(0, cost - avg * e.q);
+      qty  = Math.max(0, qty  - e.q);
+    }
+  }
+  if (!cap || cap <= 0 || peak <= 0) return null;
+  return Math.round(peak / cap * 100 * 100) / 100;
+}
+
 document.getElementById('form-close-trade').addEventListener('submit', async e => {
   e.preventDefault();
   const btn = document.getElementById('close-trade-btn');
@@ -1664,6 +1703,9 @@ document.getElementById('form-close-trade').addEventListener('submit', async e =
   const totalRealised = finalPnl + partialPnl;
   const partialQty    = partials ? partials.reduce((s,p) => s+(p.quantity||0), 0) : 0;
 
+  // True peak exposure — robust to interleaved pyramids & partial exits.
+  const peakPosPct = await computePeakExposurePct(openId, t);
+
   const closedPayload = {
     symbol:            t.symbol,
     company_name:      t.company_name,
@@ -1682,13 +1724,11 @@ document.getElementById('form-close-trade').addEventListener('submit', async e =
     trade_notes:       fd.get('trade_notes').trim() || t.trade_notes,
     // Partial exit summary (first partial for display)
     partial_exit_qty:  partialQty > 0 ? partialQty : null,
-    // Position size — capture PEAK (max) exposure ever held in this stock:
-    // the full pyramided position (total_quantity) before any partial exits,
-    // i.e. the higher of original-buy / post-pyramid / post-partial sizing.
+    // Position size — capture the TRUE PEAK (max) exposure ever held, computed
+    // by walking buys & sells chronologically (handles interleaved pyramids and
+    // partial exits). Falls back to the stored entry-time size if unavailable.
     capital_at_entry:  t.capital_at_entry,
-    position_size_pct: (t.capital_at_entry && t.capital_at_entry > 0)
-      ? Math.round(avgEntry * totalQty / t.capital_at_entry * 100 * 100) / 100
-      : t.position_size_pct,
+    position_size_pct: peakPosPct != null ? peakPosPct : t.position_size_pct,
     // Link back to the original open trade so its pyramid legs + partial
     // exits (still keyed by open_trade_id) can be found for the archive chart.
     origin_open_trade_id: openId,
