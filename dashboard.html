@@ -1353,6 +1353,70 @@ canvas.tc{display:block;width:100%;height:100%}
     </div>
   </div>
 
+  <!-- ── Row 2b: Previous Day High / Low (styled like A/D Ratio) ── -->
+  <div class="card mb-glow">
+    <div class="ch">
+      <span class="ct">Previous Day High / Low</span>
+      <div class="ch-r">
+        <span class="chip">Nifty 500 · Today</span>
+        <span id="pdhpdl-label" style="font-size:11px;font-weight:700;color:var(--green)">—</span>
+      </div>
+    </div>
+    <div class="ad-row">
+      <div class="ad-cell">
+        <div class="ad-label">Above PDH</div>
+        <div class="ad-val g" id="pdh-above">—</div>
+        <div class="ad-sub">closed above prev day high</div>
+        <div class="ad-ratio-pill arp-bull" id="pdh-pill">—</div>
+      </div>
+      <div class="ad-cell">
+        <div class="ad-label">Below PDL</div>
+        <div class="ad-val r" id="pdl-below">—</div>
+        <div class="ad-sub">closed below prev day low</div>
+        <div class="ad-ratio-pill arp-bear" id="pdl-pill">—</div>
+      </div>
+      <div class="ad-cell">
+        <div class="ad-label">Net PDH/PDL</div>
+        <div class="ad-val" id="pdhpdl-net" style="font-size:32px;font-weight:800;letter-spacing:-1px">—</div>
+        <div class="ad-sub" id="pdhpdl-net-sub">Above PDH minus Below PDL</div>
+        <div class="ad-label" style="margin-bottom:4px;margin-top:14px">PDH/PDL Split</div>
+        <div class="ad-bar-track">
+          <div class="ad-bar-adv" id="pdhpdl-bar-up" style="width:50%"></div>
+          <div class="ad-bar-dec" id="pdhpdl-bar-dn" style="width:50%"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px">
+          <span class="up" id="pdh-pct">—</span>
+          <span class="dn" id="pdl-pct">—</span>
+        </div>
+      </div>
+    </div>
+    <!-- PDH/PDL History (collapsible) -->
+    <div style="padding:10px 20px;border-top:1px solid var(--bdr)">
+      <button onclick="togglePDHistory()" id="btn-pdhpdl-history"
+        style="width:100%;padding:6px 12px;background:var(--card3);
+          border:1px solid var(--bdr);border-radius:6px;color:var(--muted);
+          font-size:10px;font-weight:600;cursor:pointer;font-family:var(--fm);
+          letter-spacing:.3px;transition:all .15s">
+        ▼ Show History
+      </button>
+      <div id="pdhpdl-history-panel" style="display:none;margin-top:6px;
+        max-height:240px;overflow-y:auto;border-radius:6px;
+        border:1px solid var(--bdr);background:var(--card2)">
+        <table style="width:100%;border-collapse:collapse;font-size:10px">
+          <thead><tr style="background:var(--card3);position:sticky;top:0;z-index:1">
+            <th style="padding:6px 10px;text-align:left;color:var(--muted);font-weight:600">Date</th>
+            <th style="padding:6px 10px;text-align:right;color:var(--green);font-weight:600">Above PDH</th>
+            <th style="padding:6px 10px;text-align:right;color:var(--red);font-weight:600">Below PDL</th>
+            <th style="padding:6px 10px;text-align:right;color:var(--muted);font-weight:600">Net PDH/PDL</th>
+          </tr></thead>
+          <tbody id="pdhpdl-hist-body">
+            <tr><td colspan="4" style="text-align:center;padding:14px;color:var(--muted)">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Row 3: Market Score ── -->
   <div class="card mb-glow">
     <div class="ch">
@@ -4009,6 +4073,60 @@ function renderRS(){document.getElementById('rs-tbody').innerHTML=rsD.map(s=>{co
 
 /* ── A/D HISTORY TOGGLE ── */
 let adHistoryLoaded = false;
+let pdHistoryLoaded = false;
+
+async function togglePDHistory() {
+  const panel = document.getElementById('pdhpdl-history-panel');
+  const btn   = document.getElementById('btn-pdhpdl-history');
+  if(!panel || !btn) return;
+  const isOpen = panel.style.display !== 'none';
+  if(isOpen) {
+    panel.style.display = 'none';
+    btn.innerHTML = '▼ Show History';
+    btn.style.color = 'var(--muted)';
+  } else {
+    panel.style.display = 'block';
+    btn.innerHTML = '▲ Hide PDH/PDL History';
+    btn.style.color = 'var(--text2)';
+    if(!pdHistoryLoaded) { await loadPDHistory(); pdHistoryLoaded = true; }
+  }
+}
+
+async function loadPDHistory() {
+  const tbody = document.getElementById('pdhpdl-hist-body');
+  if(!tbody) return;
+  try {
+    const { data: rows } = await sb.from('market_breadth')
+      .select('snapshot_date,above_pdh,below_pdl,total_stocks')
+      .order('snapshot_date', {ascending: false})
+      .limit(90);
+    if(!rows || rows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:14px;color:var(--muted)">No history yet.</td></tr>';
+      return;
+    }
+    const validRows = rows.filter(r => (r.total_stocks || 0) >= 450 && (r.above_pdh != null || r.below_pdl != null));
+    if(validRows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:14px;color:var(--muted)">No complete snapshots yet.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = validRows.map((r, i) => {
+      const up  = r.above_pdh || 0;
+      const dn  = r.below_pdl || 0;
+      const net = up - dn;
+      const bgRow  = i === 0 ? 'background:rgba(255,255,255,.04);' : '';
+      const netCol = net > 0 ? 'var(--green)' : net < 0 ? 'var(--red)' : 'var(--muted)';
+      const dt = new Date(r.snapshot_date).toLocaleDateString('en-IN', {day:'numeric', month:'short'});
+      return `<tr style="${bgRow}border-top:1px solid var(--bdr)">
+        <td style="padding:6px 10px;color:var(--text2)">${dt}</td>
+        <td style="padding:6px 10px;text-align:right;color:var(--green);font-weight:600;font-family:var(--fm)">${up}</td>
+        <td style="padding:6px 10px;text-align:right;color:var(--red);font-weight:600;font-family:var(--fm)">${dn}</td>
+        <td style="padding:6px 10px;text-align:right;color:${netCol};font-weight:700;font-family:var(--fm)">${net>=0?'+':''}${net}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:14px;color:var(--red)">Error loading history</td></tr>';
+  }
+}
 
 async function toggleADHistory() {
   const panel = document.getElementById('ad-history-panel');
@@ -4593,6 +4711,35 @@ async function loadMarketBreadth() {
   const decPill = document.getElementById('ad-dec-pill');
   if(advPill) advPill.className = 'ad-ratio-pill ' + (isBullAD?'arp-bull':'arp-bear');
   if(decPill) decPill.className = 'ad-ratio-pill ' + (!isBullAD?'arp-bear':'arp-bull');
+
+  // ── Previous Day High / Low ───────────────────
+  const pdh = d.above_pdh || 0;
+  const pdl = d.below_pdl || 0;
+  const pdhPct = total > 0 ? (pdh/total*100).toFixed(1) : 0;
+  const pdlPct = total > 0 ? (pdl/total*100).toFixed(1) : 0;
+  const isBullPD = pdh > pdl;
+  const netPD = pdh - pdl;
+  const netPDEl = document.getElementById('pdhpdl-net');
+  if(netPDEl) {
+    netPDEl.textContent = (netPD >= 0 ? '+' : '') + netPD.toLocaleString('en-IN');
+    netPDEl.style.color = netPD >= 0 ? 'var(--green)' : 'var(--red)';
+  }
+  setText('pdhpdl-net-sub', `${pdh.toLocaleString('en-IN')} − ${pdl.toLocaleString('en-IN')}`);
+  setText('pdhpdl-label', isBullPD ? 'Net above PDH' : (netPD < 0 ? 'Net below PDL' : 'Balanced'), isBullPD?'var(--green)':'var(--red)');
+  setText('pdh-above', pdh.toLocaleString('en-IN'));
+  setText('pdl-below', pdl.toLocaleString('en-IN'));
+  setText('pdh-pill', `▲ ${pdhPct}% above PDH`);
+  setText('pdl-pill', `▼ ${pdlPct}% below PDL`);
+  setText('pdh-pct', `${pdhPct}% > PDH`);
+  setText('pdl-pct', `${pdlPct}% < PDL`);
+  const pdhBar = document.getElementById('pdhpdl-bar-up');
+  const pdlBar = document.getElementById('pdhpdl-bar-dn');
+  if(pdhBar) pdhBar.style.width = pdhPct + '%';
+  if(pdlBar) pdlBar.style.width = pdlPct + '%';
+  const pdhPill = document.getElementById('pdh-pill');
+  const pdlPill = document.getElementById('pdl-pill');
+  if(pdhPill) pdhPill.className = 'ad-ratio-pill ' + (isBullPD?'arp-bull':'arp-bear');
+  if(pdlPill) pdlPill.className = 'ad-ratio-pill ' + (!isBullPD?'arp-bear':'arp-bull');
 
   // ── 5-Day A/D Trend ──────────────────────────
   const trendEl = null; // replaced by collapsible A/D history
