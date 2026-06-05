@@ -372,6 +372,7 @@ def calculate_market_breadth(symbols, nifty50_close=None):
         return
     print(f"🔬 Computing market breadth ({len(symbols)} stocks)...")
     a21=a50=a200=h52=l52=adv=dec=unch=valid = 0
+    pdh=pdl = 0
     BATCH = 50
     for i in range(0, len(symbols), BATCH):
         batch = symbols[i:i+BATCH]
@@ -394,6 +395,21 @@ def calculate_market_breadth(symbols, nifty50_close=None):
                     if cur > prev:   adv  += 1
                     elif cur < prev: dec  += 1
                     else:            unch += 1
+                    # Previous Day High / Low breadth: is the latest price above the
+                    # prior session's HIGH (bullish breakout) or below its LOW?
+                    try:
+                        if len(batch) == 1:
+                            hi = raw["High"]; lo = raw["Low"]
+                        else:
+                            hi = raw[sym]["High"]; lo = raw[sym]["Low"]
+                        if isinstance(hi, pd.DataFrame): hi = hi.iloc[:, 0]
+                        if isinstance(lo, pd.DataFrame): lo = lo.iloc[:, 0]
+                        hi = hi.reindex(cl.index); lo = lo.reindex(cl.index)
+                        prev_high = float(hi.iloc[-2]); prev_low = float(lo.iloc[-2])
+                        if pd.notna(prev_high) and cur > prev_high: pdh += 1
+                        if pd.notna(prev_low)  and cur < prev_low:  pdl += 1
+                    except Exception:
+                        pass
                     if cur > float(compute_ema(cl,21).iloc[-1]):  a21  += 1
                     if cur > float(compute_ema(cl,50).iloc[-1]):  a50  += 1
                     if cur > float(compute_ema(cl,200).iloc[-1]): a200 += 1
@@ -427,10 +443,11 @@ def calculate_market_breadth(symbols, nifty50_close=None):
         "pct_above_50ema":  p50,  "above_50ema_count":  a50,
         "pct_above_200ema": p200, "above_200ema_count": a200,
         "new_52w_highs":    h52,  "new_52w_lows":       l52,
+        "above_pdh":        pdh,  "below_pdl":          pdl,
         "nifty50_close":    nifty50_close,
         "india_vix":        india_vix,
     }, on_conflict="snapshot_date").execute()
-    print(f"   ✓ {valid} stocks | 21:{p21}% 50:{p50}% 200:{p200}% | VIX:{india_vix}\n")
+    print(f"   ✓ {valid} stocks | 21:{p21}% 50:{p50}% 200:{p200}% | PDH:{pdh} PDL:{pdl} | VIX:{india_vix}\n")
 
 
 # ════════════════════════════════════════════════════════════
