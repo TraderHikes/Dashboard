@@ -2259,7 +2259,7 @@ function renderFiiTable(rows, period) {
 
   const maxAbs = Math.max(...data.map(r => Math.abs((r.fii_cash_net||0) + (r.dii_cash_net||0))), 1000);
   const fmtN  = (n) => (n >= 0 ? '+' : '\u2212') + Math.abs(n).toLocaleString('en-IN', { maximumFractionDigits: 0 });
-  const GRN = 'var(--green)', RED = '#ef5350';
+  const GRN = 'var(--green)', RED = 'var(--red)';  // match Key Indices negative red
 
   // Diverging bar centred on zero: green fills right, red fills left.
   const bar = (val) => {
