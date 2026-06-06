@@ -373,6 +373,7 @@ def calculate_market_breadth(symbols, nifty50_close=None):
     print(f"🔬 Computing market breadth ({len(symbols)} stocks)...")
     a21=a50=a200=h52=l52=adv=dec=unch=valid = 0
     pdh=pdl = 0
+    movers = []  # (symbol, pct_change, last_price) — for top gainers / losers
     BATCH = 50
     for i in range(0, len(symbols), BATCH):
         batch = symbols[i:i+BATCH]
@@ -410,6 +411,8 @@ def calculate_market_breadth(symbols, nifty50_close=None):
                         if pd.notna(prev_low)  and cur < prev_low:  pdl += 1
                     except Exception:
                         pass
+                    if prev > 0:
+                        movers.append((sym.replace('.NS', ''), round((cur - prev) / prev * 100, 2), round(cur, 2)))
                     if cur > float(compute_ema(cl,21).iloc[-1]):  a21  += 1
                     if cur > float(compute_ema(cl,50).iloc[-1]):  a50  += 1
                     if cur > float(compute_ema(cl,200).iloc[-1]): a200 += 1
@@ -435,6 +438,9 @@ def calculate_market_breadth(symbols, nifty50_close=None):
         vix_cl = get_close_series("^INDIAVIX", period="5d")
         if len(vix_cl): india_vix = round(float(vix_cl.iloc[-1]), 2)
     except: pass
+    movers_sorted = sorted(movers, key=lambda m: m[1], reverse=True)
+    top_gainers = [{"s": s, "p": p, "c": c} for s, p, c in movers_sorted if p > 0][:50]
+    top_losers  = [{"s": s, "p": p, "c": c} for s, p, c in reversed(movers_sorted) if p < 0][:50]
     sb.table("market_breadth").upsert({
         "snapshot_date":    TODAY,
         "total_stocks":     valid,
@@ -444,6 +450,8 @@ def calculate_market_breadth(symbols, nifty50_close=None):
         "pct_above_200ema": p200, "above_200ema_count": a200,
         "new_52w_highs":    h52,  "new_52w_lows":       l52,
         "above_pdh":        pdh,  "below_pdl":          pdl,
+        "top_gainers":      top_gainers,
+        "top_losers":       top_losers,
         "nifty50_close":    nifty50_close,
         "india_vix":        india_vix,
     }, on_conflict="snapshot_date").execute()
