@@ -452,6 +452,26 @@ canvas.tc{display:block;width:100%;height:100%}
 .arp-bull{background:var(--green-dim);border:1px solid var(--green-bd);color:var(--green)}
 .arp-bear{background:var(--red-dim);border:1px solid var(--red-bd);color:var(--red)}
 
+/* ── Gainers / Losers indicator ── */
+.gl-toggle{display:flex;gap:8px;padding:14px 20px 0}
+.gl-tab{flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--bdr);background:var(--card3);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--f);transition:all .15s;letter-spacing:.2px}
+.gl-tab:hover{color:var(--text2);border-color:var(--bdr2)}
+#gl-tab-gainers.active{background:var(--green-dim);border-color:var(--green-bd);color:var(--green)}
+#gl-tab-losers.active{background:var(--red-dim);border-color:var(--red-bd);color:var(--red)}
+.gl-canvas{margin:14px 20px 18px;border:1px solid var(--blue-lt);border-radius:10px;box-shadow:0 0 16px rgba(92,111,251,.14),inset 0 0 18px rgba(92,111,251,.04);overflow:hidden}
+.gl-head,.gl-row{display:grid;grid-template-columns:40px 1fr 92px 96px;gap:8px;align-items:center}
+.gl-head{padding:10px 14px;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:700;border-bottom:1px solid var(--bdr);background:var(--card3)}
+.gl-head span:nth-child(3),.gl-head span:nth-child(4){text-align:right}
+.gl-scroll{max-height:344px;overflow-y:auto}
+.gl-row{padding:9px 14px;font-size:12px;border-bottom:1px solid rgba(255,255,255,.04);transition:background .12s}
+.gl-row:last-child{border-bottom:none}
+.gl-row:hover{background:rgba(255,255,255,.035)}
+.gl-rank{color:var(--muted);font-family:var(--fm);font-size:11px}
+.gl-sym{font-weight:700;color:var(--white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gl-pct{text-align:right;font-weight:700;font-family:var(--fm)}
+.gl-pct.up{color:var(--green)}.gl-pct.dn{color:var(--red)}
+.gl-ltp{text-align:right;font-family:var(--fm);color:var(--text2)}
+
 .hl-grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
 .hl-side{padding:16px 20px}
 .hl-side:first-child{border-right:1px solid var(--bdr)}
@@ -1353,7 +1373,8 @@ canvas.tc{display:block;width:100%;height:100%}
     </div>
   </div>
 
-  <!-- ── Row 2b: Previous Day High / Low (styled like A/D Ratio) ── -->
+  <!-- ── Row 2b: Previous Day High/Low + Gainers/Losers (half-width, like A/D row) ── -->
+  <div class="g2">
   <div class="card mb-glow">
     <div class="ch">
       <span class="ct">Previous Day High / Low</span>
@@ -1415,7 +1436,25 @@ canvas.tc{display:block;width:100%;height:100%}
         </table>
       </div>
     </div>
+  </div><!-- /PDH-PDL card -->
+
+  <div class="card mb-glow">
+    <div class="ch">
+      <span class="ct">Gainers / Losers</span>
+      <div class="ch-r"><span class="chip">Nifty 500 · Top 50</span></div>
+    </div>
+    <div class="gl-toggle">
+      <button id="gl-tab-gainers" class="gl-tab active" onclick="setGLView('gainers')">Top Gainers</button>
+      <button id="gl-tab-losers"  class="gl-tab" onclick="setGLView('losers')">Top Losers</button>
+    </div>
+    <div class="gl-canvas">
+      <div class="gl-head"><span>#</span><span>Symbol</span><span>Chg %</span><span>LTP</span></div>
+      <div class="gl-scroll" id="gl-list">
+        <div style="padding:24px;text-align:center;color:var(--muted);font-size:12px">Loading...</div>
+      </div>
+    </div>
   </div>
+  </div><!-- /g2 Row 2b -->
 
   <!-- ── Row 3: Market Score ── -->
   <div class="card mb-glow">
@@ -4075,6 +4114,37 @@ function renderRS(){document.getElementById('rs-tbody').innerHTML=rsD.map(s=>{co
 let adHistoryLoaded = false;
 let pdHistoryLoaded = false;
 
+/* ── GAINERS / LOSERS ── */
+let _glData = { gainers: [], losers: [] };
+function renderGL(view) {
+  const list = document.getElementById('gl-list');
+  if(!list) return;
+  const arr = (view === 'losers') ? _glData.losers : _glData.gainers;
+  if(!arr || arr.length === 0) {
+    list.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted);font-size:12px">No ${view} recorded yet.</div>`;
+    return;
+  }
+  list.innerHTML = arr.map((m, i) => {
+    const pct  = Number(m.p) || 0;
+    const cls  = pct >= 0 ? 'up' : 'dn';
+    const sign = pct >= 0 ? '+' : '';
+    const ltp  = (m.c != null) ? Number(m.c).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—';
+    return `<div class="gl-row">
+      <span class="gl-rank">${i+1}</span>
+      <span class="gl-sym" title="${m.s}">${m.s}</span>
+      <span class="gl-pct ${cls}">${sign}${pct.toFixed(2)}%</span>
+      <span class="gl-ltp">${ltp}</span>
+    </div>`;
+  }).join('');
+}
+function setGLView(view) {
+  const g = document.getElementById('gl-tab-gainers');
+  const l = document.getElementById('gl-tab-losers');
+  if(g) g.classList.toggle('active', view === 'gainers');
+  if(l) l.classList.toggle('active', view === 'losers');
+  renderGL(view);
+}
+
 async function togglePDHistory() {
   const panel = document.getElementById('pdhpdl-history-panel');
   const btn   = document.getElementById('btn-pdhpdl-history');
@@ -4740,6 +4810,12 @@ async function loadMarketBreadth() {
   const pdlPill = document.getElementById('pdl-pill');
   if(pdhPill) pdhPill.className = 'ad-ratio-pill ' + (isBullPD?'arp-bull':'arp-bear');
   if(pdlPill) pdlPill.className = 'ad-ratio-pill ' + (!isBullPD?'arp-bear':'arp-bull');
+
+  // ── Gainers / Losers ──────────────────────────
+  _glData.gainers = Array.isArray(d.top_gainers) ? d.top_gainers : [];
+  _glData.losers  = Array.isArray(d.top_losers)  ? d.top_losers  : [];
+  const glView = document.getElementById('gl-tab-losers')?.classList.contains('active') ? 'losers' : 'gainers';
+  renderGL(glView);
 
   // ── 5-Day A/D Trend ──────────────────────────
   const trendEl = null; // replaced by collapsible A/D history
