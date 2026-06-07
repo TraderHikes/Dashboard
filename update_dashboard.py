@@ -364,6 +364,189 @@ def save_portfolio_snapshot(cmp_map, n500_val):
 
 
 # ════════════════════════════════════════════════════════════
+# PROPRIETARY MARKET SCORE  (9-indicator, two-layer engine)
+# ════════════════════════════════════════════════════════════
+# Private swing-trading exposure model. NOT investment advice — it sizes the
+# AGGREGATE book; per-trade stops / position risk still govern each position.
+#
+#   REGIME layer  (slow) → sets the exposure CEILING (what you're ALLOWED to hold)
+#   TACTICAL layer (fast) → dials position WITHIN that ceiling (timing)
+#
+# All 9 inputs normalise to 0..100 (50 = neutral). The two layers combine into a
+# composite, which is 3-day-EMA smoothed, mapped to a suggested exposure with hard
+# vetoes, then run through asymmetric hysteresis (de-risk fast, add slow).
+
+# Key Indices feeding the index-trend pillar (must match admin IDX_ADMIN list).
+KEY_INDEX_KEYS = [
+    "nifty50", "sensex", "nifty500",
+    "nifty_midcap100", "nifty_smallcap100", "nifty_microcap250", "nifty_alpha50",
+]
+
+
+def _norm_ratio(a, b, min_sample=0):
+    """Self-scaling 0..100 where 50 = balanced: a/(a+b)*100.
+    Returns neutral 50 when the sample is empty or below min_sample."""
+    a = a or 0; b = b or 0
+    tot = a + b
+    if tot <= 0 or tot < min_sample:
+        return 50.0
+    return a / tot * 100.0
+
+
+def _index_trend_score():
+    """Key Indices pillar. For each index, longer EMAs weigh heavier:
+        t = (1·a10 + 2·a21 + 3·a50 + 4·a200) / 10   (1.0 = above all, 0.0 = below all)
+    Averaged across indices that HAVE flags set, ×100. Indices the admin hasn't
+    flagged are skipped (not scored as 0, which would falsely drag it bearish).
+    Returns (score_0_100, n_indices_used)."""
+    try:
+        rows = sb.table("index_ema_flags").select("*").execute().data or []
+    except Exception:
+        rows = []
+    ts = []
+    for r in rows:
+        if r.get("index_key") not in KEY_INDEX_KEYS:
+            continue
+        flags = [r.get("above_10ema"), r.get("above_21ema"),
+                 r.get("above_50ema"), r.get("above_200ema")]
+        if all(f is None for f in flags):
+            continue  # not set yet — don't dilute
+        a10, a21, a50, a200 = [1 if f else 0 for f in flags]
+        ts.append((1*a10 + 2*a21 + 3*a50 + 4*a200) / 10.0)
+    if not ts:
+        return 50.0, 0
+    return sum(ts) / len(ts) * 100.0, len(ts)
+
+
+def _fii_dii_flow5d(scale=25000.0):
+    """FII/DII pillar. 5-day rolling net, FII weighted heavier than DII (foreign
+    flows drive Indian swing moves more; DII is steadier). Squashed with tanh so
+    extreme single days stay bounded:
+        flow5d = 0.7·ΣFII(5d) + 0.3·ΣDII(5d)
+        score  = 50 + 50·tanh(flow5d / scale)
+    Returns (score_0_100, flow5d_cr)."""
+    try:
+        rows = (sb.table("fii_dii_activity")
+                  .select("fii_cash_net,dii_cash_net,activity_date")
+                  .order("activity_date", desc=True).limit(5).execute().data or [])
+    except Exception:
+        rows = []
+    if not rows:
+        return 50.0, 0.0
+    fii = sum(float(r.get("fii_cash_net") or 0) for r in rows)
+    dii = sum(float(r.get("dii_cash_net") or 0) for r in rows)
+    flow5d = 0.7 * fii + 0.3 * dii
+    score  = 50.0 + 50.0 * float(np.tanh(flow5d / scale))
+    return score, flow5d
+
+
+def _prev_breadth_row():
+    """Most recent market_breadth row BEFORE today — supplies prior smoothed
+    composite (for the 3-day EMA), prior exposure (for hysteresis), and prior
+    200EMA breadth (for the falling-breadth veto). Excluding today means intraday
+    re-runs don't compound the smoothing within a single session."""
+    try:
+        rows = (sb.table("market_breadth").select(
+                    "pct_above_200ema,composite_smoothed,suggested_exposure_pct")
+                  .lt("snapshot_date", TODAY)
+                  .order("snapshot_date", desc=True).limit(1).execute().data or [])
+        return rows[0] if rows else None
+    except Exception:
+        return None
+
+
+def compute_market_score(p21, p50, p200, adv, dec, h52, l52, pdh, pdl,
+                         strong_up, strong_down, india_vix):
+    """Compute the full 9-pillar score. Returns a dict of fields ready to merge
+    into the market_breadth upsert payload."""
+    # ── 1. Normalise the 9 pillars to 0..100 (50 = neutral) ──
+    n_21  = float(p21  if p21  is not None else 50)   # already a percentage
+    n_50  = float(p50  if p50  is not None else 50)
+    n_200 = float(p200 if p200 is not None else 50)
+    n_ad  = _norm_ratio(adv, dec)                              # direction only
+    n_52  = _norm_ratio(h52, l52, min_sample=20)              # guard thin samples
+    n_pdh = _norm_ratio(pdh, pdl)                             # prev-day H/L
+    n_thr = _norm_ratio(strong_up, strong_down, min_sample=10) # breadth thrust
+    n_idx, n_idx_used = _index_trend_score()                  # key-index trend
+    n_fii, flow5d     = _fii_dii_flow5d()                     # 5-day FII/DII flow
+
+    # ── 2. Two layers ──
+    # Regime (slow) — the environment; sets how much you're ALLOWED to deploy.
+    R = 0.40 * n_200 + 0.35 * n_idx + 0.25 * n_50
+    # Tactical (fast) — timing within that ceiling.
+    T = (0.20 * n_21 + 0.20 * n_ad + 0.20 * n_52
+         + 0.15 * n_pdh + 0.10 * n_thr + 0.15 * n_fii)
+    # Headline composite — regime weighted more (horizon is swings, not scalps).
+    composite = 0.55 * R + 0.45 * T
+
+    # ── 3. Smooth the composite (3-day EMA, alpha = 2/(3+1) = 0.5) ──
+    prev          = _prev_breadth_row() or {}
+    prev_smoothed = prev.get("composite_smoothed")
+    composite_smoothed = (composite if prev_smoothed is None
+                          else 0.5 * composite + 0.5 * float(prev_smoothed))
+
+    # ── 4. Regime → exposure ceiling; tactical dials within it ──
+    if   R >= 70: ceiling = 100
+    elif R >= 55: ceiling = 80
+    elif R >= 45: ceiling = 50
+    elif R >= 30: ceiling = 25
+    else:         ceiling = 10
+    expo = ceiling * (0.4 + 0.6 * T / 100.0)   # 0.4 floor keeps you partly in on soft days
+
+    # ── 5. Hard vetoes — override the score on dangerous tapes ──
+    vetoes = []
+    prev_p200 = prev.get("pct_above_200ema")
+    if n_200 < 40 and prev_p200 is not None and n_200 < float(prev_p200):
+        expo = min(expo, 20); vetoes.append("Weak & falling 200EMA breadth")
+    if india_vix is not None:
+        if india_vix >= 20:
+            expo = min(expo, 25); vetoes.append(f"High VIX ({india_vix})")
+        elif india_vix >= 16:
+            expo = min(expo, 60); vetoes.append(f"Elevated VIX ({india_vix})")
+    if flow5d < -20000:
+        expo = min(expo, 50); vetoes.append("Sustained FII/DII outflow (5d)")
+
+    # ── 6. Asymmetric hysteresis — de-risk fast, add slow ──
+    prev_expo = prev.get("suggested_exposure_pct")
+    if prev_expo is None:
+        exposure = expo
+    elif expo < float(prev_expo):
+        exposure = expo                                          # cut now
+    else:
+        exposure = float(prev_expo) + (expo - float(prev_expo)) * 0.5  # add half-step
+    exposure = max(0, min(100, round(exposure / 5.0) * 5))       # clean 5% bands
+
+    # ── 7. Headline signal (off the SMOOTHED composite) ──
+    cs = composite_smoothed
+    signal = ("Strong Bull" if cs >= 70 else "Bullish" if cs >= 55
+              else "Neutral" if cs >= 45 else "Cautious" if cs >= 30 else "Defensive")
+
+    breakdown = {
+        "pillars": {
+            "above21ema": round(n_21, 1), "above50ema": round(n_50, 1),
+            "above200ema": round(n_200, 1), "advance_decline": round(n_ad, 1),
+            "high_low_52w": round(n_52, 1), "prev_day_hl": round(n_pdh, 1),
+            "thrust": round(n_thr, 1), "key_indices": round(n_idx, 1),
+            "fii_dii": round(n_fii, 1),
+        },
+        "regime": round(R, 1), "tactical": round(T, 1), "ceiling": ceiling,
+        "exposure_raw": round(expo, 1), "flow5d_cr": round(flow5d, 0),
+        "indices_used": n_idx_used, "thrust_counts": [strong_up, strong_down],
+        "vetoes": vetoes,
+    }
+
+    return {
+        "regime_score":           round(R, 2),
+        "tactical_score":         round(T, 2),
+        "composite_score":        round(composite, 2),
+        "composite_smoothed":     round(composite_smoothed, 2),
+        "suggested_exposure_pct": exposure,
+        "market_signal":          signal,
+        "score_breakdown":        breakdown,
+    }
+
+
+# ════════════════════════════════════════════════════════════
 # MARKET BREADTH
 # ════════════════════════════════════════════════════════════
 def calculate_market_breadth(symbols, nifty50_close=None):
@@ -373,6 +556,7 @@ def calculate_market_breadth(symbols, nifty50_close=None):
     print(f"🔬 Computing market breadth ({len(symbols)} stocks)...")
     a21=a50=a200=h52=l52=adv=dec=unch=valid = 0
     pdh=pdl = 0
+    strong_up=strong_down = 0          # breadth-thrust tallies (|move| ≥ 3%)
     movers = []  # (symbol, pct_change, last_price) — for top gainers / losers
     BATCH = 50
     for i in range(0, len(symbols), BATCH):
@@ -412,7 +596,12 @@ def calculate_market_breadth(symbols, nifty50_close=None):
                     except Exception:
                         pass
                     if prev > 0:
-                        movers.append((sym.replace('.NS', ''), round((cur - prev) / prev * 100, 2), round(cur, 2)))
+                        pct = (cur - prev) / prev * 100
+                        movers.append((sym.replace('.NS', ''), round(pct, 2), round(cur, 2)))
+                        # Breadth thrust: count conviction moves across all Nifty 500.
+                        # Flat ±3% absolute threshold (swing-trader's "strong" lens).
+                        if   pct >=  3.0: strong_up   += 1
+                        elif pct <= -3.0: strong_down += 1
                     if cur > float(compute_ema(cl,21).iloc[-1]):  a21  += 1
                     if cur > float(compute_ema(cl,50).iloc[-1]):  a50  += 1
                     if cur > float(compute_ema(cl,200).iloc[-1]): a200 += 1
@@ -441,7 +630,15 @@ def calculate_market_breadth(symbols, nifty50_close=None):
     movers_sorted = sorted(movers, key=lambda m: m[1], reverse=True)
     top_gainers = [{"s": s, "p": p, "c": c} for s, p, c in movers_sorted if p > 0][:50]
     top_losers  = [{"s": s, "p": p, "c": c} for s, p, c in reversed(movers_sorted) if p < 0][:50]
-    sb.table("market_breadth").upsert({
+
+    # ── Proprietary Market Score (9-pillar, two-layer) ──
+    # Reads index_ema_flags + fii_dii_activity + prior breadth row internally.
+    score = compute_market_score(
+        p21, p50, p200, adv, dec, h52, l52, pdh, pdl,
+        strong_up, strong_down, india_vix,
+    )
+
+    payload = {
         "snapshot_date":    TODAY,
         "total_stocks":     valid,
         "advancing":        adv, "declining": dec, "unchanged": unch,
@@ -450,12 +647,20 @@ def calculate_market_breadth(symbols, nifty50_close=None):
         "pct_above_200ema": p200, "above_200ema_count": a200,
         "new_52w_highs":    h52,  "new_52w_lows":       l52,
         "above_pdh":        pdh,  "below_pdl":          pdl,
+        "strong_up_count":  strong_up, "strong_down_count": strong_down,
         "top_gainers":      top_gainers,
         "top_losers":       top_losers,
         "nifty50_close":    nifty50_close,
         "india_vix":        india_vix,
-    }, on_conflict="snapshot_date").execute()
-    print(f"   ✓ {valid} stocks | 21:{p21}% 50:{p50}% 200:{p200}% | PDH:{pdh} PDL:{pdl} | VIX:{india_vix}\n")
+    }
+    payload.update(score)
+    sb.table("market_breadth").upsert(payload, on_conflict="snapshot_date").execute()
+    print(f"   ✓ {valid} stocks | 21:{p21}% 50:{p50}% 200:{p200}% | PDH:{pdh} PDL:{pdl} | VIX:{india_vix}")
+    print(f"   📊 Score {score['composite_score']} (smoothed {score['composite_smoothed']}) "
+          f"· {score['market_signal']} · R{score['regime_score']}/T{score['tactical_score']} "
+          f"· thrust {strong_up}↑/{strong_down}↓ · exposure {score['suggested_exposure_pct']}%"
+          + (f" · vetoes: {', '.join(score['score_breakdown']['vetoes'])}"
+             if score['score_breakdown']['vetoes'] else "") + "\n")
 
 
 # ════════════════════════════════════════════════════════════
