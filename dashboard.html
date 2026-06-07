@@ -335,13 +335,11 @@ body{overflow-x:hidden;
 /* ── Market Score hero card (proprietary 9-indicator composite) ── */
 .msc-card{border-color:var(--bdr3);box-shadow:0 0 30px rgba(92,111,251,.18),inset 0 0 40px rgba(92,111,251,.05)}
 .msc-card .ch{background:linear-gradient(135deg,rgba(92,111,251,.16),var(--card2) 60%,var(--card))}
-.msc-aichip{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;padding:4px 11px;border-radius:100px;
-  background:rgba(143,163,255,.14);border:1px solid rgba(143,163,255,.42);color:var(--blue-lt);letter-spacing:.3px;
-  box-shadow:0 0 12px rgba(92,111,251,.22)}
-.msc-aidot{width:12px;height:12px;border-radius:50%;border:2px solid rgba(143,163,255,.22);
-  border-top-color:var(--blue-lt);border-right-color:var(--blue-lt);
-  box-shadow:0 0 8px var(--blue-glow);animation:mscspin .85s linear infinite}
-@keyframes mscspin{to{transform:rotate(360deg)}}
+.msc-aichip{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:700;padding:4px 11px;border-radius:100px;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.55);color:#fff;letter-spacing:.3px;
+  box-shadow:0 0 12px rgba(255,255,255,.12)}
+.msc-aidot{width:6px;height:6px;border-radius:50%;background:#fff;
+  box-shadow:0 0 7px rgba(255,255,255,.85);animation:blink 1.4s infinite}
 .msc-cb-row{display:flex;justify-content:center;padding:18px 24px 0}
 @property --msc-angle{syntax:'<angle>';initial-value:0deg;inherits:false}
 .msc-cb-wrap{--msc-angle:0deg;position:relative;display:inline-block;border-radius:100px;padding:2px}
