@@ -140,7 +140,7 @@ body{overflow-x:hidden;
 .btn-set:hover{border-color:var(--blue);color:var(--blue-lt)}
 
 /* ═══ NAV ═══ */
-.nav{display:flex;padding:0 28px;background:var(--bg2);border-bottom:1px solid var(--bdr);position:sticky;top:62px;z-index:190;gap:0;overflow-x:auto}
+.nav{display:flex;padding:0 28px;background:var(--bg2);border-bottom:1px solid var(--bdr);position:sticky;top:62px;z-index:190;gap:0;overflow-x:visible}
 .ntab{padding:15px 20px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .18s;display:flex;align-items:center;gap:7px;white-space:nowrap;flex-shrink:0}
 .ntab:hover{color:var(--text2)}
 .ntab.active{
@@ -338,7 +338,15 @@ body{overflow-x:hidden;
 .msc-aichip{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;padding:4px 11px;border-radius:100px;
   background:rgba(143,163,255,.14);border:1px solid rgba(143,163,255,.42);color:var(--blue-lt);letter-spacing:.3px;
   box-shadow:0 0 12px rgba(92,111,251,.22)}
-.msc-aidot{width:6px;height:6px;border-radius:50%;background:var(--blue-lt);box-shadow:0 0 7px var(--blue-glow);animation:blink 1.5s infinite}
+.msc-aidot{width:12px;height:12px;border-radius:50%;border:2px solid rgba(143,163,255,.22);
+  border-top-color:var(--blue-lt);border-right-color:var(--blue-lt);
+  box-shadow:0 0 8px var(--blue-glow);animation:mscspin .85s linear infinite}
+@keyframes mscspin{to{transform:rotate(360deg)}}
+.msc-title-wrap{display:flex;flex-direction:column;align-items:flex-start;gap:7px}
+.msc-composite-badge{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;
+  padding:3px 12px;border-radius:100px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.45);
+  background:linear-gradient(90deg,var(--red) 0%,var(--amber) 50%,var(--green) 100%);
+  box-shadow:0 0 13px rgba(46,216,160,.28),inset 0 0 0 1px rgba(255,255,255,.12)}
 .msc-body{display:grid;grid-template-columns:300px 1fr;gap:22px;padding:22px 24px}
 @media(max-width:860px){.msc-body{grid-template-columns:1fr;gap:26px}}
 /* dial */
@@ -1174,10 +1182,12 @@ canvas.tc{display:block;width:100%;height:100%}
   <!-- ── Market Score (hero — proprietary 9-indicator composite) ── -->
   <div class="card mb-glow msc-card">
     <div class="ch">
-      <span class="ct">Market Score</span>
+      <div class="msc-title-wrap">
+        <span class="ct">Market Score</span>
+        <span class="msc-composite-badge">Multi-Indicator Composite</span>
+      </div>
       <div class="ch-r">
         <span class="msc-aichip"><span class="msc-aidot"></span>AI Powered</span>
-        <span class="msc-aichip">Multi-Indicator Composite</span>
       </div>
     </div>
     <div class="msc-body">
