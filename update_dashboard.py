@@ -546,6 +546,108 @@ def compute_market_score(p21, p50, p200, adv, dec, h52, l52, pdh, pdl,
     }
 
 
+# ── Plain-language rationale for the dashboard "Rationale" dropdown ──
+# Two layers: a deterministic summary built from the computed numbers (ALWAYS
+# correct, always available), optionally rephrased by Claude into friendlier
+# prose grounded in those same numbers. The card's numbers come from the data,
+# never from this text — so display is accurate regardless of the AI path.
+
+_PILLAR_LABELS = {
+    "above21ema": "short-term trend (21 EMA)",
+    "above50ema": "medium-term trend (50 EMA)",
+    "above200ema": "long-term trend (200 EMA)",
+    "advance_decline": "advance/decline",
+    "high_low_52w": "52-week highs vs lows",
+    "prev_day_hl": "previous-day range breaks",
+    "thrust": "breadth thrust",
+    "key_indices": "key-index trend",
+    "fii_dii": "institutional flows (FII/DII)",
+}
+
+
+def _join(items):
+    items = list(items)
+    if not items:
+        return ""
+    if len(items) == 1:
+        return items[0]
+    return ", ".join(items[:-1]) + " and " + items[-1]
+
+
+def _deterministic_rationale(score):
+    b = score["score_breakdown"]; p = b["pillars"]
+    sig  = score["market_signal"]
+    comp = score["composite_smoothed"]
+    R, T = b["regime"], b["tactical"]
+    ranked = sorted(p.items(), key=lambda kv: kv[1], reverse=True)
+    strong = [_PILLAR_LABELS[k] for k, v in ranked if v >= 55][:3]
+    weak   = [_PILLAR_LABELS[k] for k, v in reversed(ranked) if v < 45][:3]
+    env = ("a supportive backdrop" if R >= 55 else
+           "a fragile backdrop" if R < 45 else "a mixed backdrop")
+    tac = ("buyers in control" if T >= 55 else
+           "sellers pressing" if T < 45 else "a balanced tape")
+    parts = [f"The market reads {sig} at {comp:.0f} out of 100.",
+             f"The slow regime layer ({R:.0f}) points to {env}, "
+             f"while the fast tactical layer ({T:.0f}) shows {tac}."]
+    if strong:
+        parts.append("Support is coming from " + _join(strong) + ".")
+    if weak:
+        parts.append("The main drag is " + _join(weak) + ".")
+    if b["vetoes"]:
+        parts.append("Risk guard active: " + "; ".join(b["vetoes"]) + ".")
+    return " ".join(parts)
+
+
+def _ai_rationale(score, facts):
+    """Rephrase the deterministic facts into friendly retail prose via Claude.
+    Returns None on any failure (caller falls back to the deterministic text)."""
+    key = os.environ.get("ANTHROPIC_API_KEY")
+    if not key:
+        return None
+    model = os.environ.get("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
+    b = score["score_breakdown"]
+    prompt = (
+        "You are writing a short explainer for a stock-market breadth dashboard "
+        "read by retail swing traders. Using ONLY the facts below, write 2-3 "
+        "plain-English sentences explaining what today's Market Score means and "
+        "why. Keep it simple and calm. Do NOT invent any numbers or facts beyond "
+        "those given. Do NOT give buy/sell advice or price targets. No emojis.\n\n"
+        f"Signal: {score['market_signal']}\n"
+        f"Composite score: {score['composite_smoothed']:.0f}/100 "
+        f"(regime {b['regime']:.0f}, tactical {b['tactical']:.0f})\n"
+        f"Deterministic summary to rephrase: {facts}"
+    )
+    try:
+        r = requests.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={"x-api-key": key,
+                     "anthropic-version": "2023-06-01",
+                     "content-type": "application/json"},
+            json={"model": model, "max_tokens": 240,
+                  "messages": [{"role": "user", "content": prompt}]},
+            timeout=20,
+        )
+        r.raise_for_status()
+        j = r.json()
+        txt = "".join(blk.get("text", "") for blk in j.get("content", [])
+                      if blk.get("type") == "text").strip()
+        return txt or None
+    except Exception as e:
+        print(f"   ℹ️  AI rationale unavailable ({e}) — using deterministic summary")
+        return None
+
+
+def build_rationale(score):
+    """Deterministic summary always; AI polish only on the meaningful EOD/flow
+    runs (keeps cost negligible and intraday runs fast)."""
+    facts = _deterministic_rationale(score)
+    if RUN_MODE in ("full_eod", "fii_dii"):
+        ai = _ai_rationale(score, facts)
+        if ai:
+            return ai
+    return facts
+
+
 # ════════════════════════════════════════════════════════════
 # MARKET BREADTH
 # ════════════════════════════════════════════════════════════
@@ -637,6 +739,7 @@ def calculate_market_breadth(symbols, nifty50_close=None):
         p21, p50, p200, adv, dec, h52, l52, pdh, pdl,
         strong_up, strong_down, india_vix,
     )
+    score["score_rationale"] = build_rationale(score)
 
     payload = {
         "snapshot_date":    TODAY,
