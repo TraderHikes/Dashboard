@@ -338,6 +338,7 @@ body{overflow-x:hidden;
 .msc-aichip{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;padding:4px 11px;border-radius:100px;
   background:rgba(143,163,255,.14);border:1px solid rgba(143,163,255,.42);color:var(--blue-lt);letter-spacing:.3px;
   box-shadow:0 0 12px rgba(92,111,251,.22)}
+.msc-aidot{width:6px;height:6px;border-radius:50%;background:var(--blue-lt);box-shadow:0 0 7px var(--blue-glow);animation:blink 1.5s infinite}
 .msc-body{display:grid;grid-template-columns:300px 1fr;gap:22px;padding:22px 24px}
 @media(max-width:860px){.msc-body{grid-template-columns:1fr;gap:26px}}
 /* dial */
@@ -367,11 +368,11 @@ body{overflow-x:hidden;
 .msc-pbar i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;display:block;transition:width 1s cubic-bezier(.22,1,.36,1)}
 .msc-pv{font-size:12px;font-weight:700;font-family:var(--fm);text-align:right}
 /* rationale dropdown */
-.msc-rationale-btn{width:100%;display:flex;justify-content:space-between;align-items:center;gap:10px;
+.msc-rationale-btn{width:100%;display:flex;justify-content:flex-start;align-items:center;gap:9px;
   padding:13px 24px;background:var(--card2);border:none;border-top:1px solid var(--bdr);cursor:pointer;
   color:var(--text2);font-family:var(--f);font-size:12px;font-weight:700;letter-spacing:.3px;transition:background .15s}
 .msc-rationale-btn:hover{background:var(--card3)}
-.msc-rat-arrow{font-size:11px;color:var(--blue-lt);transition:transform .25s}
+.msc-rat-arrow{font-size:17px;line-height:1;color:var(--blue-lt);transition:transform .25s;text-shadow:0 0 9px var(--blue-glow)}
 .msc-rationale-btn.open .msc-rat-arrow{transform:rotate(180deg)}
 .msc-rationale{max-height:0;overflow:hidden;transition:max-height .35s ease;background:var(--card2);border-top:0 solid var(--bdr)}
 .msc-rationale.open{max-height:320px;border-top:1px solid var(--bdr)}
@@ -1175,8 +1176,8 @@ canvas.tc{display:block;width:100%;height:100%}
     <div class="ch">
       <span class="ct">Market Score</span>
       <div class="ch-r">
-        <span class="msc-aichip">✦ AI Powered</span>
-        <span class="chip">9-Indicator Composite</span>
+        <span class="msc-aichip"><span class="msc-aidot"></span>AI Powered</span>
+        <span class="msc-aichip">Multi-Indicator Composite</span>
       </div>
     </div>
     <div class="msc-body">
@@ -1215,7 +1216,7 @@ canvas.tc{display:block;width:100%;height:100%}
       </div>
     </div>
     <button class="msc-rationale-btn" id="msc-rat-btn" onclick="toggleRationale()">
-      <span>Rationale — why this score</span>
+      <span>Read Rationale</span>
       <span class="msc-rat-arrow" id="msc-rat-arrow">▾</span>
     </button>
     <div class="msc-rationale" id="msc-rationale">
