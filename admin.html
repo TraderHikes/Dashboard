@@ -194,6 +194,33 @@
   .card-title { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--text2); }
   .card-body { padding:20px; }
 
+  /* ── Market Score exposure panel ── */
+  .ams-grid{display:grid;grid-template-columns:1fr 1.25fr 1fr;gap:14px;margin-bottom:14px}
+  .ams-two{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+  .ams-tile{background:var(--card2);border:1px solid var(--bdr);border-radius:12px;padding:16px 18px;text-align:center}
+  .ams-tile.hero{background:linear-gradient(135deg,rgba(92,111,251,.12),var(--card2) 70%);border-color:var(--bdr2);box-shadow:0 0 22px rgba(92,111,251,.14)}
+  .ams-l{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:700;margin-bottom:8px}
+  .ams-big{font-size:42px;font-weight:800;line-height:1;font-family:var(--fm);letter-spacing:-2px;color:var(--text2)}
+  .ams-expo{font-size:56px;font-weight:800;line-height:1;font-family:var(--fm);letter-spacing:-2px;color:var(--blue-lt)}
+  .ams-sig{font-size:15px;font-weight:800;margin-top:8px}
+  .ams-sub{font-size:11.5px;color:var(--muted);margin-top:8px}
+  .ams-veto{border-radius:10px;padding:11px 16px;font-size:12px;font-weight:600;margin-bottom:18px}
+  .ams-veto.ok{background:var(--green-dim);border:1px solid var(--green-bd);color:var(--green)}
+  .ams-veto.warn{background:var(--red-dim);border:1px solid var(--red-bd);color:var(--red)}
+  .ams-pillars{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:18px}
+  .ams-pg-h{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:11px;display:flex;align-items:center;gap:8px}
+  .ams-pg-h::after{content:'';flex:1;height:1px;background:var(--bdr)}
+  .ams-prow{display:grid;grid-template-columns:128px 1fr 30px;align-items:center;gap:10px;margin-bottom:8px}
+  .ams-pl{font-size:11.5px;color:var(--text);font-weight:600}
+  .ams-pbar{height:6px;border-radius:4px;background:var(--card3);overflow:hidden}
+  .ams-pbar i{display:block;height:100%;border-radius:4px;transition:width .8s cubic-bezier(.22,1,.36,1)}
+  .ams-pv{font-size:12px;font-weight:700;font-family:var(--fm);text-align:right}
+  .ams-extra{display:flex;gap:20px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-bottom:16px;font-family:var(--fm)}
+  .ams-extra b{color:var(--text2)}
+  .ams-rat{background:var(--card2);border:1px solid var(--bdr);border-left:3px solid var(--blue);border-radius:0 10px 10px 0;padding:14px 16px;font-size:13px;line-height:1.62;color:var(--text)}
+  .ams-foot{font-size:11px;color:var(--muted);margin-top:14px;line-height:1.6}
+  @media(max-width:760px){.ams-grid,.ams-two,.ams-pillars{grid-template-columns:1fr}}
+
   /* ── FORMS ── */
   .form-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
   .form-grid.two { grid-template-columns:repeat(2,1fr); }
@@ -352,6 +379,7 @@
     <button class="tab-btn" onclick="openTab('tab-closed-edit',this);loadClosedTradesForEdit()">Closed Trades</button>
     <button class="tab-btn" onclick="openTab('tab-snapshot',this)">Portfolio Snapshot</button>
     <button class="tab-btn" onclick="openTab('tab-breadth',this)">Market Breadth</button>
+    <button class="tab-btn" onclick="openTab('tab-score',this);loadMarketScore()">Market Score</button>
     <button class="tab-btn" onclick="openTab('tab-indices',this);loadIndexFlags()">Key Indices</button>
     <button class="tab-btn" onclick="openTab('tab-watchlist',this);loadWatchlistAdmin()">Watchlist</button>
     <button class="tab-btn" onclick="openTab('tab-students',this)">Students</button>
@@ -1011,6 +1039,26 @@
       </div>
     </div>
   </div>
+
+  <!-- ════ TAB: MARKET SCORE — private exposure engine ════ -->
+  <div class="tab-pane" id="tab-score"><div class="form-tab-wrap">
+    <div class="card">
+      <div class="card-hdr" style="flex-wrap:wrap;gap:10px">
+        <span class="card-title">Market Score — Exposure Engine</span>
+        <span id="ams-asof" style="font-size:10px;color:var(--muted);font-family:var(--fm)">—</span>
+      </div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--muted);margin-bottom:18px;line-height:1.7">
+          Private read-only view of the proprietary 9-indicator score. The dashboard shows the public
+          version; this panel adds your <b>suggested swing exposure</b>, the regime ceiling, and any
+          active risk vetoes. Computed by the pipeline — reopen this tab to refresh after the latest run.
+        </p>
+        <div id="ams-content">
+          <div style="text-align:center;color:var(--muted);padding:40px 0">Loading latest score…</div>
+        </div>
+      </div>
+    </div>
+  </div></div>
 
   <!-- ════ TAB: KEY INDICES EMA FLAGS ════ -->
   <div class="tab-pane" id="tab-indices"><div class="form-tab-wrap">
@@ -2055,6 +2103,93 @@ async function saveIndexFlags() {
   const { error } = await sb.from('index_ema_flags').upsert(rows, { onConflict: 'index_key' });
   if(error) { showAlert('idx-error', '✗ ' + error.message, 'error'); return; }
   showAlert('idx-success', '✓ Index EMA flags saved.', 'success');
+}
+
+// ════════════════════════════════════════════
+// MARKET SCORE — private exposure engine (read-only)
+// ════════════════════════════════════════════
+async function loadMarketScore() {
+  const el   = document.getElementById('ams-content');
+  const asof = document.getElementById('ams-asof');
+  if(!el) return;
+  el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px 0">Loading latest score…</div>';
+
+  let d = null;
+  try {
+    const { data } = await sb.from('market_breadth').select('*')
+      .order('snapshot_date', { ascending:false }).limit(1);
+    d = (data && data[0]) || null;
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--red);padding:20px">Failed to load: ' + e.message + '</div>';
+    return;
+  }
+  if(!d) { el.innerHTML = '<div style="color:var(--muted);padding:30px;text-align:center">No breadth data yet.</div>'; return; }
+
+  if(asof) asof.textContent = d.snapshot_date ? ('As of ' + d.snapshot_date) : '';
+
+  const bd   = d.score_breakdown;
+  const comp = (d.composite_smoothed != null) ? d.composite_smoothed : d.composite_score;
+  if(comp == null || !bd || !bd.pillars) {
+    el.innerHTML = '<div style="color:var(--muted);padding:30px;text-align:center;line-height:1.7">'
+      + 'Score not yet computed for the latest row.<br>It appears once the pipeline runs with the scoring engine '
+      + '(and the <code>market_score</code> migration is applied).</div>';
+    return;
+  }
+
+  const col    = v => v >= 55 ? 'var(--green)' : v < 45 ? 'var(--red)' : 'var(--amber)';
+  const sigCol = s => !s ? 'var(--amber)' : s.indexOf('Bull') >= 0 ? 'var(--green)'
+                    : (s === 'Cautious' || s === 'Defensive') ? 'var(--red)' : 'var(--amber)';
+  const sig = d.market_signal || '—';
+  const R = +bd.regime, T = +bd.tactical;
+  const expo = d.suggested_exposure_pct, ceiling = bd.ceiling;
+  const P = bd.pillars;
+  const flow = bd.flow5d_cr;
+  const tc = bd.thrust_counts || [d.strong_up_count, d.strong_down_count];
+  const vetoes = (bd.vetoes && bd.vetoes.length) ? bd.vetoes : null;
+  const rat = (d.score_rationale && ('' + d.score_rationale).trim()) ? ('' + d.score_rationale).trim() : '';
+
+  const grp = (title, rows) => `<div><div class="ams-pg-h">${title}</div>` + rows.map(([k,lab]) => {
+    const v = (P[k] != null) ? +P[k] : 50, c = col(v);
+    return `<div class="ams-prow"><span class="ams-pl">${lab}</span>`
+         + `<span class="ams-pbar"><i style="width:${Math.max(2,Math.min(100,v))}%;background:${c}"></i></span>`
+         + `<span class="ams-pv" style="color:${c}">${Math.round(v)}</span></div>`;
+  }).join('') + `</div>`;
+
+  el.innerHTML = `
+    <div class="ams-grid">
+      <div class="ams-tile">
+        <div class="ams-l">Composite</div>
+        <div class="ams-big" style="color:${sigCol(sig)}">${Math.round(comp)}<span style="font-size:18px;color:var(--muted)">/100</span></div>
+        <div class="ams-sig" style="color:${sigCol(sig)}">${sig}</div>
+      </div>
+      <div class="ams-tile hero">
+        <div class="ams-l">Suggested Exposure</div>
+        <div class="ams-expo">${expo != null ? Math.round(expo) : '—'}<span style="font-size:22px;color:var(--muted)">%</span></div>
+        <div class="ams-sub">of deployable swing capital</div>
+      </div>
+      <div class="ams-tile">
+        <div class="ams-l">Regime Ceiling</div>
+        <div class="ams-big" style="color:${col(R)}">${ceiling != null ? ceiling : '—'}<span style="font-size:18px;color:var(--muted)">%</span></div>
+        <div class="ams-sub">max allowed by regime</div>
+      </div>
+    </div>
+    <div class="ams-two">
+      <div class="ams-tile" style="text-align:left"><div class="ams-l">Regime · slow (ceiling)</div><div class="ams-big" style="font-size:30px;color:${col(R)}">${Math.round(R)}</div></div>
+      <div class="ams-tile" style="text-align:left"><div class="ams-l">Tactical · fast (timing)</div><div class="ams-big" style="font-size:30px;color:${col(T)}">${Math.round(T)}</div></div>
+    </div>
+    <div class="ams-veto ${vetoes ? 'warn' : 'ok'}">${vetoes ? ('⚠ Risk guard active: ' + vetoes.join('  ·  ')) : '✓ No active risk vetoes'}</div>
+    <div class="ams-pillars">
+      ${grp('Regime · slow', [['above200ema','200 EMA breadth'],['key_indices','Key-index trend'],['above50ema','50 EMA breadth']])}
+      ${grp('Tactical · fast', [['above21ema','21 EMA breadth'],['advance_decline','Advance / Decline'],['high_low_52w','52-week H / L'],['prev_day_hl','Prev-day H / L'],['thrust','Breadth thrust'],['fii_dii','FII / DII flow']])}
+    </div>
+    <div class="ams-extra">
+      <span>Thrust: <b style="color:var(--green)">${tc[0] != null ? tc[0] : '—'} ↑</b> / <b style="color:var(--red)">${tc[1] != null ? tc[1] : '—'} ↓</b></span>
+      <span>5-day net flow: <b>${flow != null ? ('₹' + Math.round(flow).toLocaleString('en-IN') + ' Cr') : '—'}</b></span>
+      <span>Raw exposure (pre-hysteresis): <b>${bd.exposure_raw != null ? Math.round(bd.exposure_raw) + '%' : '—'}</b></span>
+    </div>
+    ${rat ? `<div class="ams-rat">${rat}</div>` : ''}
+    <div class="ams-foot">Private sizing methodology — not investment advice. The score sizes the aggregate book; per-trade stops and position risk still govern each position. The engine de-risks immediately but adds exposure in half-steps.</div>
+  `;
 }
 
 // ════════════════════════════════════════════
