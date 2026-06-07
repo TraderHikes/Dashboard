@@ -344,13 +344,22 @@ body{overflow-x:hidden;
 @keyframes mscspin{to{transform:rotate(360deg)}}
 .msc-cb-row{display:flex;justify-content:center;padding:18px 24px 0}
 @property --msc-angle{syntax:'<angle>';initial-value:0deg;inherits:false}
-.msc-cb-wrap{--msc-angle:0deg;display:inline-block;border-radius:100px;padding:2px;
-  background:conic-gradient(from var(--msc-angle),var(--red),var(--amber),var(--green),var(--blue-lt),var(--red));
-  animation:msc-cb 3.2s linear infinite;box-shadow:0 0 16px rgba(92,111,251,.30)}
+.msc-cb-wrap{--msc-angle:0deg;position:relative;display:inline-block;border-radius:100px;padding:2px}
+.msc-cb-wrap::after{content:'';position:absolute;inset:0;border-radius:inherit;border:1px solid var(--bdr2);pointer-events:none}
+.msc-cb-wrap::before{content:'';position:absolute;inset:0;border-radius:inherit;padding:2px;pointer-events:none;
+  background:conic-gradient(from var(--msc-angle),
+    rgba(143,163,255,0) 0deg, rgba(143,163,255,0) 230deg,
+    rgba(143,163,255,.10) 305deg, rgba(143,163,255,.45) 343deg,
+    rgba(143,163,255,1) 359deg, rgba(143,163,255,0) 360deg);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;
+  filter:drop-shadow(0 0 4px rgba(143,163,255,.6));
+  animation:msc-cb 2.8s linear infinite}
 @keyframes msc-cb{from{--msc-angle:0deg}to{--msc-angle:360deg}}
-.msc-composite-badge{display:block;border-radius:100px;background:var(--card2);
-  font-size:9.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--text2);
-  padding:5px 16px}
+.msc-composite-badge{position:relative;display:block;border-radius:100px;background:var(--card2);
+  font-size:9.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;
+  padding:5px 16px;animation:msc-cb-text 6s ease-in-out infinite}
+@keyframes msc-cb-text{0%{color:var(--red)}25%{color:var(--amber)}50%{color:var(--green)}75%{color:var(--amber)}100%{color:var(--red)}}
 .msc-body{display:grid;grid-template-columns:300px 1fr;gap:22px;padding:22px 24px}
 @media(max-width:860px){.msc-body{grid-template-columns:1fr;gap:26px}}
 /* dial */
