@@ -331,6 +331,63 @@ body{overflow-x:hidden;
 .rm-needle{position:absolute;top:1px;bottom:1px;width:4px;border-radius:2px;background:var(--white);box-shadow:0 0 8px rgba(255,255,255,.6);transition:left 1s ease}
 .rm-axis{display:flex;justify-content:space-between;font-size:10px;font-family:var(--fm)}
 .rm-axis .rb{color:var(--red)}.rm-axis .rn{color:var(--amber)}.rm-axis .rg{color:var(--green)}
+
+/* ── Market Score hero card (proprietary 9-indicator composite) ── */
+.msc-card{border-color:var(--bdr3);box-shadow:0 0 30px rgba(92,111,251,.18),inset 0 0 40px rgba(92,111,251,.05)}
+.msc-card .ch{background:linear-gradient(135deg,rgba(92,111,251,.16),var(--card2) 60%,var(--card))}
+.msc-aichip{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;padding:4px 11px;border-radius:100px;
+  background:rgba(143,163,255,.14);border:1px solid rgba(143,163,255,.42);color:var(--blue-lt);letter-spacing:.3px;
+  box-shadow:0 0 12px rgba(92,111,251,.22)}
+.msc-body{display:grid;grid-template-columns:300px 1fr;gap:22px;padding:22px 24px}
+@media(max-width:860px){.msc-body{grid-template-columns:1fr;gap:26px}}
+/* dial */
+.msc-dial-wrap{display:flex;flex-direction:column;align-items:center;gap:10px}
+.msc-dial-inner{position:relative;width:100%;max-width:280px}
+.msc-dial{width:100%;height:auto;overflow:visible;display:block}
+.msc-dial text{fill:var(--muted);font-family:var(--fm)}
+.msc-dial-track{fill:none;stroke:url(#mscZones);stroke-width:13;stroke-linecap:round;opacity:.32}
+.msc-dial-val{fill:none;stroke:var(--amber);stroke-width:13;stroke-linecap:round;stroke-dashoffset:270.2;
+  transition:stroke-dashoffset 1.1s cubic-bezier(.22,1,.36,1),stroke .4s;filter:drop-shadow(0 0 6px currentColor)}
+.msc-dial-center{position:absolute;top:60%;left:0;right:0;transform:translateY(-50%);text-align:center;pointer-events:none}
+.msc-score{font-size:62px;font-weight:800;letter-spacing:-3px;line-height:.9;font-family:var(--fm);color:var(--white)}
+.msc-score .msc-of{font-size:18px;font-weight:600;color:var(--muted);letter-spacing:0}
+.msc-signal{font-size:15px;font-weight:800;letter-spacing:.2px;margin-top:4px}
+.msc-rt{display:flex;gap:10px;width:100%;max-width:280px;margin-top:2px}
+.msc-rt>div{flex:1;background:var(--card2);border:1px solid var(--bdr);border-radius:10px;padding:9px 12px;text-align:center}
+.msc-rt-l{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:700;margin-bottom:3px}
+.msc-rt-v{font-size:20px;font-weight:800;font-family:var(--fm);color:var(--text2)}
+.msc-rt-sub{display:block;font-size:8.5px;color:var(--muted);margin-top:1px;letter-spacing:.3px}
+/* pillars */
+.msc-pillars{display:flex;flex-direction:column;gap:16px;align-self:center}
+.msc-pgroup-h{display:flex;align-items:center;gap:8px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:9px}
+.msc-pgroup-h::after{content:'';flex:1;height:1px;background:var(--bdr)}
+.msc-prow{display:grid;grid-template-columns:118px 1fr 30px;align-items:center;gap:10px;margin-bottom:7px}
+.msc-pl{font-size:11px;color:var(--text);font-weight:600}
+.msc-pbar{height:6px;border-radius:4px;background:var(--card3);overflow:hidden;position:relative}
+.msc-pbar i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;display:block;transition:width 1s cubic-bezier(.22,1,.36,1)}
+.msc-pv{font-size:12px;font-weight:700;font-family:var(--fm);text-align:right}
+/* rationale dropdown */
+.msc-rationale-btn{width:100%;display:flex;justify-content:space-between;align-items:center;gap:10px;
+  padding:13px 24px;background:var(--card2);border:none;border-top:1px solid var(--bdr);cursor:pointer;
+  color:var(--text2);font-family:var(--f);font-size:12px;font-weight:700;letter-spacing:.3px;transition:background .15s}
+.msc-rationale-btn:hover{background:var(--card3)}
+.msc-rat-arrow{font-size:11px;color:var(--blue-lt);transition:transform .25s}
+.msc-rationale-btn.open .msc-rat-arrow{transform:rotate(180deg)}
+.msc-rationale{max-height:0;overflow:hidden;transition:max-height .35s ease;background:var(--card2);border-top:0 solid var(--bdr)}
+.msc-rationale.open{max-height:320px;border-top:1px solid var(--bdr)}
+.msc-rationale-inner{padding:16px 24px 18px}
+.msc-rationale p{font-size:13px;line-height:1.62;color:var(--text);margin:0}
+.msc-rat-foot{display:flex;align-items:center;gap:7px;margin-top:11px;font-size:10px;color:var(--muted);letter-spacing:.2px}
+.msc-rat-foot .dot{width:5px;height:5px;border-radius:50%;background:var(--blue-lt);box-shadow:0 0 6px var(--blue-glow)}
+
+/* ── Breadth-thrust strip on Gainers/Losers card ── */
+.gl-thrust{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;
+  padding:11px 16px;background:var(--card2);border-bottom:1px solid var(--bdr);font-family:var(--fm)}
+.gl-thrust .glt-up{font-size:12px;font-weight:700;color:var(--green)}
+.gl-thrust .glt-dn{font-size:12px;font-weight:700;color:var(--red)}
+.gl-thrust .glt-thr{font-size:12px;font-weight:700;color:var(--blue-lt)}
+.gl-thrust .glt-sep{color:var(--muted);font-size:11px}
+.gl-thrust .glt-thr b{font-size:13px}
 .rm-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .rms{background:var(--card2);border:1px solid var(--bdr);border-radius:10px;padding:10px 12px}
 .rmsl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;font-weight:600}
@@ -1113,6 +1170,62 @@ canvas.tc{display:block;width:100%;height:100%}
     <div class="sb" id="breadth-sub">Loading...</div>
   </div>
 
+  <!-- ── Market Score (hero — proprietary 9-indicator composite) ── -->
+  <div class="card mb-glow msc-card">
+    <div class="ch">
+      <span class="ct">Market Score</span>
+      <div class="ch-r">
+        <span class="msc-aichip">✦ AI Powered</span>
+        <span class="chip">9-Indicator Composite</span>
+      </div>
+    </div>
+    <div class="msc-body">
+      <!-- Dial -->
+      <div class="msc-dial-wrap">
+        <div class="msc-dial-inner">
+          <svg class="msc-dial" viewBox="0 0 200 124" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="mscZones" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%"  style="stop-color:var(--red)"/>
+                <stop offset="50%" style="stop-color:var(--amber)"/>
+                <stop offset="100%" style="stop-color:var(--green)"/>
+              </linearGradient>
+            </defs>
+            <path class="msc-dial-track" d="M 14 110 A 86 86 0 0 1 186 110"/>
+            <path class="msc-dial-val" id="msc-arc" d="M 14 110 A 86 86 0 0 1 186 110" stroke-dasharray="270.2"/>
+            <text x="14"  y="122" font-size="9" text-anchor="middle">0</text>
+            <text x="100" y="16"  font-size="9" text-anchor="middle">50</text>
+            <text x="186" y="122" font-size="9" text-anchor="middle">100</text>
+          </svg>
+          <div class="msc-dial-center">
+            <div class="msc-score" id="msc-score">—</div>
+            <div class="msc-signal" id="msc-signal">Loading…</div>
+          </div>
+        </div>
+        <div class="msc-rt">
+          <div><span class="msc-rt-l">Regime</span><span class="msc-rt-v" id="msc-regime">—</span><span class="msc-rt-sub">slow · ceiling</span></div>
+          <div><span class="msc-rt-l">Tactical</span><span class="msc-rt-v" id="msc-tactical">—</span><span class="msc-rt-sub">fast · timing</span></div>
+        </div>
+      </div>
+      <!-- Pillars -->
+      <div class="msc-pillars" id="msc-pillars">
+        <div style="color:var(--muted);font-size:12px;text-align:center;padding:30px 0">
+          Awaiting first scored data run…
+        </div>
+      </div>
+    </div>
+    <button class="msc-rationale-btn" id="msc-rat-btn" onclick="toggleRationale()">
+      <span>Rationale — why this score</span>
+      <span class="msc-rat-arrow" id="msc-rat-arrow">▾</span>
+    </button>
+    <div class="msc-rationale" id="msc-rationale">
+      <div class="msc-rationale-inner">
+        <p id="msc-rationale-text">Open after the next data run for a plain-language summary of what's driving today's score.</p>
+        <div class="msc-rat-foot" id="msc-rat-foot"><span class="dot"></span><span>Generated from live breadth data</span></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Row 1: 3 EMA Cards ── -->
   <div class="g3">
 
@@ -1447,6 +1560,13 @@ canvas.tc{display:block;width:100%;height:100%}
       <button id="gl-tab-gainers" class="gl-tab active" onclick="setGLView('gainers')">Top Gainers</button>
       <button id="gl-tab-losers"  class="gl-tab" onclick="setGLView('losers')">Top Losers</button>
     </div>
+    <div class="gl-thrust" id="gl-thrust" title="Breadth thrust across all Nifty 500 — moves of ±3% or more">
+      <span class="glt-up" id="glt-up">—</span>
+      <span class="glt-sep">·</span>
+      <span class="glt-dn" id="glt-dn">—</span>
+      <span class="glt-sep">·</span>
+      <span class="glt-thr" id="glt-thr">Thrust —</span>
+    </div>
     <div class="gl-canvas">
       <div class="gl-head"><span>#</span><span>Symbol</span><span>Chg %</span><span>LTP</span></div>
       <div class="gl-scroll" id="gl-list">
@@ -1455,36 +1575,6 @@ canvas.tc{display:block;width:100%;height:100%}
     </div>
   </div>
   </div><!-- /g2 Row 2b -->
-
-  <!-- ── Row 3: Market Score ── -->
-  <div class="card mb-glow">
-    <div class="ch">
-      <span class="ct">Market Score</span>
-      <span id="regime-chip" style="font-size:10px;font-weight:700;padding:4px 12px;
-        border-radius:100px;background:rgba(139,92,246,.15);
-        border:1px solid rgba(139,92,246,.4);color:#c4b5fd;
-        box-shadow:0 0 10px rgba(139,92,246,.2);letter-spacing:.3px">
-        ✦ AI Powered
-      </span>
-    </div>
-    <div class="regime-body">
-      <div class="rm-top">
-        <div class="rm-num" id="regime-score">—</div>
-        <div>
-          <div class="rm-label" id="regime-label">Loading...</div>
-          <div class="rm-sub" id="regime-sub">Calculating from live breadth data...</div>
-        </div>
-      </div>
-      <div class="rm-gauge">
-        <div class="rm-needle" id="regime-needle" style="left:50%"></div>
-      </div>
-      <div class="rm-axis">
-        <span class="rb">Bearish (&lt;40)</span>
-        <span class="rn">Neutral (40–60)</span>
-        <span class="rg">Bullish (&gt;60)</span>
-      </div>
-    </div>
-  </div>
 
   <!-- ── Row 4: Key Indices ── -->
   <div class="card mb-glow">
@@ -4922,61 +5012,155 @@ async function loadMarketBreadth() {
   setGaugeFull('hh', highs, total);
   setGaugeFull('ll', lows, total);
 
-  // ── Market Regime Score ──────────────────────
-  // Composite score 0–100 from all breadth indicators
-  const score21  = d.pct_above_21ema  || 0;
-  const score50  = d.pct_above_50ema  || 0;
-  const score200 = d.pct_above_200ema || 0;
-  const adScore  = adv > dec ? Math.min((adv/(adv+dec))*100, 100) : (adv/(adv+dec))*100;
-  const hlScore  = highs > lows ? Math.min(70 + (netHL/total*30), 100) : Math.max(30 - (Math.abs(netHL)/total*30), 0);
-  const vixScore = d.india_vix ? (d.india_vix < 15 ? 80 : d.india_vix < 20 ? 50 : 20) : 50;
+  // ── Proprietary Market Score (computed in the pipeline) ──────
+  // Drives the hero card + header pill from market_breadth columns:
+  // composite_smoothed, market_signal, regime_score, tactical_score,
+  // score_breakdown {pillars{…}, regime, tactical, vetoes}, score_rationale.
+  renderMarketScore(d);
 
-  const regimeScore = Math.round(
-    score21 * 0.20 +
-    score50 * 0.25 +
-    score200 * 0.20 +
-    adScore * 0.15 +
-    hlScore * 0.10 +
-    vixScore * 0.10
-  );
-
-  const regimeLabel = regimeScore >= 65 ? 'Bull Phase'
-    : regimeScore >= 50 ? 'Neutral Phase'
-    : regimeScore >= 35 ? 'Caution Zone'
-    : 'Bear Phase';
-  const regimeCol = regimeScore >= 65 ? 'var(--green)'
-    : regimeScore >= 50 ? 'var(--amber)'
-    : regimeScore >= 35 ? 'var(--amber)'
-    : 'var(--red)';
-  const regimeSub = regimeScore >= 65
-    ? `${score50.toFixed(0)}% above 50 EMA · A/D ${adr} · VIX ${d.india_vix?.toFixed(1)||'—'}`
-    : regimeScore >= 50
-    ? `Mixed signals · Monitor closely · ${score50.toFixed(0)}% above 50 EMA`
-    : `Breadth deteriorating · ${score50.toFixed(0)}% above 50 EMA · Caution`;
-
-  setText('regime-score', regimeScore, regimeCol);
-  setText('regime-label', regimeLabel, regimeCol);
-  setText('regime-sub', regimeSub);
-  const needle = document.getElementById('regime-needle');
-  if(needle) needle.style.left = Math.min(Math.max(regimeScore, 2), 96) + '%';
-
-  // ── Update header pill with live score ──────────────────
-  const pillText = document.getElementById('hdr-regime-text');
-  const pillDot  = document.getElementById('hdr-regime-dot');
-  const pillWrap = document.getElementById('hdr-regime-pill');
-  if(pillText) pillText.textContent = regimeLabel + ' · ' + regimeScore + '/100';
-  if(pillDot)  pillDot.style.background = regimeCol;
-  if(pillWrap) pillWrap.style.borderColor = regimeCol.replace(')', ',.4)').replace('var(','rgba(').replace('--green','46,216,160').replace('--amber','255,179,64').replace('--red','255,93,122');
-
-  // Regime stat cells (kept for JS reference, elements removed from HTML)
-  if(document.getElementById('rs-adr')) setText('rs-adr', adr,
-    parseFloat(adr)>=1.5?'var(--green)':parseFloat(adr)>=1?'var(--amber)':'var(--red)');
+  // ── Breadth-thrust strip on the Gainers/Losers card ──────────
+  renderThrustStrip(d);
 
   // ── Updated chip ─────────────────────────────
   setText('breadth-updated-chip', `Updated ${updDate}`);
 
   // Load FII/DII data
   await loadFiiDii();
+}
+
+// ── Market Score rendering helpers ─────────────────────────────
+function mscCol(v){ return v >= 55 ? 'var(--green)' : v < 45 ? 'var(--red)' : 'var(--amber)'; }
+function signalCol(sig){
+  if(!sig) return 'var(--amber)';
+  if(sig.indexOf('Bull') >= 0) return 'var(--green)';
+  if(sig === 'Cautious' || sig === 'Defensive') return 'var(--red)';
+  return 'var(--amber)';
+}
+const MSC_DIAL_LEN = 270.2;  // arc length of the semicircle path (π·86)
+
+// Client-side mirror of the pipeline's deterministic rationale — used only if
+// the score_rationale column is empty (e.g. before an AI-enabled run).
+function mscFallbackRationale(sig, comp, R, T, P){
+  const L = {above21ema:'short-term trend (21 EMA)',above50ema:'medium-term trend (50 EMA)',
+    above200ema:'long-term trend (200 EMA)',advance_decline:'advance/decline',
+    high_low_52w:'52-week highs vs lows',prev_day_hl:'previous-day range breaks',
+    thrust:'breadth thrust',key_indices:'key-index trend',fii_dii:'institutional flows (FII/DII)'};
+  const ranked = Object.entries(P).sort((a,b)=>b[1]-a[1]);
+  const strong = ranked.filter(([,v])=>v>=55).slice(0,3).map(([k])=>L[k]);
+  const weak   = ranked.filter(([,v])=>v<45).reverse().slice(0,3).map(([k])=>L[k]);
+  const join = a => a.length<=1 ? (a[0]||'') : a.slice(0,-1).join(', ')+' and '+a[a.length-1];
+  const env = R>=55?'a supportive backdrop':R<45?'a fragile backdrop':'a mixed backdrop';
+  const tac = T>=55?'buyers in control':T<45?'sellers pressing':'a balanced tape';
+  let s = `The market reads ${sig} at ${Math.round(comp)} out of 100. `
+        + `The slow regime layer (${Math.round(R)}) points to ${env}, while the fast tactical layer (${Math.round(T)}) shows ${tac}.`;
+  if(strong.length) s += ` Support is coming from ${join(strong)}.`;
+  if(weak.length)   s += ` The main drag is ${join(weak)}.`;
+  return s;
+}
+
+function renderMarketScore(d){
+  const scoreEl  = document.getElementById('msc-score');
+  const sigEl    = document.getElementById('msc-signal');
+  const arcEl    = document.getElementById('msc-arc');
+  const regEl    = document.getElementById('msc-regime');
+  const tacEl    = document.getElementById('msc-tactical');
+  const pillEl   = document.getElementById('msc-pillars');
+  const ratText  = document.getElementById('msc-rationale-text');
+  const ratFoot  = document.getElementById('msc-rat-foot');
+  const bd   = d.score_breakdown || null;
+  const comp = (d.composite_smoothed != null) ? d.composite_smoothed
+             : (d.composite_score != null ? d.composite_score : null);
+
+  // Header pill refs
+  const pillText = document.getElementById('hdr-regime-text');
+  const pillDot  = document.getElementById('hdr-regime-dot');
+  const pillWrap = document.getElementById('hdr-regime-pill');
+
+  if(comp == null || !bd || !bd.pillars){
+    if(scoreEl) scoreEl.innerHTML = '—';
+    if(sigEl){ sigEl.textContent = 'Awaiting data'; sigEl.style.color = 'var(--muted)'; }
+    if(pillEl) pillEl.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:30px 0">Score initialises after the next pipeline run.</div>';
+    if(pillText) pillText.textContent = 'Market Score';
+    return;
+  }
+
+  const sig = d.market_signal || '—';
+  const col = signalCol(sig);
+  const R = +bd.regime, T = +bd.tactical;
+
+  // Dial
+  if(scoreEl){ scoreEl.innerHTML = `${Math.round(comp)}<span class="msc-of">/100</span>`; }
+  if(sigEl){ sigEl.textContent = sig; sigEl.style.color = col; }
+  if(arcEl){
+    arcEl.style.stroke = col;
+    arcEl.style.strokeDashoffset = (MSC_DIAL_LEN * (1 - Math.max(0,Math.min(100,comp))/100)).toFixed(1);
+  }
+  if(regEl){ regEl.textContent = Math.round(R); regEl.style.color = mscCol(R); }
+  if(tacEl){ tacEl.textContent = Math.round(T); tacEl.style.color = mscCol(T); }
+
+  // Pillars — Regime (slow) vs Tactical (fast)
+  const P = bd.pillars;
+  const groups = [
+    { title:'Regime · slow', rows:[['above200ema','200 EMA breadth'],['key_indices','Key-index trend'],['above50ema','50 EMA breadth']] },
+    { title:'Tactical · fast', rows:[['above21ema','21 EMA breadth'],['advance_decline','Advance / Decline'],['high_low_52w','52-week H / L'],['prev_day_hl','Prev-day H / L'],['thrust','Breadth thrust'],['fii_dii','FII / DII flow']] },
+  ];
+  if(pillEl){
+    pillEl.innerHTML = groups.map(g => {
+      const rows = g.rows.map(([k,label]) => {
+        const v = (P[k] != null) ? +P[k] : 50;
+        const c = mscCol(v);
+        return `<div class="msc-prow">
+          <span class="msc-pl">${label}</span>
+          <span class="msc-pbar"><i style="width:${Math.max(2,Math.min(100,v))}%;background:${c}"></i></span>
+          <span class="msc-pv" style="color:${c}">${Math.round(v)}</span>
+        </div>`;
+      }).join('');
+      return `<div><div class="msc-pgroup-h">${g.title}</div>${rows}</div>`;
+    }).join('');
+  }
+
+  // Rationale (pipeline text preferred; deterministic JS fallback otherwise)
+  if(ratText){
+    const txt = (d.score_rationale && d.score_rationale.trim())
+      ? d.score_rationale.trim()
+      : mscFallbackRationale(sig, comp, R, T, P);
+    ratText.textContent = txt;
+  }
+  if(ratFoot){
+    const vetoes = (bd.vetoes && bd.vetoes.length) ? bd.vetoes : null;
+    ratFoot.innerHTML = vetoes
+      ? `<span class="dot" style="background:var(--red);box-shadow:0 0 6px var(--red)"></span><span style="color:var(--red)">Risk guard: ${vetoes.join('; ')}</span>`
+      : `<span class="dot"></span><span>Generated from live breadth data</span>`;
+  }
+
+  // Header pill
+  if(pillText) pillText.textContent = sig + ' · ' + Math.round(comp) + '/100';
+  if(pillDot)  pillDot.style.background = col;
+  if(pillWrap) pillWrap.style.borderColor = col
+      .replace(')', ',.4)').replace('var(','rgba(')
+      .replace('--green','46,216,160').replace('--amber','255,179,64').replace('--red','255,93,122');
+}
+
+function renderThrustStrip(d){
+  const up = d.strong_up_count, dn = d.strong_down_count;
+  const upEl = document.getElementById('glt-up');
+  const dnEl = document.getElementById('glt-dn');
+  const thEl = document.getElementById('glt-thr');
+  const thrust = (d.score_breakdown && d.score_breakdown.pillars && d.score_breakdown.pillars.thrust != null)
+    ? Math.round(d.score_breakdown.pillars.thrust) : null;
+  if(upEl) upEl.textContent = (up != null ? up : '—') + ' up ≥3%';
+  if(dnEl) dnEl.textContent = (dn != null ? dn : '—') + ' down ≥3%';
+  if(thEl){
+    thEl.innerHTML = 'Thrust <b style="color:' + (thrust!=null?mscCol(thrust):'var(--muted)') + '">' + (thrust != null ? thrust : '—') + '</b>';
+  }
+}
+
+function toggleRationale(){
+  const btn = document.getElementById('msc-rat-btn');
+  const panel = document.getElementById('msc-rationale');
+  if(!btn || !panel) return;
+  const open = panel.classList.toggle('open');
+  btn.classList.toggle('open', open);
 }
 
 /* ── INIT ── */
