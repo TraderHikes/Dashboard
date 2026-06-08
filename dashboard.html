@@ -3822,6 +3822,7 @@ async function renderClosed(){
         .select('*').eq('open_trade_id', t.origin_open_trade_id).order('entry_date');
       _entryRows = _ents || [];
     }
+    if (_closedCache[t.id]) _closedCache[t.id].entries = _entryRows;
     let entriesHtml;
     if (_entryRows.length > 1) {
       const sumInv = _entryRows.reduce((s,e)=>s+(Number(e.entry_price)||0)*(Number(e.quantity)||0),0);
@@ -4169,6 +4170,39 @@ async function downloadClosedPDF(id){
       }
     }
     yPos += Math.ceil(detail.length/2)*18 + 22;
+
+    // ── Entry (initial + pyramid adds = Total Invested) ──
+    const _entries = (cache.entries && cache.entries.length) ? cache.entries : [];
+    sectionTitle('Entry');
+    doc.setFontSize(9.5);
+    if(_entries.length > 1){
+      let sumInv = 0;
+      _entries.forEach((e,idx) => {
+        const amt = (Number(e.entry_price)||0)*(Number(e.quantity)||0); sumInv += amt;
+        doc.setFont('helvetica','bold'); doc.setTextColor(40,40,40);
+        doc.text(idx===0?'Initial Entry':'Pyramid Add', M+4, yPos);
+        doc.setFont('helvetica','normal'); doc.setTextColor(70,70,70);
+        doc.text(`${fmtINR(e.entry_price)} × ${e.quantity}`, M+120, yPos);
+        doc.setTextColor(25,25,25);
+        doc.text(`${fmtINR(amt)}`, W-M, yPos, {align:'right'});
+        yPos += 15;
+      });
+      doc.setDrawColor(225,228,235); doc.setLineWidth(0.5);
+      doc.line(M+4, yPos-4, W-M, yPos-4);
+      doc.setFont('helvetica','bold'); doc.setTextColor(25,25,25);
+      doc.text('Total Invested', M+4, yPos+9);
+      doc.text(`${fmtINR(sumInv)}`, W-M, yPos+9, {align:'right'});
+      yPos += 24;
+    } else {
+      const totalInv = (Number(t.avg_entry_price)||0)*(Number(t.quantity)||0);
+      doc.setFont('helvetica','bold'); doc.setTextColor(40,40,40);
+      doc.text('Total Invested', M+4, yPos);
+      doc.setFont('helvetica','normal'); doc.setTextColor(70,70,70);
+      doc.text(`${fmtINR(t.avg_entry_price)} × ${t.quantity||0}`, M+120, yPos);
+      doc.setTextColor(25,25,25);
+      doc.text(`${fmtINR(totalInv)}`, W-M, yPos, {align:'right'});
+      yPos += 18;
+    }
 
     // ── Partial Exits (with reasons) ──
     if(px.length){
