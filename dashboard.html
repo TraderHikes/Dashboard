@@ -3815,6 +3815,42 @@ async function renderClosed(){
     const isWin    = totalPnlT >= 0;
     const pnlCol   = isWin ? 'var(--green)' : 'var(--red)';
 
+    // ── Entry breakdown for the journey: initial + pyramid adds = Total Invested ──
+    let _entryRows = [];
+    if (t.has_pyramid && t.origin_open_trade_id) {
+      const { data: _ents } = await sb.from('trade_entries')
+        .select('*').eq('open_trade_id', t.origin_open_trade_id).order('entry_date');
+      _entryRows = _ents || [];
+    }
+    let entriesHtml;
+    if (_entryRows.length > 1) {
+      const sumInv = _entryRows.reduce((s,e)=>s+(Number(e.entry_price)||0)*(Number(e.quantity)||0),0);
+      entriesHtml = _entryRows.map((e,i)=>{
+        const amt=(Number(e.entry_price)||0)*(Number(e.quantity)||0), isInit=i===0;
+        return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:10px${isInit?'':';padding-left:8px'}">
+          <span style="color:var(--blue-lt);font-weight:700;min-width:14px">▲</span>
+          <span style="color:var(--muted);min-width:80px">${e.entry_date||''}</span>
+          <span style="color:${isInit?'var(--white)':'var(--blue-lt)'};min-width:50px">${isInit?'Initial Entry':'Pyramid Add'}</span>
+          <span style="color:var(--text2);font-family:var(--fm)">₹${Number(e.entry_price).toLocaleString('en-IN')} × ${e.quantity} shares</span>
+          <span style="color:var(--blue-lt);margin-left:auto;font-size:9px">${isInit?'':'+ '}₹${amt.toLocaleString('en-IN')}</span>
+        </div>`;
+      }).join('') +
+      `<div style="display:flex;align-items:center;gap:8px;margin:6px 0 5px;font-size:10px;border-top:1px dashed var(--bdr);padding-top:7px">
+        <span style="min-width:14px"></span><span style="min-width:80px"></span>
+        <span style="color:var(--white);font-weight:700;min-width:50px">Total Invested</span>
+        <span style="margin-left:auto;color:var(--white);font-weight:700;font-family:var(--fm)">₹${sumInv.toLocaleString('en-IN')}</span>
+      </div>`;
+    } else {
+      const totalInv=(t.avg_entry_price||0)*(t.quantity||0);
+      entriesHtml = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:10px">
+        <span style="color:var(--blue-lt);font-weight:700;min-width:14px">▲</span>
+        <span style="color:var(--muted);min-width:80px">${t.entry_date}</span>
+        <span style="color:var(--white);min-width:50px">Initial Entry</span>
+        <span style="color:var(--text2);font-family:var(--fm)">₹${Number(t.avg_entry_price||0).toLocaleString('en-IN')} × ${t.quantity||0} shares</span>
+        ${(t.avg_entry_price&&t.quantity)?`<span style="color:var(--blue-lt);margin-left:auto;font-size:9px">Total Invested ₹${Number(totalInv).toLocaleString('en-IN')}</span>`:''}
+      </div>`;
+    }
+
     const card = document.createElement('div');
     card.style.cssText = `background:var(--card);border:1px solid var(--bdr);
       border-radius:12px;overflow:hidden;
@@ -3876,14 +3912,8 @@ async function renderClosed(){
         <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;
           letter-spacing:.5px;margin-bottom:8px">Trade Journey</div>
 
-        <!-- Initial entry -->
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:10px">
-          <span style="color:var(--blue-lt);font-weight:700;min-width:14px">▲</span>
-          <span style="color:var(--muted);min-width:80px">${t.entry_date}</span>
-          <span style="color:var(--white);min-width:50px">Initial Entry</span>
-          <span style="color:var(--text2);font-family:var(--fm)">₹${Number(t.avg_entry_price||0).toLocaleString('en-IN')} × ${t.quantity||0} shares</span>
-          ${t.position_size_pct?`<span style="color:var(--blue-lt);margin-left:auto;font-size:9px">${t.position_size_pct}% of ₹${t.capital_at_entry?(t.capital_at_entry/100000).toFixed(0)+'L':'—'}</span>`:''}
-        </div>
+        <!-- Entries: initial + pyramid adds = Total Invested -->
+        ${entriesHtml}
 
         <!-- Partial exits -->
         ${pxList.map(px=>{
