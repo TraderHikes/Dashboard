@@ -930,32 +930,33 @@
   <!-- ════ TAB 3: STUDENTS ════ -->
   <div class="tab-pane" id="tab-students">
     <div class="card">
-      <div class="card-hdr"><span class="card-title">Add New Student Access</span></div>
+      <div class="card-hdr"><span class="card-title">Grant / Update Access</span></div>
       <div class="card-body">
         <p style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.6">
-          Add the student's Gmail address. They can immediately sign in with Google at
-          <strong style="color:var(--text2)">dashboard.traderhikes.com/login.html</strong>
+          Users sign up themselves at <strong style="color:var(--text2)">dashboard.traderhikes.com/login.html</strong>.
+          Here you set their tier. If they haven't signed up yet, the grant is <em>queued</em> and
+          applies automatically the moment they register.
         </p>
         <div class="alert alert-success" id="invite-success"></div>
         <div class="alert alert-error"   id="invite-error"></div>
         <form id="form-invite">
           <div class="form-grid" style="margin-bottom:14px">
             <div class="form-group">
-              <label class="form-label">Student Gmail Address *</label>
-              <input class="form-input" type="email" name="email" placeholder="student@gmail.com" required>
+              <label class="form-label">User Email *</label>
+              <input class="form-input" type="email" name="email" placeholder="user@gmail.com" required>
             </div>
             <div class="form-group">
-              <label class="form-label">Full Name</label>
-              <input class="form-input" type="text" name="full_name" placeholder="Rahul Sharma">
+              <label class="form-label">Tier *</label>
+              <select class="form-input" name="tier" required>
+                <option value="dashboard">Paid — Dashboard</option>
+                <option value="course">Paid — Course (incl. Dashboard)</option>
+                <option value="free">Free (downgrade)</option>
+              </select>
             </div>
             <div class="form-group">
-              <label class="form-label">Access Until (blank = lifetime)</label>
+              <label class="form-label">Access Until (blank = no expiry)</label>
               <input class="form-input" type="date" name="access_until">
             </div>
-          </div>
-          <div class="form-group" style="margin-bottom:14px">
-            <label class="form-label">Your Notes (private — students don't see this)</label>
-            <input class="form-input" type="text" name="notes" placeholder="Batch 3 student. Paid ₹4999.">
           </div>
           <div style="display:flex;justify-content:flex-end">
             <button type="submit" class="btn btn-primary" id="invite-btn">Grant Access</button>
@@ -965,8 +966,11 @@
     </div>
     <div class="card">
       <div class="card-hdr">
-        <span class="card-title">Approved Students</span>
+        <span class="card-title">Users</span>
         <button class="btn btn-ghost btn-sm" onclick="loadStudents()">↻ Refresh</button>
+      </div>
+      <div class="card-body" style="padding-bottom:6px">
+        <div id="user-filter" style="display:flex;gap:8px;flex-wrap:wrap"></div>
       </div>
       <div id="students-list">
         <div style="padding:20px;text-align:center;color:var(--muted)">Loading...</div>
@@ -1939,40 +1943,83 @@ document.getElementById('form-close-trade').addEventListener('submit', async e =
 });
 
 // ════════════════════════════════════════════
-// STUDENTS — now uses approved_students table
+// USERS — profiles + entitlement tiers (grant via grant_access RPC)
 // ════════════════════════════════════════════
+let _users = [], _pending = [], _userFilter = 'all';
+
 async function loadStudents() {
   const container = document.getElementById('students-list');
-  const { data, error } = await sb
-    .from('approved_students').select('*').order('enrolled_at', { ascending: false });
+  const [{ data: profs, error: e1 }, { data: pend }] = await Promise.all([
+    sb.from('profiles').select('*').order('created_at', { ascending: false }),
+    sb.from('pending_grants').select('*').order('created_at', { ascending: false }),
+  ]);
+  if (e1) { container.innerHTML = `<div style="padding:16px;color:var(--red)">${e1.message}</div>`; return; }
+  _users = profs || [];
+  _pending = pend || [];
+  renderUserFilter();
+  renderUsers();
+}
 
-  if (error) {
-    container.innerHTML = `<div style="padding:16px;color:var(--red)">${error.message}</div>`;
+function tierMeta(tier, until) {
+  const expired = until && new Date(until) < new Date();
+  if (tier === 'course')    return { label:'COURSE',    c:'var(--green)',   bg:'var(--green-dim)',     bd:'var(--green-bd)' };
+  if (tier === 'dashboard') return expired
+      ? { label:'EXPIRED',   c:'var(--red)',     bg:'var(--red-dim)',       bd:'var(--red-bd)' }
+      : { label:'DASHBOARD', c:'var(--blue-lt)', bg:'rgba(92,111,251,.14)', bd:'rgba(92,111,251,.4)' };
+  return { label:'FREE', c:'var(--muted)', bg:'var(--card3)', bd:'var(--bdr)' };
+}
+
+function _pill(k, lbl, n, activeCol, activeBg) {
+  const active = _userFilter === k;
+  return `<button onclick="setUserFilter('${k}')" style="padding:5px 12px;border-radius:100px;
+    font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${active?activeCol:'var(--bdr)'};
+    background:${active?activeBg:'var(--card2)'};color:${active?activeCol:'var(--muted)'}">${lbl} ${n}</button>`;
+}
+
+function renderUserFilter() {
+  const counts = { all:_users.length, free:0, dashboard:0, course:0 };
+  _users.forEach(u => { counts[u.tier] = (counts[u.tier]||0)+1; });
+  let html = _pill('all','All',counts.all,'var(--blue-lt)','rgba(92,111,251,.14)')
+           + _pill('free','Free',counts.free||0,'var(--blue-lt)','rgba(92,111,251,.14)')
+           + _pill('dashboard','Dashboard',counts.dashboard||0,'var(--blue-lt)','rgba(92,111,251,.14)')
+           + _pill('course','Course',counts.course||0,'var(--blue-lt)','rgba(92,111,251,.14)');
+  if (_pending.length) html += _pill('pending','Pending',_pending.length,'var(--amber)','rgba(255,179,64,.12)');
+  document.getElementById('user-filter').innerHTML = html;
+}
+
+function setUserFilter(k){ _userFilter = k; renderUserFilter(); renderUsers(); }
+
+function renderUsers() {
+  const container = document.getElementById('students-list');
+
+  if (_userFilter === 'pending') {
+    if (!_pending.length) { container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">No pending grants.</div>'; return; }
+    container.innerHTML = _pending.map(p => `<div class="student-row">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600;color:var(--white)">${p.email}</div>
+        <div style="font-size:11px;color:var(--amber)">Queued · applies on signup</div>
+      </div>
+      <span style="background:rgba(255,179,64,.12);border:1px solid var(--amber);color:var(--amber);padding:2px 8px;border-radius:100px;font-size:10px;font-weight:700">${p.tier.toUpperCase()}</span>
+      <button class="btn btn-danger btn-sm" onclick="cancelPending('${p.email}')">Cancel</button>
+    </div>`).join('');
     return;
   }
-  if (!data || data.length === 0) {
-    container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">No students yet. Add your first student above.</div>';
-    return;
-  }
 
-  container.innerHTML = data.map(s => {
-    const isActive  = s.plan === 'active';
-    const planColor = isActive ? 'var(--green)' : 'var(--red)';
-    const planBg    = isActive ? 'var(--green-dim)' : 'var(--red-dim)';
-    const planBd    = isActive ? 'var(--green-bd)'  : 'var(--red-bd)';
-    const until     = s.access_until
-      ? new Date(s.access_until).toLocaleDateString('en-IN') : 'Lifetime';
+  const list = _users.filter(u => _userFilter === 'all' || u.tier === _userFilter);
+  if (!list.length) { container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">No users in this tier.</div>'; return; }
+  container.innerHTML = list.map(u => {
+    const m = tierMeta(u.tier, u.dashboard_until);
+    const until = u.dashboard_until ? new Date(u.dashboard_until).toLocaleDateString('en-IN') : (u.tier==='free' ? '—' : 'No expiry');
+    const joined = u.created_at ? new Date(u.created_at).toLocaleDateString('en-IN') : '—';
     return `<div class="student-row">
       <div style="flex:1">
-        <div style="font-size:13px;font-weight:600;color:var(--white)">${s.full_name || '—'}</div>
-        <div style="font-size:11px;color:var(--muted);font-family:var(--fm)">${s.email}</div>
+        <div style="font-size:13px;font-weight:600;color:var(--white)">${u.full_name || '—'}</div>
+        <div style="font-size:11px;color:var(--muted);font-family:var(--fm)">${u.email || '—'}</div>
       </div>
+      <div style="font-size:11px;color:var(--muted)">Joined ${joined}</div>
       <div style="font-size:11px;color:var(--muted)">Until: ${until}</div>
-      <span style="background:${planBg};border:1px solid ${planBd};color:${planColor};
-        padding:2px 8px;border-radius:100px;font-size:10px;font-weight:700">
-        ${s.plan.toUpperCase()}
-      </span>
-      <button class="btn btn-danger btn-sm" onclick="revokeAccess('${s.email}')">Revoke</button>
+      <span style="background:${m.bg};border:1px solid ${m.bd};color:${m.c};padding:2px 8px;border-radius:100px;font-size:10px;font-weight:700">${m.label}</span>
+      ${u.tier!=='free' ? `<button class="btn btn-danger btn-sm" onclick="revokeAccess('${u.email}')">Revoke</button>` : ''}
     </div>`;
   }).join('');
 }
@@ -1980,42 +2027,38 @@ async function loadStudents() {
 document.getElementById('form-invite').addEventListener('submit', async e => {
   e.preventDefault();
   const btn = document.getElementById('invite-btn');
-  btn.disabled = true; btn.textContent = 'Adding...';
+  btn.disabled = true; btn.textContent = 'Granting...';
 
-  const fd         = new FormData(e.target);
-  const email      = fd.get('email').trim().toLowerCase();
-  const full_name  = fd.get('full_name').trim() || null;
-  const accessUntil = fd.get('access_until') || null;
-  const notes      = fd.get('notes').trim() || null;
+  const fd      = new FormData(e.target);
+  const p_email = fd.get('email').trim().toLowerCase();
+  const p_tier  = fd.get('tier');
+  const p_until = fd.get('access_until') || null;
 
-  const { error } = await sb.from('approved_students').upsert({
-    email,
-    full_name,
-    plan: 'active',
-    access_until: accessUntil || null,
-    notes,
-  }, { onConflict: 'email' });
+  const { data, error } = await sb.rpc('grant_access', { p_email, p_tier, p_until });
 
   btn.disabled = false; btn.textContent = 'Grant Access';
-
   if (error) {
     showAlert('invite-error', '✗ ' + error.message, 'error');
   } else {
-    showAlert('invite-success',
-      `✓ Access granted for ${email}. They can now sign in at dashboard.traderhikes.com/login.html using their Google account.`,
-      'success'
-    );
+    showAlert('invite-success', `✓ ${p_email}: ${data}`, 'success');
     e.target.reset();
     await loadStudents();
   }
 });
 
 async function revokeAccess(email) {
-  if (!confirm(`Revoke dashboard access for ${email}?`)) return;
-  const { error } = await sb
-    .from('approved_students').update({ plan: 'inactive' }).eq('email', email);
+  if (!confirm(`Set ${email} back to FREE?`)) return;
+  const { error } = await sb.rpc('grant_access', { p_email: email, p_tier: 'free', p_until: null });
   if (error) { toast('Error: ' + error.message, 'error'); return; }
-  toast(`Access revoked for ${email}.`, 'success');
+  toast(`${email} set to free.`, 'success');
+  await loadStudents();
+}
+
+async function cancelPending(email) {
+  if (!confirm(`Cancel the queued grant for ${email}?`)) return;
+  const { error } = await sb.from('pending_grants').delete().eq('email', email.toLowerCase());
+  if (error) { toast('Error: ' + error.message, 'error'); return; }
+  toast('Pending grant cancelled.', 'success');
   await loadStudents();
 }
 
