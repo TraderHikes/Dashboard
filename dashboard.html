@@ -967,22 +967,42 @@ canvas.tc{display:block;width:100%;height:100%}
 </header>
 
 <!-- NAV -->
-<nav class="nav">
-  <div class="ntab active" onclick="sw('portfolio',this)">Portfolio Overview</div>
-  <div class="ntab" onclick="sw('mytrades',this)">My Trades</div>
-  <div class="ntab" onclick="sw('open',this)">Open Trades</div>
-  <div class="ntab" onclick="sw('closed',this)">Closed Trades</div>
-  <div class="ntab" onclick="sw('breadth',this)">Market Breadth</div>
-  <div class="ntab" onclick="sw('sectoral',this)">Sectoral Analysis</div>
-  <div class="ntab" onclick="sw('filter',this)">Watchlists</div>
-<div class="ntab" onclick="sw('charts',this)">Screen Charts</div>
+<style>
+.nav2{background:var(--bg2);border-bottom:1px solid var(--bdr);position:sticky;top:62px;z-index:190}
+.nav2-groups{display:flex;gap:4px;padding:8px 28px 0;flex-wrap:wrap}
+.ng-btn{padding:9px 16px;border-radius:9px 9px 0 0;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;border:1px solid transparent;border-bottom:none;transition:all .15s;display:flex;align-items:center;gap:7px}
+.ng-btn:hover{color:var(--text2)}
+.ng-btn.active{color:#fff;background:var(--card2);border-color:var(--bdr)}
+.ng-lock{font-size:10px;opacity:.85}
+.nav2-subs{display:flex;gap:0;padding:0 28px;border-top:1px solid var(--bdr);background:var(--card2);flex-wrap:wrap}
+.ns-btn{padding:11px 18px;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.ns-btn:hover{color:var(--text2)}
+.ns-btn.active{color:var(--blue-lt);border-bottom-color:var(--blue-lt)}
+.mt-tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.mt-tbl th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--bdr);font-weight:700}
+.mt-tbl td{padding:9px 10px;border-bottom:1px solid var(--bdr);color:var(--text2);font-family:var(--fm)}
+.mt-tbl tr:hover td{background:var(--card3)}
+#lock-screen{padding:0}
+.lock-box{max-width:560px;margin:50px auto;text-align:center;background:var(--card2);border:1px solid var(--bdr2);border-radius:18px;padding:40px 32px}
+.lock-ic{font-size:38px;margin-bottom:6px}
+.lock-t{font-size:20px;font-weight:800;color:var(--white);margin-bottom:10px}
+.lock-d{font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:22px}
+.lock-cta{display:inline-block;padding:12px 26px;border-radius:10px;background:linear-gradient(135deg,var(--blue),var(--blue-lt));color:#fff;font-weight:700;font-size:14px;cursor:pointer;border:none}
+.lock-teaser{background:var(--card3);border:1px solid var(--bdr);border-radius:12px;padding:18px;margin-bottom:22px}
+.lock-teaser .score{font-size:34px;font-weight:800;font-family:var(--fm);line-height:1.1;margin-top:4px}
+.lock-teaser .sig{font-size:13px;font-weight:700;margin-top:2px}
+.lock-teaser .rat{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6}
+</style>
+<nav class="nav2">
+  <div class="nav2-groups" id="nav-groups"></div>
+  <div class="nav2-subs" id="nav-subs"></div>
 </nav>
 
 <div class="wrap">
 
 <!-- ══════════════════════════════════════ MY TRADES (Phase 1) ══════════════════════════════════════ -->
 <style>
-#pane-mytrades .sh{margin-bottom:18px}
+#pane-mtmanager .sh,#pane-mtportfolio .sh,#pane-mtclosed .sh{margin-bottom:18px}
 .mt-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px}
 .mt-stat{background:var(--card2);border:1px solid var(--bdr);border-radius:14px;padding:14px 16px}
 .mt-stat .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
@@ -1034,16 +1054,11 @@ canvas.tc{display:block;width:100%;height:100%}
 .mt-res{background:var(--card3);border:1px dashed var(--bdr2);border-radius:9px;padding:10px 12px;margin:10px 0;font-size:12px;color:var(--text2);line-height:1.8}
 </style>
 
-<div class="pane" id="pane-mytrades">
-  <div class="sh"><div class="st">My Trades</div><div class="sb">Your personal trading journal</div></div>
+<div id="lock-screen" style="display:none"></div>
 
-  <div class="mt-strip">
-    <div class="mt-stat"><div class="l">Invested (Open)</div><div class="v" id="mt-s-invested">—</div></div>
-    <div class="mt-stat"><div class="l">Notional P&amp;L (Open)</div><div class="v" id="mt-s-open-pnl">—</div></div>
-    <div class="mt-stat"><div class="l">Realised P&amp;L (Closed)</div><div class="v" id="mt-s-realised">—</div></div>
-    <div class="mt-stat"><div class="l">Open / Closed</div><div class="v" id="mt-s-counts">—</div></div>
-  </div>
-
+<!-- ══ MY TRADING DESK · Trade Manager ══ -->
+<div class="pane" id="pane-mtmanager">
+  <div class="sh"><div class="st">Trade Manager</div><div class="sb">Add a trade, pyramid in, book partials, or close</div></div>
   <div class="mt-card">
     <div class="mt-card-h">New Trade</div>
     <div class="mt-alert" id="mt-new-alert"></div>
@@ -1067,12 +1082,30 @@ canvas.tc{display:block;width:100%;height:100%}
       <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="mt-btn mt-btn-p" id="mt-new-btn" type="submit">Add Trade</button></div>
     </form>
   </div>
+  <div class="mt-card">
+    <div class="mt-card-h">Manage Open Positions <span class="mt-count" id="mt-manage-count"></span></div>
+    <div id="mt-manage-list"><div class="mt-empty">Loading…</div></div>
+  </div>
+</div>
 
+<!-- ══ MY TRADING DESK · Portfolio ══ -->
+<div class="pane" id="pane-mtportfolio">
+  <div class="sh"><div class="st">My Portfolio</div><div class="sb">Your open positions</div></div>
+  <div class="mt-strip">
+    <div class="mt-stat"><div class="l">Invested (Open)</div><div class="v" id="mt-s-invested">—</div></div>
+    <div class="mt-stat"><div class="l">Notional P&amp;L (Open)</div><div class="v" id="mt-s-open-pnl">—</div></div>
+    <div class="mt-stat"><div class="l">Realised P&amp;L (Closed)</div><div class="v" id="mt-s-realised">—</div></div>
+    <div class="mt-stat"><div class="l">Open / Closed</div><div class="v" id="mt-s-counts">—</div></div>
+  </div>
   <div class="mt-card">
     <div class="mt-card-h">Open Positions <span class="mt-count" id="mt-open-count"></span></div>
     <div id="mt-open-list"><div class="mt-empty">Loading…</div></div>
   </div>
+</div>
 
+<!-- ══ MY TRADING DESK · Closed Trades ══ -->
+<div class="pane" id="pane-mtclosed">
+  <div class="sh"><div class="st">My Closed Trades</div><div class="sb">Your trade history</div></div>
   <div class="mt-card">
     <div class="mt-card-h">Closed Trades <span class="mt-count" id="mt-closed-count"></span></div>
     <div id="mt-closed-list"><div class="mt-empty">Loading…</div></div>
@@ -2214,44 +2247,32 @@ const ADMIN_URL    = 'https://dashboard.traderhikes.com/admin.html';
 const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-/* ── AUTH GUARD ── runs before anything else */
+/* ── AUTH GUARD + ROLE ── anyone signed in; RLS + tier decide what they see */
 (async () => {
   const { data: { session } } = await sb.auth.getSession();
-  if (!session) {
-    // Not logged in → redirect to login page
-    window.location.href = LOGIN_URL;
-    return;
-  }
-
-  // Check approved_students table
+  if (!session) { window.location.href = LOGIN_URL; return; }
   const email = session.user.email.toLowerCase();
-  const { data: student } = await sb
-    .from('approved_students')
-    .select('plan, access_until')
-    .eq('email', email)
-    .single();
 
-  if (!student || student.plan !== 'active') {
-    await sb.auth.signOut();
-    window.location.href = LOGIN_URL;
-    return;
-  }
-  if (student.access_until && new Date(student.access_until) < new Date()) {
-    await sb.auth.signOut();
-    window.location.href = LOGIN_URL;
-    return;
-  }
-
-  // Show user info in header
-  const displayName = session.user.user_metadata?.full_name
-    || session.user.user_metadata?.name
-    || email.split('@')[0];
-  document.getElementById('hdr-user').textContent = displayName;
-
-  // Show admin button only for admin email
+  let role = 'free';
   if (email === ADMIN_EMAIL.toLowerCase()) {
-    document.getElementById('btn-admin').style.display = 'block';
+    role = 'admin';
+  } else {
+    const { data: prof } = await sb.from('profiles')
+      .select('tier,dashboard_until').eq('user_id', session.user.id).maybeSingle();
+    if (prof) {
+      if (prof.tier === 'course') role = 'paid';
+      else if (prof.tier === 'dashboard' && (!prof.dashboard_until || new Date(prof.dashboard_until) >= new Date())) role = 'paid';
+      else role = 'free';
+    }
   }
+  window.USER_ROLE = role;
+
+  const displayName = session.user.user_metadata?.full_name
+    || session.user.user_metadata?.name || email.split('@')[0];
+  document.getElementById('hdr-user').textContent = displayName;
+  if (email === ADMIN_EMAIL.toLowerCase()) document.getElementById('btn-admin').style.display = 'block';
+
+  NAVUI.build(role);
 })();
 
 /* ── SIGN OUT ── */
@@ -2265,18 +2286,83 @@ const clkEl=document.getElementById('clk');
 function tick(){const d=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));clkEl.textContent=`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')} IST`;}
 setInterval(tick,1000);tick();
 
-/* ── TABS ── */
-function sw(id,el){
-  document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('active'));
+/* ── PANE SWITCH ── */
+function sw(id){
   document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
-  el.classList.add('active');document.getElementById('pane-'+id).classList.add('active');
+  const pane=document.getElementById('pane-'+id); if(pane) pane.classList.add('active');
   if(id==='portfolio'){setTimeout(drawPortfolioCharts,80);}
   if(id==='breadth'){loadMarketBreadth();}
   if(id==='filter'){loadStockFilter();}
   if(id==='sectoral'){SB.init();}
   if(id==='charts'){loadCharts();}
-  if(id==='mytrades'){MT.init();MT.loadAll();}
+  if(id==='mtmanager'||id==='mtportfolio'||id==='mtclosed'){MT.init();MT.loadAll();}
 }
+
+/* ── TWO-LEVEL NAV (role-aware) ── */
+const NAV=[
+  {key:'model',    label:'Model Swing Trader Portfolio', roles:['admin','paid','free'], lockFor:['free'],
+   subs:[{id:'portfolio',label:'Portfolio Overview'},{id:'open',label:'Open Trades'},{id:'closed',label:'Closed Trades'}]},
+  {key:'market',   label:'Market Data Tracker', roles:['admin','paid','free'], lockFor:['free'],
+   subs:[{id:'breadth',label:'Market Breadth'},{id:'sectoral',label:'Sectoral Analysis'}]},
+  {key:'screener', label:'Leading Stocks Screener', roles:['admin','paid','free'], lockFor:['free'],
+   subs:[{id:'filter',label:'Watchlists'},{id:'charts',label:'Screen Charts'}]},
+  {key:'desk',     label:'My Trading Desk', roles:['paid','free'], lockFor:[],
+   subs:[{id:'mtmanager',label:'Trade Manager'},{id:'mtportfolio',label:'Portfolio'},{id:'mtclosed',label:'Closed Trades'}]},
+];
+const NAVUI=(()=>{
+  let role='free', curGroup=null;
+  const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const vis=()=>NAV.filter(g=>g.roles.includes(role));
+  function build(r){
+    role=r;
+    const gs=vis();
+    document.getElementById('nav-groups').innerHTML = gs.map(g=>{
+      const locked=g.lockFor.includes(role);
+      return `<div class="ng-btn" data-g="${g.key}" onclick="NAVUI.selectGroup('${g.key}')">${esc(g.label)}${locked?' <span class="ng-lock">\uD83D\uDD12</span>':''}</div>`;
+    }).join('');
+    selectGroup(role==='free' ? 'desk' : gs[0].key);
+  }
+  function selectGroup(key){
+    curGroup=key;
+    document.querySelectorAll('.ng-btn').forEach(b=>b.classList.toggle('active', b.dataset.g===key));
+    const g=NAV.find(x=>x.key===key);
+    document.getElementById('nav-subs').innerHTML = g.subs.map(sx=>`<div class="ns-btn" data-s="${sx.id}" onclick="NAVUI.go('${sx.id}')">${esc(sx.label)}</div>`).join('');
+    go(g.subs[0].id);
+  }
+  function go(subId){
+    document.querySelectorAll('.ns-btn').forEach(b=>b.classList.toggle('active', b.dataset.s===subId));
+    const g=NAV.find(x=>x.key===curGroup);
+    if(g && g.lockFor.includes(role)) showLock(g);
+    else { hideLock(); sw(subId); }
+  }
+  function hideLock(){ const l=document.getElementById('lock-screen'); if(l) l.style.display='none'; }
+  async function showLock(g){
+    document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
+    const l=document.getElementById('lock-screen'); if(!l) return;
+    let teaser='';
+    if(g.key==='market'){
+      try{
+        const { data } = await sb.from('market_teaser').select('*').order('snapshot_date',{ascending:false}).limit(1);
+        const t=data&&data[0];
+        if(t){
+          const c=t.composite_smoothed!=null?Math.round(t.composite_smoothed):'—';
+          const cc=t.composite_smoothed>=55?'var(--green)':t.composite_smoothed>=45?'var(--amber)':'var(--red)';
+          teaser=`<div class="lock-teaser"><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">Today's Market Score</div>
+            <div class="score" style="color:${cc}">${c}<span style="font-size:16px;color:var(--muted)">/100</span></div>
+            <div class="sig" style="color:${cc}">${esc(t.market_signal||'')}</div>
+            ${t.rationale?`<div class="rat">${esc(t.rationale)}</div>`:''}</div>`;
+        }
+      }catch(e){}
+    }
+    l.innerHTML=`<div class="lock-box"><div class="lock-ic">\uD83D\uDD12</div>
+      <div class="lock-t">${esc(g.label)} is a paid feature</div>
+      ${teaser}
+      <div class="lock-d">Upgrade to the Market Basecamp dashboard to unlock the model portfolio, full market breadth, sectoral analysis, watchlists and chart scans.</div>
+      <button class="lock-cta" onclick="window.open('https://www.traderhikes.com','_blank')">Upgrade Now</button></div>`;
+    l.style.display='block';
+  }
+  return { build, selectGroup, go, getRole:()=>role };
+})();
 
 
 /* ══ MY TRADES CONTROLLER (Phase 1) ══ */
@@ -2352,82 +2438,109 @@ const MT = (() => {
     });
   }
 
-  // ---------- lists + stats ----------
+  // ---------- role-aware lists + stats ----------
+  const isFree = () => (window.USER_ROLE||'free')==='free';
+
+  function posActions(t){
+    return `<button class="mt-btn mt-btn-g mt-btn-sm" onclick="MT.openModal('pyramid','${t.id}')">+ Add</button>
+      <button class="mt-btn mt-btn-g mt-btn-sm" onclick="MT.openModal('partial','${t.id}')">Partial</button>
+      <button class="mt-btn mt-btn-d mt-btn-sm" onclick="MT.openModal('close','${t.id}')">Close</button>
+      <button class="mt-btn mt-btn-g mt-btn-sm" onclick="MT.del('${t.id}','${esc(t.symbol)}')">Delete</button>`;
+  }
+  function openCard(t, withActions){
+    const avg=t.avg_entry_price||t.entry_price, rem=t.remaining_qty??t.quantity, tot=t.total_quantity||t.quantity;
+    let pnlHtml='<span style="color:var(--muted)">—</span>';
+    if(t.cmp!=null){ const p=(t.cmp-avg)*rem; pnlHtml=`<span style="color:${col(p)}">${sgn(p)}</span>`; }
+    const tags=[ t.has_pyramid?'<span class="mt-tag">Pyramided</span>':'', t.has_partial_exit?'<span class="mt-tag" style="color:var(--amber);background:rgba(255,179,64,.12)">Partial</span>':'' ].join('');
+    return `<div class="mt-pos">
+      <div class="mt-pos-top">
+        <div><div class="mt-pos-sym">${esc(t.symbol)} ${tags}</div><div class="mt-pos-co">${esc(t.company_name)}</div></div>
+        <div style="text-align:right"><div class="mt-m" style="align-items:flex-end"><span class="l">Notional P&L</span><span class="v">${pnlHtml}</span></div></div>
+      </div>
+      <div class="mt-pos-meta">
+        <div class="mt-m"><span class="l">Avg Entry</span><span class="v">\u20B9${avg.toLocaleString('en-IN')}</span></div>
+        <div class="mt-m"><span class="l">Qty (rem/total)</span><span class="v">${rem} / ${tot}</span></div>
+        <div class="mt-m"><span class="l">Stop Loss</span><span class="v">${t.sl_price!=null?'\u20B9'+t.sl_price.toLocaleString('en-IN'):'—'}</span></div>
+        <div class="mt-m"><span class="l">CMP</span><span class="v">${t.cmp!=null?'\u20B9'+t.cmp.toLocaleString('en-IN'):'—'}</span></div>
+        <div class="mt-m"><span class="l">Entry Date</span><span class="v">${t.entry_date}</span></div>
+      </div>
+      ${withActions?`<div class="mt-pos-actions">${posActions(t)}</div>`:''}</div>`;
+  }
+  function openTable(list, withActions){
+    const rows=list.map(t=>{
+      const avg=t.avg_entry_price||t.entry_price, rem=t.remaining_qty??t.quantity, tot=t.total_quantity||t.quantity;
+      let pnl='—', pc='var(--muted)';
+      if(t.cmp!=null){ const p=(t.cmp-avg)*rem; pnl=sgn(p); pc=col(p); }
+      return `<tr>
+        <td><b style="color:var(--white)">${esc(t.symbol)}</b><div style="color:var(--muted);font-size:11px">${esc(t.company_name)}</div></td>
+        <td>\u20B9${avg.toLocaleString('en-IN')}</td><td>${rem}/${tot}</td>
+        <td>${t.sl_price!=null?'\u20B9'+t.sl_price.toLocaleString('en-IN'):'—'}</td>
+        <td>${t.cmp!=null?'\u20B9'+t.cmp.toLocaleString('en-IN'):'—'}</td>
+        <td style="color:${pc}">${pnl}</td>
+        ${withActions?`<td style="white-space:nowrap">${posActions(t)}</td>`:''}</tr>`;
+    }).join('');
+    return `<table class="mt-tbl"><thead><tr><th>Stock</th><th>Avg Entry</th><th>Qty</th><th>SL</th><th>CMP</th><th>Notional P&L</th>${withActions?'<th>Actions</th>':''}</tr></thead><tbody>${rows}</tbody></table>`;
+  }
+  function closedCards(list){
+    return list.map(t=>{
+      const pnl=t.realised_pnl||0;
+      return `<div class="mt-pos">
+        <div class="mt-pos-top">
+          <div><div class="mt-pos-sym">${esc(t.symbol)}</div><div class="mt-pos-co">${esc(t.company_name)}</div></div>
+          <div style="text-align:right"><div class="mt-pos-sym" style="color:${col(pnl)}">${sgn(pnl)}</div><div class="mt-pos-co" style="color:${col(pnl)}">${t.return_pct!=null?(t.return_pct>=0?'+':'')+t.return_pct+'%':''}</div></div>
+        </div>
+        <div class="mt-pos-meta">
+          <div class="mt-m"><span class="l">Entry</span><span class="v">\u20B9${(t.avg_entry_price||0).toLocaleString('en-IN')}</span></div>
+          <div class="mt-m"><span class="l">Exit</span><span class="v">\u20B9${(t.avg_exit_price||0).toLocaleString('en-IN')}</span></div>
+          <div class="mt-m"><span class="l">Qty</span><span class="v">${t.quantity}</span></div>
+          <div class="mt-m"><span class="l">Held</span><span class="v">${t.holding_days!=null?t.holding_days+'d':'—'}</span></div>
+          <div class="mt-m"><span class="l">Reason</span><span class="v">${esc(t.exit_reason||'—')}</span></div>
+        </div>
+        ${t.trade_notes?`<div style="margin-top:8px;font-size:11px;color:var(--muted);font-style:italic">${esc(t.trade_notes)}</div>`:''}</div>`;
+    }).join('');
+  }
+  function closedTable(list){
+    const rows=list.map(t=>{ const pnl=t.realised_pnl||0;
+      return `<tr><td><b style="color:var(--white)">${esc(t.symbol)}</b><div style="color:var(--muted);font-size:11px">${esc(t.company_name)}</div></td>
+        <td>\u20B9${(t.avg_entry_price||0).toLocaleString('en-IN')}</td><td>\u20B9${(t.avg_exit_price||0).toLocaleString('en-IN')}</td>
+        <td>${t.quantity}</td><td style="color:${col(pnl)}">${sgn(pnl)}</td>
+        <td style="color:${col(pnl)}">${t.return_pct!=null?(t.return_pct>=0?'+':'')+t.return_pct+'%':''}</td>
+        <td>${t.holding_days!=null?t.holding_days+'d':'—'}</td><td>${esc(t.exit_reason||'—')}</td></tr>`;
+    }).join('');
+    return `<table class="mt-tbl"><thead><tr><th>Stock</th><th>Entry</th><th>Exit</th><th>Qty</th><th>P&L</th><th>Return</th><th>Held</th><th>Reason</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }
+
   async function loadAll(){ await Promise.all([loadOpen(), loadClosed()]); }
 
   async function loadOpen(){
     const { data, error } = await sb.from('open_trades').select('*').eq('is_model', false).order('entry_date',{ascending:false});
-    const el=$('mt-open-list');
-    if(error){ el.innerHTML=`<div class="mt-empty">Error: ${error.message}</div>`; return; }
-    const list=data||[];
-    $('mt-open-count').textContent=list.length;
+    if(error){ ['mt-manage-list','mt-open-list'].forEach(id=>{const el=$(id); if(el) el.innerHTML=`<div class="mt-empty">Error: ${error.message}</div>`;}); return; }
+    const list=data||[], free=isFree();
+    const manageHtml = list.length ? (free?openTable(list,true):list.map(t=>openCard(t,true)).join('')) : '<div class="mt-empty">No open positions. Add a trade using the form above.</div>';
+    const reviewHtml = list.length ? (free?openTable(list,false):list.map(t=>openCard(t,false)).join('')) : '<div class="mt-empty">No open positions yet.</div>';
+    if($('mt-manage-list')) $('mt-manage-list').innerHTML=manageHtml;
+    if($('mt-open-list'))   $('mt-open-list').innerHTML=reviewHtml;
+    if($('mt-manage-count'))$('mt-manage-count').textContent=list.length;
+    if($('mt-open-count'))  $('mt-open-count').textContent=list.length;
     let invested=0, openPnl=0, pnlKnown=false;
-    if(!list.length){ el.innerHTML='<div class="mt-empty">No open positions yet. Add your first trade above.</div>'; }
-    else{
-      el.innerHTML=list.map(t=>{
-        const avg=t.avg_entry_price||t.entry_price, rem=t.remaining_qty??t.quantity, tot=t.total_quantity||t.quantity;
-        invested += avg*rem;
-        let pnlHtml='<span style="color:var(--muted)">—</span>';
-        if(t.cmp!=null){ const p=(t.cmp-avg)*rem; openPnl+=p; pnlKnown=true; pnlHtml=`<span style="color:${col(p)}">${sgn(p)}</span>`; }
-        const tags=[ t.has_pyramid?'<span class="mt-tag">Pyramided</span>':'', t.has_partial_exit?'<span class="mt-tag" style="color:var(--amber);background:rgba(255,179,64,.12)">Partial</span>':'' ].join('');
-        return `<div class="mt-pos">
-          <div class="mt-pos-top">
-            <div><div class="mt-pos-sym">${esc(t.symbol)} ${tags}</div><div class="mt-pos-co">${esc(t.company_name)}</div></div>
-            <div style="text-align:right"><div class="mt-m" style="align-items:flex-end"><span class="l">Notional P&L</span><span class="v">${pnlHtml}</span></div></div>
-          </div>
-          <div class="mt-pos-meta">
-            <div class="mt-m"><span class="l">Avg Entry</span><span class="v">\u20B9${avg.toLocaleString('en-IN')}</span></div>
-            <div class="mt-m"><span class="l">Qty (rem/total)</span><span class="v">${rem} / ${tot}</span></div>
-            <div class="mt-m"><span class="l">Stop Loss</span><span class="v">${t.sl_price!=null?'\u20B9'+t.sl_price.toLocaleString('en-IN'):'—'}</span></div>
-            <div class="mt-m"><span class="l">CMP</span><span class="v">${t.cmp!=null?'\u20B9'+t.cmp.toLocaleString('en-IN'):'—'}</span></div>
-            <div class="mt-m"><span class="l">Entry Date</span><span class="v">${t.entry_date}</span></div>
-          </div>
-          <div class="mt-pos-actions">
-            <button class="mt-btn mt-btn-g mt-btn-sm" onclick="MT.openModal('pyramid','${t.id}')">+ Add (Pyramid)</button>
-            <button class="mt-btn mt-btn-g mt-btn-sm" onclick="MT.openModal('partial','${t.id}')">Partial Exit</button>
-            <button class="mt-btn mt-btn-d mt-btn-sm" onclick="MT.openModal('close','${t.id}')">Close</button>
-            <button class="mt-btn mt-btn-g mt-btn-sm" style="margin-left:auto" onclick="MT.del('${t.id}','${esc(t.symbol)}')">Delete</button>
-          </div></div>`;
-      }).join('');
-    }
-    $('mt-s-invested').textContent = invested>0 ? inr(invested) : '—';
-    $('mt-s-open-pnl').innerHTML = pnlKnown ? `<span style="color:${col(openPnl)}">${sgn(openPnl)}</span>` : '—';
-    MT._openCount=list.length;
-    updateCounts();
+    list.forEach(t=>{ const avg=t.avg_entry_price||t.entry_price, rem=t.remaining_qty??t.quantity; invested+=avg*rem; if(t.cmp!=null){ openPnl+=(t.cmp-avg)*rem; pnlKnown=true; } });
+    if($('mt-s-invested')) $('mt-s-invested').textContent = invested>0?inr(invested):'—';
+    if($('mt-s-open-pnl')) $('mt-s-open-pnl').innerHTML = pnlKnown?`<span style="color:${col(openPnl)}">${sgn(openPnl)}</span>`:'—';
+    MT._openCount=list.length; updateCounts();
   }
 
   async function loadClosed(){
     const { data, error } = await sb.from('closed_trades').select('*').eq('is_model', false).order('exit_date',{ascending:false});
-    const el=$('mt-closed-list');
+    const el=$('mt-closed-list'); if(!el) return;
     if(error){ el.innerHTML=`<div class="mt-empty">Error: ${error.message}</div>`; return; }
-    const list=data||[];
-    $('mt-closed-count').textContent=list.length;
-    let realised=0;
-    if(!list.length){ el.innerHTML='<div class="mt-empty">No closed trades yet.</div>'; }
-    else{
-      el.innerHTML=list.map(t=>{
-        const pnl=t.realised_pnl||0; realised+=pnl;
-        return `<div class="mt-pos">
-          <div class="mt-pos-top">
-            <div><div class="mt-pos-sym">${esc(t.symbol)}</div><div class="mt-pos-co">${esc(t.company_name)}</div></div>
-            <div style="text-align:right"><div class="mt-pos-sym" style="color:${col(pnl)}">${sgn(pnl)}</div><div class="mt-pos-co" style="color:${col(pnl)}">${t.return_pct!=null?(t.return_pct>=0?'+':'')+t.return_pct+'%':''}</div></div>
-          </div>
-          <div class="mt-pos-meta">
-            <div class="mt-m"><span class="l">Entry</span><span class="v">\u20B9${(t.avg_entry_price||0).toLocaleString('en-IN')}</span></div>
-            <div class="mt-m"><span class="l">Exit</span><span class="v">\u20B9${(t.avg_exit_price||0).toLocaleString('en-IN')}</span></div>
-            <div class="mt-m"><span class="l">Qty</span><span class="v">${t.quantity}</span></div>
-            <div class="mt-m"><span class="l">Held</span><span class="v">${t.holding_days!=null?t.holding_days+'d':'—'}</span></div>
-            <div class="mt-m"><span class="l">Reason</span><span class="v">${esc(t.exit_reason||'—')}</span></div>
-          </div>
-          ${t.trade_notes?`<div style="margin-top:8px;font-size:11px;color:var(--muted);font-style:italic">${esc(t.trade_notes)}</div>`:''}
-        </div>`;
-      }).join('');
-    }
-    $('mt-s-realised').innerHTML = list.length ? `<span style="color:${col(realised)}">${sgn(realised)}</span>` : '—';
-    MT._closedCount=list.length;
-    updateCounts();
+    const list=data||[], free=isFree();
+    el.innerHTML = list.length ? (free?closedTable(list):closedCards(list)) : '<div class="mt-empty">No closed trades yet.</div>';
+    if($('mt-closed-count')) $('mt-closed-count').textContent=list.length;
+    let realised=0; list.forEach(t=>realised+=(t.realised_pnl||0));
+    if($('mt-s-realised')) $('mt-s-realised').innerHTML = list.length?`<span style="color:${col(realised)}">${sgn(realised)}</span>`:'—';
+    MT._closedCount=list.length; updateCounts();
   }
-  function updateCounts(){ $('mt-s-counts').textContent = (MT._openCount??0)+' / '+(MT._closedCount??0); }
+  function updateCounts(){ if($('mt-s-counts')) $('mt-s-counts').textContent = (MT._openCount??0)+' / '+(MT._closedCount??0); }
 
   async function del(id, sym){
     if(!confirm(`Delete ${sym}? This removes the open position from your journal and cannot be undone.`)) return;
