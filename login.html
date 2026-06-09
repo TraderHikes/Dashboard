@@ -312,7 +312,7 @@
       </div>
     </div>
     <div class="card-title">Member Access</div>
-    <div class="card-sub">Sign in to access live trades &amp; market analysis</div>
+    <div class="card-sub">Sign in to your trading journal &amp; market analysis</div>
   </div>
 
   <!-- Body -->
@@ -408,7 +408,7 @@
   <!-- Footer -->
   <div class="card-footer">
     <strong>Market Basecamp</strong> by TraderHikes &nbsp;|&nbsp;
-    Access for paid course members only
+    Free journal · paid market analysis
   </div>
 
 </div><!-- /login-card -->
@@ -429,43 +429,17 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 // CHECK IF ALREADY LOGGED IN
 // ═══════════════════════════════════════════════
 (async () => {
-  // Handle the OAuth callback — Supabase puts tokens in the URL hash
-  // after Google redirects back. getSession() processes this automatically.
+  // Handle the OAuth callback — Supabase puts tokens in the URL hash after
+  // Google redirects back. getSession() processes this automatically.
+  // Anyone signed in goes to the dashboard; their tier (free/paid/course)
+  // and RLS decide what they can see. First-time Google sign-in auto-creates
+  // a free profile via the signup trigger.
   const { data: { session } } = await sb.auth.getSession();
-
   if (session) {
     showChecking(true);
-    const ok = await checkAccess(session.user.id, session.user.email);
-    if (ok) {
-      window.location.href = DASHBOARD_URL;
-    } else {
-      showChecking(false);
-      // Signed in via Google but not an approved student
-      await sb.auth.signOut();
-      showError(
-        'Your Google account (' + session.user.email + ') is not registered as a student. ' +
-        'Please contact TraderHikes to get access.'
-      );
-    }
+    window.location.href = DASHBOARD_URL;
   }
 })();
-
-// ═══════════════════════════════════════════════
-// CHECK STUDENT ACCESS
-// ═══════════════════════════════════════════════
-async function checkAccess(userId, email) {
-  // Check approved_students table by email (our access control table)
-  const { data, error } = await sb
-    .from('approved_students')
-    .select('plan, access_until')
-    .eq('email', email.toLowerCase().trim())
-    .single();
-
-  if (error || !data) return false;
-  if (data.plan !== 'active') return false;
-  if (data.access_until && new Date(data.access_until) < new Date()) return false;
-  return true;
-}
 
 // ═══════════════════════════════════════════════
 // GOOGLE SIGN-IN
@@ -526,16 +500,6 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
       } else {
         showError(error.message);
       }
-      setLoading('submit-btn', false);
-      return;
-    }
-
-    const hasAccess = await checkAccess(data.user.id, data.user.email);
-    if (!hasAccess) {
-      await sb.auth.signOut();
-      showError(
-        'Your account is not active. Please contact TraderHikes to gain access.'
-      );
       setLoading('submit-btn', false);
       return;
     }
