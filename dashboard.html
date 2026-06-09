@@ -1038,6 +1038,12 @@ canvas.tc{display:block;width:100%;height:100%}
 .lock-teaser .score{font-size:36px;font-weight:800;font-family:var(--fm);line-height:1.1;margin-top:4px}
 .lock-teaser .sig{font-size:13px;font-weight:700;margin-top:2px}
 .lock-teaser .rat{font-size:12px;color:var(--text2);opacity:.78;margin-top:10px;line-height:1.6}
+.lock-eyebrow{font-size:10px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--amber);margin-bottom:12px;position:relative}
+.lock-tag{font-size:12px;font-weight:700;color:var(--amber);letter-spacing:.3px;margin:-4px 0 16px;position:relative}
+.lock-bullets{text-align:left;max-width:390px;margin:0 auto 18px;display:flex;flex-direction:column;gap:10px;position:relative}
+.lock-bullets div{font-size:12.5px;color:var(--text2);display:flex;align-items:flex-start;gap:10px;line-height:1.5}
+.lb-dot{width:6px;height:6px;border-radius:50%;background:var(--amber);margin-top:6px;flex-shrink:0;box-shadow:0 0 6px var(--amber)}
+.lock-cta-gold{background:linear-gradient(135deg,#ffc861,#ff9b3d);color:#241600;box-shadow:0 6px 22px rgba(255,179,64,.40)}
 </style>
 <nav class="nav2">
   <div class="nav2-groups" id="nav-groups"></div>
@@ -2345,12 +2351,22 @@ function sw(id){
 }
 
 /* ── TWO-LEVEL NAV (role-aware) ── */
+const MSTP_URL='https://www.traderhikes.com';   // ← set exact MSTP enrolment link later
 const NAV=[
-  {key:'model',    label:'Model Swing Trader Portfolio', roles:['admin','paid','free'], lockFor:['free'],
+  {key:'model',    label:'Model Swing Trader Portfolio', roles:['admin','paid','free'], lockFor:['free','paid'],
+   lock:{kind:'course', title:'Learn live from the Model Swing Trader Portfolio',
+         body:'This is the real book behind the Master Swing Trader Program — followed hands-on inside the course.',
+         cta:'Explore the MSTP Course →', url:MSTP_URL},
    subs:[{id:'portfolio',label:'Portfolio Overview'},{id:'open',label:'Open Trades'},{id:'closed',label:'Closed Trades'}]},
   {key:'market',   label:'Market Data Tracker', roles:['admin','paid','free'], lockFor:['free'],
+   lock:{kind:'upgrade', title:'Market Data Tracker',
+         body:'Unlock the full multi-indicator market score, breadth across every EMA, and sectoral rotation.',
+         cta:'Unlock Full Access', url:MSTP_URL},
    subs:[{id:'breadth',label:'Market Breadth'},{id:'sectoral',label:'Sectoral Analysis'}]},
   {key:'screener', label:'Leading Stocks Screener', roles:['admin','paid','free'], lockFor:['free'],
+   lock:{kind:'upgrade', title:'Leading Stocks Screener',
+         body:'Unlock curated watchlists and chart scans of the market\'s leading stocks.',
+         cta:'Unlock Full Access', url:MSTP_URL},
    subs:[{id:'filter',label:'Watchlists'},{id:'charts',label:'Screen Charts'}]},
   {key:'desk',     label:'My Trading Desk', roles:['paid','free'], lockFor:[],
    subs:[{id:'mtmanager',label:'Trade Manager'},{id:'mtportfolio',label:'Portfolio'},{id:'mtclosed',label:'Closed Trades'}]},
@@ -2366,7 +2382,7 @@ const NAVUI=(()=>{
       const locked=g.lockFor.includes(role);
       return `<div class="ng-btn${locked?' locked':''}" data-g="${g.key}" onclick="NAVUI.selectGroup('${g.key}')">${esc(g.label)}</div>`;
     }).join('');
-    selectGroup(role==='free' ? 'desk' : gs[0].key);
+    selectGroup(role==='admin' ? 'model' : role==='paid' ? 'market' : 'desk');
   }
   function selectGroup(key){
     curGroup=key; window._curGroup=key; if(window.applyHeader) applyHeader();
@@ -2402,30 +2418,43 @@ const NAVUI=(()=>{
   async function showLock(g){
     document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
     const l=document.getElementById('lock-screen'); if(!l) return;
-    let teaser='';
-    if(g.key==='market'){
-      try{
-        const { data } = await sb.from('market_teaser').select('*').order('snapshot_date',{ascending:false}).limit(1);
-        const t=data&&data[0];
-        if(t){
-          const c=t.composite_smoothed!=null?Math.round(t.composite_smoothed):'—';
-          const cc=t.composite_smoothed>=55?'var(--green)':t.composite_smoothed>=45?'var(--amber)':'var(--red)';
-          teaser=`<div class="lock-teaser"><div style="font-size:11px;color:var(--text2);opacity:.7;text-transform:uppercase;letter-spacing:.4px">Today's Market Score</div>
-            <div class="score" style="color:${cc}">${c}<span style="font-size:16px;color:var(--muted)">/100</span></div>
-            <div class="sig" style="color:${cc}">${esc(t.market_signal||'')}</div>
-            ${t.rationale?`<div class="rat">${esc(t.rationale)}</div>`:''}</div>`;
-        }
-      }catch(e){}
-    }
-    l.innerHTML=`<div class="lock-wrap">
-      <div class="lock-bg">${fauxFor(g.key)}</div>
-      <div class="lock-glass">
+    const lk=g.lock||{kind:'upgrade',title:g.label,body:'This is a paid section.',cta:'Unlock Full Access',url:'https://www.traderhikes.com'};
+    let inner;
+    if(lk.kind==='course'){
+      inner=`<div class="lock-eyebrow">Master Swing Trader Program</div>
         <div class="lock-ic">${LOCK_SVG}</div>
-        <div class="lock-t">${esc(g.label)}</div>
+        <div class="lock-t">${esc(lk.title)}</div>
+        <div class="lock-tag">Real trades · real data · real learning</div>
+        <div class="lock-bullets">
+          <div><span class="lb-dot"></span>Every entry, pyramid, partial &amp; exit — with the reasoning behind it</div>
+          <div><span class="lb-dot"></span>A real, live-traded swing portfolio — not backtests or hindsight</div>
+          <div><span class="lb-dot"></span>Learn the exact system hands-on, trade by trade</div>
+        </div>
+        <div class="lock-d">${esc(lk.body)}</div>
+        <button class="lock-cta lock-cta-gold" onclick="window.open('${lk.url}','_blank')">${esc(lk.cta)}</button>`;
+    } else {
+      let teaser='';
+      if(g.key==='market'){
+        try{
+          const { data } = await sb.from('market_teaser').select('*').order('snapshot_date',{ascending:false}).limit(1);
+          const t=data&&data[0];
+          if(t){
+            const c=t.composite_smoothed!=null?Math.round(t.composite_smoothed):'—';
+            const cc=t.composite_smoothed>=55?'var(--green)':t.composite_smoothed>=45?'var(--amber)':'var(--red)';
+            teaser=`<div class="lock-teaser"><div style="font-size:11px;color:var(--text2);opacity:.7;text-transform:uppercase;letter-spacing:.4px">Today's Market Score</div>
+              <div class="score" style="color:${cc}">${c}<span style="font-size:16px;color:var(--muted)">/100</span></div>
+              <div class="sig" style="color:${cc}">${esc(t.market_signal||'')}</div>
+              ${t.rationale?`<div class="rat">${esc(t.rationale)}</div>`:''}</div>`;
+          }
+        }catch(e){}
+      }
+      inner=`<div class="lock-ic">${LOCK_SVG}</div>
+        <div class="lock-t">${esc(lk.title)}</div>
         ${teaser}
-        <div class="lock-d">This is a paid section. Unlock the model portfolio, full market breadth, sectoral analysis, watchlists and chart scans.</div>
-        <button class="lock-cta" onclick="window.open('https://www.traderhikes.com','_blank')">Unlock Full Access</button>
-      </div></div>`;
+        <div class="lock-d">${esc(lk.body)}</div>
+        <button class="lock-cta" onclick="window.open('${lk.url}','_blank')">${esc(lk.cta)}</button>`;
+    }
+    l.innerHTML=`<div class="lock-wrap"><div class="lock-bg">${fauxFor(g.key)}</div><div class="lock-glass">${inner}</div></div>`;
     l.style.display='block';
   }
   return { build, selectGroup, go, getRole:()=>role };
