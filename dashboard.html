@@ -969,6 +969,7 @@ canvas.tc{display:block;width:100%;height:100%}
 <!-- NAV -->
 <nav class="nav">
   <div class="ntab active" onclick="sw('portfolio',this)">Portfolio Overview</div>
+  <div class="ntab" onclick="sw('mytrades',this)">My Trades</div>
   <div class="ntab" onclick="sw('open',this)">Open Trades</div>
   <div class="ntab" onclick="sw('closed',this)">Closed Trades</div>
   <div class="ntab" onclick="sw('breadth',this)">Market Breadth</div>
@@ -978,6 +979,113 @@ canvas.tc{display:block;width:100%;height:100%}
 </nav>
 
 <div class="wrap">
+
+<!-- ══════════════════════════════════════ MY TRADES (Phase 1) ══════════════════════════════════════ -->
+<style>
+#pane-mytrades .sh{margin-bottom:18px}
+.mt-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px}
+.mt-stat{background:var(--card2);border:1px solid var(--bdr);border-radius:14px;padding:14px 16px}
+.mt-stat .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.mt-stat .v{font-size:20px;font-weight:700;color:var(--white);font-family:var(--fm);margin-top:4px}
+.mt-card{background:var(--card2);border:1px solid var(--bdr);border-radius:16px;padding:20px 22px;margin-bottom:18px}
+.mt-card-h{font-size:15px;font-weight:700;color:var(--white);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.mt-count{font-family:var(--fm);font-size:11px;color:var(--muted);background:var(--card3);border:1px solid var(--bdr);border-radius:100px;padding:2px 10px}
+.mt-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.mt-fg{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
+.mt-fg-wide{grid-column:1/-1}
+.mt-fg label{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px}
+.mt-in{background:var(--card3);border:1px solid var(--bdr2);border-radius:9px;padding:10px 12px;color:var(--white);font-size:13px;font-family:var(--f);outline:none;transition:border-color .15s;width:100%}
+.mt-in:focus{border-color:var(--bdr3)}
+.mt-btn{padding:10px 20px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid transparent;font-family:var(--f);transition:all .15s}
+.mt-btn-p{background:linear-gradient(135deg,var(--blue),var(--blue-lt));color:#fff}
+.mt-btn-p:hover{filter:brightness(1.08)}
+.mt-btn-g{background:var(--card3);border:1px solid var(--bdr2);color:var(--text2)}
+.mt-btn-d{background:rgba(255,93,122,.12);border:1px solid var(--red);color:var(--red)}
+.mt-btn-sm{padding:6px 12px;font-size:11px}
+.mt-alert{display:none;padding:10px 14px;border-radius:9px;font-size:12px;margin-bottom:12px;line-height:1.5}
+.mt-alert.ok{display:block;background:rgba(46,216,160,.1);border:1px solid var(--green);color:var(--green)}
+.mt-alert.err{display:block;background:rgba(255,93,122,.1);border:1px solid var(--red);color:var(--red)}
+.mt-ac{position:absolute;top:100%;left:0;right:0;z-index:50;background:var(--card3);border:1px solid var(--bdr2);border-radius:9px;margin-top:4px;max-height:260px;overflow-y:auto;display:none;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.mt-ac.show{display:block}
+.mt-ac-item{padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--bdr);display:flex;justify-content:space-between;gap:10px;align-items:center}
+.mt-ac-item:last-child{border-bottom:none}
+.mt-ac-item:hover,.mt-ac-item.active{background:var(--blue-dim)}
+.mt-ac-sym{font-family:var(--fm);font-weight:700;color:var(--white);font-size:12px}
+.mt-ac-co{font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:52%}
+.mt-ac-bd{font-size:9px;font-weight:700;padding:1px 6px;border-radius:100px;border:1px solid var(--bdr2);color:var(--muted)}
+.mt-pick{display:flex;align-items:center;gap:10px;background:var(--blue-dim);border:1px solid var(--bdr3);border-radius:9px;padding:8px 12px;margin-top:6px}
+.mt-pick b{font-family:var(--fm);color:var(--white)}
+.mt-pos{background:var(--card3);border:1px solid var(--bdr);border-radius:12px;padding:14px 16px;margin-bottom:10px}
+.mt-pos-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.mt-pos-sym{font-family:var(--fm);font-size:14px;font-weight:700;color:var(--white)}
+.mt-pos-co{font-size:11px;color:var(--muted)}
+.mt-pos-meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:10px}
+.mt-m{display:flex;flex-direction:column;gap:1px}
+.mt-m .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
+.mt-m .v{font-size:13px;color:var(--white);font-family:var(--fm);font-weight:600}
+.mt-pos-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.mt-tag{font-size:9px;font-weight:700;padding:1px 7px;border-radius:100px;border:1px solid var(--bdr2);color:var(--blue-lt);background:var(--blue-dim)}
+.mt-empty{padding:24px;text-align:center;color:var(--muted);font-size:13px}
+.mt-modal{position:fixed;inset:0;background:rgba(3,6,15,.72);backdrop-filter:blur(4px);z-index:1000;display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto}
+.mt-modal.show{display:flex}
+.mt-modal-box{background:var(--card2);border:1px solid var(--bdr2);border-radius:16px;padding:22px;width:100%;max-width:440px}
+.mt-modal-h{display:flex;justify-content:space-between;align-items:center;font-size:16px;font-weight:700;color:var(--white);margin-bottom:16px}
+.mt-x{background:none;border:none;color:var(--muted);font-size:24px;cursor:pointer;line-height:1}
+.mt-res{background:var(--card3);border:1px dashed var(--bdr2);border-radius:9px;padding:10px 12px;margin:10px 0;font-size:12px;color:var(--text2);line-height:1.8}
+</style>
+
+<div class="pane" id="pane-mytrades">
+  <div class="sh"><div class="st">My Trades</div><div class="sb">Your personal trading journal</div></div>
+
+  <div class="mt-strip">
+    <div class="mt-stat"><div class="l">Invested (Open)</div><div class="v" id="mt-s-invested">—</div></div>
+    <div class="mt-stat"><div class="l">Notional P&amp;L (Open)</div><div class="v" id="mt-s-open-pnl">—</div></div>
+    <div class="mt-stat"><div class="l">Realised P&amp;L (Closed)</div><div class="v" id="mt-s-realised">—</div></div>
+    <div class="mt-stat"><div class="l">Open / Closed</div><div class="v" id="mt-s-counts">—</div></div>
+  </div>
+
+  <div class="mt-card">
+    <div class="mt-card-h">New Trade</div>
+    <div class="mt-alert" id="mt-new-alert"></div>
+    <form id="mt-form-new" autocomplete="off">
+      <div class="mt-grid">
+        <div class="mt-fg mt-fg-wide" style="position:relative">
+          <label>Stock *</label>
+          <input class="mt-in" id="mt-symsearch" placeholder="Search symbol or company, e.g. RELIANCE or Adani…" autocomplete="off">
+          <div class="mt-ac" id="mt-ac"></div>
+          <input type="hidden" name="symbol" id="mt-sym"><input type="hidden" name="company_name" id="mt-coname">
+          <input type="hidden" name="exchange" id="mt-exch"><input type="hidden" name="board" id="mt-board">
+          <div class="mt-pick" id="mt-pick" style="display:none"></div>
+        </div>
+        <div class="mt-fg"><label>Entry Date *</label><input class="mt-in" type="date" name="entry_date" required></div>
+        <div class="mt-fg"><label>Entry Price *</label><input class="mt-in" type="number" step="0.01" min="0" name="entry_price" required></div>
+        <div class="mt-fg"><label>Quantity *</label><input class="mt-in" type="number" step="1" min="1" name="quantity" required></div>
+        <div class="mt-fg"><label>Stop Loss</label><input class="mt-in" type="number" step="0.01" min="0" name="sl_price"></div>
+        <div class="mt-fg"><label>Current Price (optional)</label><input class="mt-in" type="number" step="0.01" min="0" name="cmp" placeholder="for live P&L"></div>
+      </div>
+      <div class="mt-fg"><label>Notes</label><input class="mt-in" name="trade_notes" placeholder="Setup, pattern, reason for entry…"></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="mt-btn mt-btn-p" id="mt-new-btn" type="submit">Add Trade</button></div>
+    </form>
+  </div>
+
+  <div class="mt-card">
+    <div class="mt-card-h">Open Positions <span class="mt-count" id="mt-open-count"></span></div>
+    <div id="mt-open-list"><div class="mt-empty">Loading…</div></div>
+  </div>
+
+  <div class="mt-card">
+    <div class="mt-card-h">Closed Trades <span class="mt-count" id="mt-closed-count"></span></div>
+    <div id="mt-closed-list"><div class="mt-empty">Loading…</div></div>
+  </div>
+</div>
+
+<div class="mt-modal" id="mt-modal">
+  <div class="mt-modal-box">
+    <div class="mt-modal-h"><span id="mt-modal-title">Action</span><button class="mt-x" onclick="MT.closeModal()">&times;</button></div>
+    <div class="mt-alert" id="mt-modal-alert"></div>
+    <div id="mt-modal-body"></div>
+  </div>
+</div>
 
 <!-- ══════════════════════════════════════
      TAB 1 — PORTFOLIO OVERVIEW
@@ -2167,7 +2275,298 @@ function sw(id,el){
   if(id==='filter'){loadStockFilter();}
   if(id==='sectoral'){SB.init();}
   if(id==='charts'){loadCharts();}
+  if(id==='mytrades'){MT.init();MT.loadAll();}
 }
+
+
+/* ══ MY TRADES CONTROLLER (Phase 1) ══ */
+const MT = (() => {
+  let inited=false, picked=null, searchTimer=null, modalTrade=null, modalAction=null;
+  const $ = id => document.getElementById(id);
+  const inr = n => '\u20B9' + Math.abs(Math.round(n)).toLocaleString('en-IN');
+  const sgn = n => (n>=0?'+':'-') + inr(n);
+  const col = n => n>=0 ? 'var(--green)' : 'var(--red)';
+  const today = () => new Date().toISOString().split('T')[0];
+  const esc = s => (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+  function alert(elId, msg, kind){ const el=$(elId); el.textContent=msg; el.className='mt-alert '+(kind||'ok'); if(kind==='ok') setTimeout(()=>{el.className='mt-alert';},6000); }
+
+  // ---------- type-ahead ----------
+  function bindSearch(){
+    const box=$('mt-symsearch');
+    box.addEventListener('input', () => {
+      const q=box.value.trim();
+      clearMsgPick();
+      if(searchTimer) clearTimeout(searchTimer);
+      if(q.length<1){ $('mt-ac').classList.remove('show'); return; }
+      searchTimer=setTimeout(()=>runSearch(q), 180);
+    });
+    document.addEventListener('click', e=>{ if(!box.contains(e.target) && !$('mt-ac').contains(e.target)) $('mt-ac').classList.remove('show'); });
+  }
+  async function runSearch(q){
+    const { data, error } = await sb.rpc('search_stocks', { q, lim: 8 });
+    const ac=$('mt-ac');
+    if(error || !data || !data.length){ ac.innerHTML='<div class="mt-ac-item" style="cursor:default;color:var(--muted)">No matches</div>'; ac.classList.add('show'); return; }
+    ac.innerHTML = data.map(r => `<div class="mt-ac-item" onclick='MT.pick(${JSON.stringify(r).replace(/'/g,"&#39;")})'>
+        <span class="mt-ac-sym">${esc(r.symbol)}</span>
+        <span class="mt-ac-co">${esc(r.company_name)}</span>
+        <span class="mt-ac-bd">${esc(r.board)}</span></div>`).join('');
+    ac.classList.add('show');
+  }
+  function pick(r){
+    picked=r;
+    $('mt-sym').value=r.symbol; $('mt-coname').value=r.company_name;
+    $('mt-exch').value=r.exchange||'NSE'; $('mt-board').value=r.board||'';
+    $('mt-symsearch').value='';
+    $('mt-ac').classList.remove('show');
+    const p=$('mt-pick'); p.style.display='flex';
+    p.innerHTML = `<b>${esc(r.symbol)}</b><span style="color:var(--muted);font-size:11px">${esc(r.company_name)} · ${esc(r.exchange||'NSE')} · ${esc(r.board)}</span>
+      <button type="button" class="mt-btn mt-btn-g mt-btn-sm" style="margin-left:auto" onclick="MT.clearPick()">change</button>`;
+    if(r.board==='SME'){ alert('mt-new-alert','Note: live prices for many SME stocks may be unavailable — enter Current Price manually if needed.','ok'); }
+  }
+  function clearPick(){ picked=null; ['mt-sym','mt-coname','mt-exch','mt-board'].forEach(i=>$(i).value=''); $('mt-pick').style.display='none'; $('mt-symsearch').focus(); }
+  function clearMsgPick(){ const a=$('mt-new-alert'); if(a) a.className='mt-alert'; }
+
+  // ---------- new trade ----------
+  function bindNew(){
+    $('mt-form-new').addEventListener('submit', async e => {
+      e.preventDefault();
+      if(!picked){ alert('mt-new-alert','Please search and pick a stock first.','err'); return; }
+      const btn=$('mt-new-btn'); btn.disabled=true; btn.textContent='Adding…';
+      const fd=new FormData(e.target);
+      const entry=parseFloat(fd.get('entry_price')), qty=parseInt(fd.get('quantity'));
+      const payload={
+        symbol:picked.symbol, company_name:picked.company_name, exchange:picked.exchange||'NSE', sector:null,
+        entry_date:fd.get('entry_date'), entry_price:entry, quantity:qty,
+        sl_price: fd.get('sl_price')? parseFloat(fd.get('sl_price')) : null,
+        cmp: fd.get('cmp')? parseFloat(fd.get('cmp')) : null,
+        status:'long', trade_notes: fd.get('trade_notes')?.trim() || null,
+        avg_entry_price:entry, total_quantity:qty, remaining_qty:qty, has_pyramid:false
+      };
+      const { error } = await sb.from('open_trades').insert(payload);
+      btn.disabled=false; btn.textContent='Add Trade';
+      if(error){ alert('mt-new-alert','Error: '+error.message,'err'); return; }
+      alert('mt-new-alert','\u2713 '+picked.symbol+' added to your journal.','ok');
+      e.target.reset(); clearPick(); $('[name=entry_date]').value=today();
+      loadAll();
+    });
+  }
+
+  // ---------- lists + stats ----------
+  async function loadAll(){ await Promise.all([loadOpen(), loadClosed()]); }
+
+  async function loadOpen(){
+    const { data, error } = await sb.from('open_trades').select('*').eq('is_model', false).order('entry_date',{ascending:false});
+    const el=$('mt-open-list');
+    if(error){ el.innerHTML=`<div class="mt-empty">Error: ${error.message}</div>`; return; }
+    const list=data||[];
+    $('mt-open-count').textContent=list.length;
+    let invested=0, openPnl=0, pnlKnown=false;
+    if(!list.length){ el.innerHTML='<div class="mt-empty">No open positions yet. Add your first trade above.</div>'; }
+    else{
+      el.innerHTML=list.map(t=>{
+        const avg=t.avg_entry_price||t.entry_price, rem=t.remaining_qty??t.quantity, tot=t.total_quantity||t.quantity;
+        invested += avg*rem;
+        let pnlHtml='<span style="color:var(--muted)">—</span>';
+        if(t.cmp!=null){ const p=(t.cmp-avg)*rem; openPnl+=p; pnlKnown=true; pnlHtml=`<span style="color:${col(p)}">${sgn(p)}</span>`; }
+        const tags=[ t.has_pyramid?'<span class="mt-tag">Pyramided</span>':'', t.has_partial_exit?'<span class="mt-tag" style="color:var(--amber);background:rgba(255,179,64,.12)">Partial</span>':'' ].join('');
+        return `<div class="mt-pos">
+          <div class="mt-pos-top">
+            <div><div class="mt-pos-sym">${esc(t.symbol)} ${tags}</div><div class="mt-pos-co">${esc(t.company_name)}</div></div>
+            <div style="text-align:right"><div class="mt-m" style="align-items:flex-end"><span class="l">Notional P&L</span><span class="v">${pnlHtml}</span></div></div>
+          </div>
+          <div class="mt-pos-meta">
+            <div class="mt-m"><span class="l">Avg Entry</span><span class="v">\u20B9${avg.toLocaleString('en-IN')}</span></div>
+            <div class="mt-m"><span class="l">Qty (rem/total)</span><span class="v">${rem} / ${tot}</span></div>
+            <div class="mt-m"><span class="l">Stop Loss</span><span class="v">${t.sl_price!=null?'\u20B9'+t.sl_price.toLocaleString('en-IN'):'—'}</span></div>
+            <div class="mt-m"><span class="l">CMP</span><span class="v">${t.cmp!=null?'\u20B9'+t.cmp.toLocaleString('en-IN'):'—'}</span></div>
+            <div class="mt-m"><span class="l">Entry Date</span><span class="v">${t.entry_date}</span></div>
+          </div>
+          <div class="mt-pos-actions">
+            <button class="mt-btn mt-btn-g mt-btn-sm" onclick="MT.openModal('pyramid','${t.id}')">+ Add (Pyramid)</button>
+            <button class="mt-btn mt-btn-g mt-btn-sm" onclick="MT.openModal('partial','${t.id}')">Partial Exit</button>
+            <button class="mt-btn mt-btn-d mt-btn-sm" onclick="MT.openModal('close','${t.id}')">Close</button>
+            <button class="mt-btn mt-btn-g mt-btn-sm" style="margin-left:auto" onclick="MT.del('${t.id}','${esc(t.symbol)}')">Delete</button>
+          </div></div>`;
+      }).join('');
+    }
+    $('mt-s-invested').textContent = invested>0 ? inr(invested) : '—';
+    $('mt-s-open-pnl').innerHTML = pnlKnown ? `<span style="color:${col(openPnl)}">${sgn(openPnl)}</span>` : '—';
+    MT._openCount=list.length;
+    updateCounts();
+  }
+
+  async function loadClosed(){
+    const { data, error } = await sb.from('closed_trades').select('*').eq('is_model', false).order('exit_date',{ascending:false});
+    const el=$('mt-closed-list');
+    if(error){ el.innerHTML=`<div class="mt-empty">Error: ${error.message}</div>`; return; }
+    const list=data||[];
+    $('mt-closed-count').textContent=list.length;
+    let realised=0;
+    if(!list.length){ el.innerHTML='<div class="mt-empty">No closed trades yet.</div>'; }
+    else{
+      el.innerHTML=list.map(t=>{
+        const pnl=t.realised_pnl||0; realised+=pnl;
+        return `<div class="mt-pos">
+          <div class="mt-pos-top">
+            <div><div class="mt-pos-sym">${esc(t.symbol)}</div><div class="mt-pos-co">${esc(t.company_name)}</div></div>
+            <div style="text-align:right"><div class="mt-pos-sym" style="color:${col(pnl)}">${sgn(pnl)}</div><div class="mt-pos-co" style="color:${col(pnl)}">${t.return_pct!=null?(t.return_pct>=0?'+':'')+t.return_pct+'%':''}</div></div>
+          </div>
+          <div class="mt-pos-meta">
+            <div class="mt-m"><span class="l">Entry</span><span class="v">\u20B9${(t.avg_entry_price||0).toLocaleString('en-IN')}</span></div>
+            <div class="mt-m"><span class="l">Exit</span><span class="v">\u20B9${(t.avg_exit_price||0).toLocaleString('en-IN')}</span></div>
+            <div class="mt-m"><span class="l">Qty</span><span class="v">${t.quantity}</span></div>
+            <div class="mt-m"><span class="l">Held</span><span class="v">${t.holding_days!=null?t.holding_days+'d':'—'}</span></div>
+            <div class="mt-m"><span class="l">Reason</span><span class="v">${esc(t.exit_reason||'—')}</span></div>
+          </div>
+          ${t.trade_notes?`<div style="margin-top:8px;font-size:11px;color:var(--muted);font-style:italic">${esc(t.trade_notes)}</div>`:''}
+        </div>`;
+      }).join('');
+    }
+    $('mt-s-realised').innerHTML = list.length ? `<span style="color:${col(realised)}">${sgn(realised)}</span>` : '—';
+    MT._closedCount=list.length;
+    updateCounts();
+  }
+  function updateCounts(){ $('mt-s-counts').textContent = (MT._openCount??0)+' / '+(MT._closedCount??0); }
+
+  async function del(id, sym){
+    if(!confirm(`Delete ${sym}? This removes the open position from your journal and cannot be undone.`)) return;
+    const { error } = await sb.from('open_trades').delete().eq('id', id);
+    if(error){ alert('mt-new-alert','Error: '+error.message,'err'); return; }
+    loadAll();
+  }
+
+  // ---------- recompute (mirrors the model engine) ----------
+  async function recompute(id){
+    const { data: ot } = await sb.from('open_trades').select('quantity,entry_price').eq('id',id).single();
+    if(!ot) return;
+    const baseQty=ot.quantity||0, basePx=ot.entry_price||0;
+    const { data: pyr } = await sb.from('trade_entries').select('entry_price,quantity').eq('open_trade_id',id);
+    const legs=pyr||[];
+    const pyrQty=legs.reduce((s,e)=>s+(e.quantity||0),0);
+    const pyrCost=legs.reduce((s,e)=>s+(e.entry_price*e.quantity),0);
+    const totalQty=baseQty+pyrQty;
+    const wavg=totalQty>0?(basePx*baseQty+pyrCost)/totalQty:basePx;
+    const { data: ex } = await sb.from('partial_exits').select('quantity').eq('open_trade_id',id);
+    const sold=(ex||[]).reduce((s,e)=>s+(e.quantity||0),0);
+    await sb.from('open_trades').update({
+      avg_entry_price:Math.round(wavg*100)/100, total_quantity:totalQty,
+      remaining_qty:Math.max(0,totalQty-sold), has_pyramid:legs.length>0,
+      updated_at:new Date().toISOString()
+    }).eq('id',id);
+  }
+
+  // ---------- modal (pyramid / partial / close) ----------
+  async function openModal(action, id){
+    const { data: t } = await sb.from('open_trades').select('*').eq('id',id).single();
+    if(!t){ return; }
+    modalTrade=t; modalAction=action;
+    const avg=t.avg_entry_price||t.entry_price, rem=t.remaining_qty??t.quantity;
+    $('mt-modal-alert').className='mt-alert';
+    const titles={pyramid:'Add to Position — '+t.symbol, partial:'Partial Exit — '+t.symbol, close:'Close Trade — '+t.symbol};
+    $('mt-modal-title').textContent=titles[action];
+    let body='';
+    if(action==='pyramid'){
+      body=`<div class="mt-res">Current avg <b>\u20B9${avg.toLocaleString('en-IN')}</b> · qty <b>${rem}</b></div>
+        <div class="mt-fg"><label>Add Date *</label><input class="mt-in" type="date" id="mm-date" value="${today()}"></div>
+        <div class="mt-fg"><label>Add Price *</label><input class="mt-in" type="number" step="0.01" id="mm-price" oninput="MT.preview()"></div>
+        <div class="mt-fg"><label>Add Quantity *</label><input class="mt-in" type="number" step="1" id="mm-qty" oninput="MT.preview()"></div>
+        <div class="mt-res" id="mm-prev">Enter price &amp; quantity to preview the new blended average.</div>
+        <div class="mt-fg"><label>Notes</label><input class="mt-in" id="mm-notes"></div>
+        <button class="mt-btn mt-btn-p" style="width:100%" onclick="MT.submitPyramid()">Confirm Pyramid Buy</button>`;
+    } else if(action==='partial'){
+      body=`<div class="mt-res">Avg entry <b>\u20B9${avg.toLocaleString('en-IN')}</b> · remaining <b>${rem}</b></div>
+        <div class="mt-fg"><label>Exit Date *</label><input class="mt-in" type="date" id="mm-date" value="${today()}"></div>
+        <div class="mt-fg"><label>Exit Price *</label><input class="mt-in" type="number" step="0.01" id="mm-price" oninput="MT.preview()"></div>
+        <div class="mt-fg"><label>Sell Quantity * (less than ${rem})</label><input class="mt-in" type="number" step="1" id="mm-qty" oninput="MT.preview()"></div>
+        <div class="mt-res" id="mm-prev">Enter price &amp; quantity to preview realised P&amp;L.</div>
+        <div class="mt-fg"><label>Reason / Notes</label><input class="mt-in" id="mm-notes" placeholder="e.g. booked partial profit"></div>
+        <button class="mt-btn mt-btn-p" style="width:100%" onclick="MT.submitPartial()">Confirm Partial Exit</button>`;
+    } else {
+      body=`<div class="mt-res">Avg entry <b>\u20B9${avg.toLocaleString('en-IN')}</b> · remaining <b>${rem}</b> shares will be closed.</div>
+        <div class="mt-fg"><label>Exit Date *</label><input class="mt-in" type="date" id="mm-date" value="${today()}"></div>
+        <div class="mt-fg"><label>Exit Price *</label><input class="mt-in" type="number" step="0.01" id="mm-price" oninput="MT.preview()"></div>
+        <div class="mt-res" id="mm-prev">Enter the exit price to preview final P&amp;L.</div>
+        <div class="mt-fg"><label>Exit Reason</label><input class="mt-in" id="mm-reason" placeholder="e.g. Target hit / SL hit / Booked"></div>
+        <div class="mt-fg"><label>Notes</label><input class="mt-in" id="mm-notes"></div>
+        <button class="mt-btn mt-btn-d" style="width:100%" onclick="MT.submitClose()">Confirm Final Exit</button>`;
+    }
+    $('mt-modal-body').innerHTML=body;
+    $('mt-modal').classList.add('show');
+  }
+  function closeModal(){ $('mt-modal').classList.remove('show'); modalTrade=null; modalAction=null; }
+
+  function preview(){
+    const t=modalTrade; if(!t) return;
+    const avg=t.avg_entry_price||t.entry_price, rem=t.remaining_qty??t.quantity, tot=t.total_quantity||t.quantity;
+    const px=parseFloat($('mm-price')?.value)||0, qty=parseFloat($('mm-qty')?.value)||0;
+    const prev=$('mm-prev'); if(!prev) return;
+    if(modalAction==='pyramid'){
+      if(px<=0||qty<=0){ return; }
+      const newAvg=((avg*tot)+(px*qty))/(tot+qty);
+      prev.innerHTML=`New blended avg <b>\u20B9${newAvg.toFixed(2)}</b> · total qty <b>${tot+qty}</b>`;
+    } else if(modalAction==='partial'){
+      if(px<=0||qty<=0){ return; }
+      const pnl=(px-avg)*qty, ret=(px-avg)/avg*100, after=rem-qty;
+      prev.innerHTML=`Realised <b style="color:${col(pnl)}">${sgn(pnl)}</b> (${ret>=0?'+':''}${ret.toFixed(2)}%) · remaining after: <b>${after>=0?after:'⚠ too many'}</b>`;
+    } else {
+      if(px<=0){ return; }
+      const pnl=(px-avg)*rem, ret=(px-avg)/avg*100;
+      prev.innerHTML=`Final-leg P&L <b style="color:${col(pnl)}">${sgn(pnl)}</b> (${ret>=0?'+':''}${ret.toFixed(2)}%) on ${rem} shares`;
+    }
+  }
+
+  async function submitPyramid(){
+    const t=modalTrade; const date=$('mm-date').value, px=parseFloat($('mm-price').value), qty=parseInt($('mm-qty').value);
+    if(!date||!(px>0)||!(qty>0)){ alert('mt-modal-alert','Enter a valid date, price and quantity.','err'); return; }
+    const { error } = await sb.from('trade_entries').insert({ open_trade_id:t.id, entry_date:date, entry_price:px, quantity:qty, notes:$('mm-notes').value||null });
+    if(error){ alert('mt-modal-alert','Error: '+error.message,'err'); return; }
+    await recompute(t.id);
+    closeModal(); loadAll();
+  }
+
+  async function submitPartial(){
+    const t=modalTrade; const rem=t.remaining_qty??t.quantity, avg=t.avg_entry_price||t.entry_price;
+    const date=$('mm-date').value, px=parseFloat($('mm-price').value), qty=parseInt($('mm-qty').value);
+    if(!date||!(px>0)||!(qty>0)){ alert('mt-modal-alert','Enter a valid date, price and quantity.','err'); return; }
+    if(qty>=rem){ alert('mt-modal-alert',`Quantity (${qty}) must be less than remaining (${rem}). Use Close to exit fully.`,'err'); return; }
+    const pnl=Math.round((px-avg)*qty*100)/100, ret=Math.round((px-avg)/avg*10000)/100;
+    const { error } = await sb.from('partial_exits').insert({ open_trade_id:t.id, symbol:t.symbol, exit_date:date, exit_price:px, quantity:qty, realised_pnl:pnl, return_pct:ret, avg_entry_price:avg, notes:$('mm-notes').value||null });
+    if(error){ alert('mt-modal-alert','Error: '+error.message,'err'); return; }
+    await sb.from('open_trades').update({ remaining_qty:rem-qty, has_partial_exit:true, updated_at:new Date().toISOString() }).eq('id',t.id);
+    closeModal(); loadAll();
+  }
+
+  async function submitClose(){
+    const t=modalTrade; const avg=t.avg_entry_price||t.entry_price, rem=t.remaining_qty??t.quantity, tot=t.total_quantity||t.quantity;
+    const date=$('mm-date').value, px=parseFloat($('mm-price').value);
+    if(!date||!(px>0)){ alert('mt-modal-alert','Enter a valid exit date and price.','err'); return; }
+    const finalPnl=(px-avg)*rem, ret=(px-avg)/avg*100;
+    const { data: parts } = await sb.from('partial_exits').select('realised_pnl,quantity').eq('open_trade_id',t.id);
+    const partialPnl=(parts||[]).reduce((s,p)=>s+(p.realised_pnl||0),0);
+    const partialQty=(parts||[]).reduce((s,p)=>s+(p.quantity||0),0);
+    const totalRealised=finalPnl+partialPnl;
+    const holding=Math.round((new Date(date)-new Date(t.entry_date))/86400000);
+    const payload={ symbol:t.symbol, company_name:t.company_name, sector:t.sector, exchange:t.exchange||'NSE',
+      entry_date:t.entry_date, avg_entry_price:avg, quantity:tot, sl_price:t.sl_price,
+      exit_date:date, avg_exit_price:px, realised_pnl:Math.round(totalRealised*100)/100,
+      return_pct:Math.round(ret*100)/100, holding_days:holding, exit_reason:$('mm-reason').value||null,
+      trade_notes:$('mm-notes').value||t.trade_notes||null, partial_exit_qty:partialQty>0?partialQty:null,
+      origin_open_trade_id:t.id };
+    const { error } = await sb.from('closed_trades').insert(payload);
+    if(error){ alert('mt-modal-alert','Error: '+error.message,'err'); return; }
+    await sb.from('open_trades').delete().eq('id',t.id);
+    closeModal(); loadAll();
+  }
+
+  function init(){
+    if(inited) return; inited=true;
+    bindSearch(); bindNew();
+    const d=document.querySelector('#mt-form-new [name=entry_date]'); if(d) d.value=today();
+  }
+
+  return { init, loadAll, loadOpen, loadClosed, pick, clearPick, del, openModal, closeModal, preview, submitPyramid, submitPartial, submitClose };
+})();
 
 /* ══ SECTORAL BREADTH CONTROLLER ══ */
 const SB=(()=>{
@@ -2531,7 +2930,7 @@ async function loadPortfolioOverview() {
   setText('port-date', `As of today, ${today} · All values in INR`);
 
   // 1. Open trades
-  const { data: openTrades } = await sb.from('open_trades').select('*');
+  const { data: openTrades } = await sb.from('open_trades').select('*').eq('is_model', true);
   let totalDeployed=0, totalPnl=0, totalRisk=0;
   if(openTrades) openTrades.forEach(t => {
     const ae = t.avg_entry_price || t.entry_price;
@@ -2552,7 +2951,7 @@ async function loadPortfolioOverview() {
   const portReturn   = snap?.cumulative_return_pct || 0;
 
   // 3. Closed trades
-  const { data: closedTrades } = await sb.from('closed_trades').select('*');
+  const { data: closedTrades } = await sb.from('closed_trades').select('*').eq('is_model', true);
   let realisedPnl = 0;
   if(closedTrades) closedTrades.forEach(t => realisedPnl += (t.realised_pnl||0));
 
@@ -3276,6 +3675,7 @@ async function buildAllocList(){
   // Fetch live open trades
   const { data: trades } = await sb.from('open_trades')
     .select('symbol,avg_entry_price,remaining_qty,capital_at_entry,position_size_pct')
+    .eq('is_model', true)
     .order('capital_at_entry', {ascending:false});
 
   if(!trades||trades.length===0){
@@ -3413,6 +3813,7 @@ async function renderOpen(){
   const { data: trades, error } = await sb
     .from('open_trades')
     .select('*')
+    .eq('is_model', true)
     .order('entry_date', { ascending: false });
 
   if (error || !trades || trades.length === 0) {
@@ -3587,6 +3988,7 @@ async function renderOpen(){
   // ── Total Realised P&L (sum of all closed trades) ──────────
   sb.from('closed_trades')
     .select('realised_pnl')
+    .eq('is_model', true)
     .then(({ data: closed }) => {
       const totalRealised = (closed || []).reduce((s,t)=> s + (t.realised_pnl||0), 0);
       const pos = totalRealised >= 0;
@@ -3742,7 +4144,7 @@ async function renderClosed(){
   c.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted)">Loading trade history...</div>';
 
   const{data:trades,error}=await sb.from('closed_trades')
-    .select('*').order('exit_date',{ascending:false});
+    .select('*').eq('is_model', true).order('exit_date',{ascending:false});
 
   if(error||!trades||trades.length===0){
     c.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted)">No closed trades yet.</div>';
