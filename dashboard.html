@@ -972,12 +972,18 @@ canvas.tc{display:block;width:100%;height:100%}
 .nav2-groups{display:flex;gap:4px;padding:8px 28px 0;flex-wrap:wrap}
 .ng-btn{padding:9px 16px;border-radius:9px 9px 0 0;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;border:1px solid transparent;border-bottom:none;transition:all .15s;display:flex;align-items:center;gap:7px}
 .ng-btn:hover{color:var(--text2)}
-.ng-btn.active{color:#fff;background:var(--card2);border-color:var(--bdr)}
+.ng-btn.active{color:#fff;font-weight:800;border-color:transparent;position:relative;
+  background:linear-gradient(180deg,rgba(92,111,251,.22) 0%,rgba(92,111,251,.05) 70%,transparent 100%);
+  box-shadow:inset 0 1px 0 rgba(92,111,251,.6),0 2px 14px rgba(92,111,251,.18)}
+.ng-btn.active::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--blue),var(--blue-lt),var(--blue),transparent);
+  box-shadow:0 0 8px var(--blue);border-radius:0 0 2px 2px}
 .ng-lock{font-size:10px;opacity:.85}
-.nav2-subs{display:flex;gap:0;padding:0 28px;border-top:1px solid var(--bdr);background:var(--card2);flex-wrap:wrap}
-.ns-btn{padding:11px 18px;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
-.ns-btn:hover{color:var(--text2)}
-.ns-btn.active{color:var(--blue-lt);border-bottom-color:var(--blue-lt)}
+.nav2-subs{display:flex;gap:6px;padding:8px 28px;border-top:1px solid var(--bdr);background:var(--card2);flex-wrap:wrap}
+.ns-btn{padding:8px 16px;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;border:1px solid transparent;border-radius:8px;transition:all .15s}
+.ns-btn:hover{color:var(--text2);border-color:var(--bdr2)}
+.ns-btn.active{color:#fff;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.55);
+  box-shadow:0 0 12px rgba(255,255,255,.20),inset 0 0 8px rgba(255,255,255,.05);text-shadow:0 0 8px rgba(255,255,255,.35)}
 .mt-tbl{width:100%;border-collapse:collapse;font-size:12.5px}
 .mt-tbl th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--bdr);font-weight:700}
 .mt-tbl td{padding:9px 10px;border-bottom:1px solid var(--bdr);color:var(--text2);font-family:var(--fm)}
@@ -2323,7 +2329,7 @@ const NAVUI=(()=>{
     selectGroup(role==='free' ? 'desk' : gs[0].key);
   }
   function selectGroup(key){
-    curGroup=key;
+    curGroup=key; window._curGroup=key; if(window.applyHeader) applyHeader();
     document.querySelectorAll('.ng-btn').forEach(b=>b.classList.toggle('active', b.dataset.g===key));
     const g=NAV.find(x=>x.key===key);
     document.getElementById('nav-subs').innerHTML = g.subs.map(sx=>`<div class="ns-btn" data-s="${sx.id}" onclick="NAVUI.go('${sx.id}')">${esc(sx.label)}</div>`).join('');
@@ -2363,6 +2369,19 @@ const NAVUI=(()=>{
   }
   return { build, selectGroup, go, getRole:()=>role };
 })();
+
+/* ── GROUP-AWARE HEADER (Deployed / Open P&L) ── */
+window._hdr = { model:null, desk:null };
+function applyHeader(){
+  const role=(window.USER_ROLE||'free');
+  const grp=window._curGroup||(role==='free'?'desk':'model');
+  const src=(grp==='desk'||role==='free') ? window._hdr.desk : window._hdr.model;
+  const dep=document.getElementById('hdr-deployed'), pnl=document.getElementById('hdr-pnl');
+  if(!dep||!pnl) return;
+  if(!src){ if(grp==='desk'){ dep.textContent='—'; pnl.textContent='—'; pnl.style.color='var(--muted)'; } return; }
+  dep.textContent=src.dep; pnl.textContent=src.pnl; pnl.style.color=src.col||'var(--muted)';
+}
+window.applyHeader=applyHeader;
 
 
 /* ══ MY TRADES CONTROLLER (Phase 1) ══ */
@@ -2526,6 +2545,8 @@ const MT = (() => {
     list.forEach(t=>{ const avg=t.avg_entry_price||t.entry_price, rem=t.remaining_qty??t.quantity; invested+=avg*rem; if(t.cmp!=null){ openPnl+=(t.cmp-avg)*rem; pnlKnown=true; } });
     if($('mt-s-invested')) $('mt-s-invested').textContent = invested>0?inr(invested):'—';
     if($('mt-s-open-pnl')) $('mt-s-open-pnl').innerHTML = pnlKnown?`<span style="color:${col(openPnl)}">${sgn(openPnl)}</span>`:'—';
+    window._hdr.desk={dep: invested>0?inr(invested):'—', pnl: pnlKnown?sgn(openPnl):'—', col: pnlKnown?col(openPnl):'var(--muted)'};
+    if(window.applyHeader) applyHeader();
     MT._openCount=list.length; updateCounts();
   }
 
@@ -3096,10 +3117,8 @@ async function loadPortfolioOverview() {
   // Header
   const hdrCap = document.getElementById('hdr-capital');
   if(hdrCap) hdrCap.textContent = fmtL(totalCapital);
-  const hdrDep = document.getElementById('hdr-deployed');
-  if(hdrDep) hdrDep.textContent = fmtL(totalDeployed);
-  const hdrPnl = document.getElementById('hdr-pnl');
-  if(hdrPnl){ hdrPnl.textContent=(totalPnl>=0?'+':'')+fmt(totalPnl); hdrPnl.style.color=totalPnl>=0?'var(--green)':'var(--red)'; }
+  window._hdr.model={dep:fmtL(totalDeployed), pnl:(totalPnl>=0?'+':'')+fmt(totalPnl), col:totalPnl>=0?'var(--green)':'var(--red)'};
+  if(window.applyHeader) applyHeader();
 
   // ── EQUITY CURVE STATS ROW ─────────────────
   let niftyReturn = 0;
@@ -3934,8 +3953,8 @@ async function renderOpen(){
     // Update badge and header
     const ob = document.getElementById('badge-open');
     if(ob) ob.textContent = '0';
-    document.getElementById('hdr-deployed').textContent = '₹0';
-    document.getElementById('hdr-pnl').textContent = '—';
+    window._hdr.model={dep:'₹0', pnl:'—', col:'var(--muted)'};
+    if(window.applyHeader) applyHeader();
     return;
   }
 
@@ -4128,9 +4147,9 @@ async function renderOpen(){
     });
 
 
-  // Update header
-  setT('hdr-deployed', fmtL(totalDeployed));
-  setT('hdr-pnl', (totalPnl>=0?'+':'')+fmt(totalPnl), totalPnl>=0?'var(--green)':'var(--red)');
+  // Update header (model book) via group-aware store
+  window._hdr.model={dep:fmtL(totalDeployed), pnl:(totalPnl>=0?'+':'')+fmt(totalPnl), col:totalPnl>=0?'var(--green)':'var(--red)'};
+  if(window.applyHeader) applyHeader();
 
   c.innerHTML='';
   trades.forEach(t=>{
