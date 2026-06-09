@@ -54,6 +54,20 @@ SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
 sb = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+# Admin identity (model-portfolio owner). Pipeline runs as service-role and reads
+# the public.profiles table to resolve the admin's user_id once, cached.
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "traderhikes@gmail.com")
+_ADMIN_UID = None
+def get_admin_uid():
+    global _ADMIN_UID
+    if _ADMIN_UID is None:
+        try:
+            r = sb.table("profiles").select("user_id").eq("email", ADMIN_EMAIL).limit(1).execute().data
+            _ADMIN_UID = r[0]["user_id"] if r else None
+        except Exception as e:
+            print(f"   ⚠️  admin uid lookup: {e}")
+    return _ADMIN_UID
+
 # RUN_MODE is normally passed explicitly by the workflow (per cron slot).
 # This hour-based fallback only applies if RUN_MODE env is empty — kept in
 # sync with the workflow schedule so a manual/bare run still picks sanely.
@@ -335,10 +349,15 @@ def fetch_index_levels():
 # PORTFOLIO SNAPSHOT
 # ════════════════════════════════════════════════════════════
 def save_portfolio_snapshot(cmp_map, n500_val):
-    print("📸 Saving portfolio snapshot...")
+    print("📸 Saving model portfolio snapshot...")
     cmp_map = cmp_map or {}          # tolerate a failed cmp fetch (None)
     try:
-        trades = sb.table("open_trades").select("*").execute().data or []
+        admin_uid = get_admin_uid()
+        if not admin_uid:
+            print("   ⚠️  admin uid not found — skipping snapshot\n"); return
+        # MODEL book only (is_model=true). Per-user snapshots use (user_id, snapshot_date);
+        # user portfolios are not snapshotted by the pipeline.
+        trades = sb.table("open_trades").select("*").eq("is_model", True).execute().data or []
         deployed = unreal = 0.0
         for t in trades:
             qty   = float(t.get("remaining_qty") or t.get("quantity") or 0)
@@ -351,14 +370,16 @@ def save_portfolio_snapshot(cmp_map, n500_val):
         port_val   = total_cap + unreal
         cum_ret    = round((port_val / total_cap - 1) * 100, 4) if total_cap else 0.0
         sb.table("portfolio_snapshots").upsert({
-            "snapshot_date":        TODAY,
+            "user_id":               admin_uid,
+            "is_model":              True,
+            "snapshot_date":         TODAY,
             "portfolio_value":       round(port_val, 2),
             "total_capital":         round(total_cap, 2),
             "cash_available":        round(cash_avail, 2),
             "nifty500_level":        n500_val,
             "cumulative_return_pct": cum_ret,
-        }, on_conflict="snapshot_date").execute()
-        print(f"   ✓ Portfolio ₹{port_val:,.0f} | cash ₹{cash_avail:,.0f}\n")
+        }, on_conflict="user_id,snapshot_date").execute()
+        print(f"   ✓ Model portfolio ₹{port_val:,.0f} | cash ₹{cash_avail:,.0f}\n")
     except Exception as e:
         print(f"   ⚠️  Snapshot failed: {e}\n")
 
@@ -758,6 +779,16 @@ def calculate_market_breadth(symbols, nifty50_close=None):
     }
     payload.update(score)
     sb.table("market_breadth").upsert(payload, on_conflict="snapshot_date").execute()
+    # Free-readable teaser (headline score + signal + brief) for the upgrade/MSTP funnel
+    try:
+        sb.table("market_teaser").upsert({
+            "snapshot_date":      TODAY,
+            "composite_smoothed": payload.get("composite_smoothed"),
+            "market_signal":      payload.get("market_signal"),
+            "rationale":          payload.get("score_rationale"),
+        }, on_conflict="snapshot_date").execute()
+    except Exception as e:
+        print(f"   ⚠️  market_teaser: {e}")
     print(f"   ✓ {valid} stocks | 21:{p21}% 50:{p50}% 200:{p200}% | PDH:{pdh} PDL:{pdl} | VIX:{india_vix}")
     print(f"   📊 Score {score['composite_score']} (smoothed {score['composite_smoothed']}) "
           f"· {score['market_signal']} · R{score['regime_score']}/T{score['tactical_score']} "
