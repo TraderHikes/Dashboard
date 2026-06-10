@@ -2322,6 +2322,7 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
   const displayName = session.user.user_metadata?.full_name
     || session.user.user_metadata?.name || email.split('@')[0];
   document.getElementById('hdr-user').textContent = displayName;
+  window.USER_NAME = displayName;
   if (email === ADMIN_EMAIL.toLowerCase()) document.getElementById('btn-admin').style.display = 'block';
 
   NAVUI.build(role);
@@ -2556,12 +2557,13 @@ const MT = (() => {
       <button class="mt-btn mt-btn-d mt-btn-sm" onclick="MT.openModal('close','${t.id}')">Close</button>
       <button class="mt-btn mt-btn-g mt-btn-sm" onclick="MT.del('${t.id}','${esc(t.symbol)}')">Delete</button>`;
   }
-  function openCard(t, withActions){
+  function openCard(t, withActions, withChart){
     const avg=t.avg_entry_price||t.entry_price, rem=t.remaining_qty??t.quantity, tot=t.total_quantity||t.quantity;
     let pnlHtml='<span style="color:var(--muted)">—</span>';
     if(t.cmp!=null){ const p=(t.cmp-avg)*rem; pnlHtml=`<span style="color:${col(p)}">${sgn(p)}</span>`; }
     const tags=[ t.has_pyramid?'<span class="mt-tag">Pyramided</span>':'', t.has_partial_exit?'<span class="mt-tag" style="color:var(--amber);background:rgba(255,179,64,.12)">Partial</span>':'' ].join('');
     return `<div class="mt-pos">
+      ${withChart?`<div class="chart-col" id="chart_${t.id}" style="border-radius:10px;margin-bottom:12px"><div class="tv-loading"><div style="width:14px;height:14px;border:2px solid rgba(255,255,255,.1);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite"></div><span style="font-size:10px;color:var(--muted)">Loading chart...</span></div></div>`:''}
       <div class="mt-pos-top">
         <div><div class="mt-pos-sym">${esc(t.symbol)} ${tags}</div><div class="mt-pos-co">${esc(t.company_name)}</div></div>
         <div style="text-align:right"><div class="mt-m" style="align-items:flex-end"><span class="l">Notional P&L</span><span class="v">${pnlHtml}</span></div></div>
@@ -2592,6 +2594,8 @@ const MT = (() => {
   }
   function closedCards(list){
     return list.map(t=>{
+      _closedCache[t.id] = { trade:t, partials:[], entries:[] };
+      delete _closedCharts[t.id];
       const pnl=t.realised_pnl||0;
       return `<div class="mt-pos">
         <div class="mt-pos-top">
@@ -2605,7 +2609,12 @@ const MT = (() => {
           <div class="mt-m"><span class="l">Held</span><span class="v">${t.holding_days!=null?t.holding_days+'d':'—'}</span></div>
           <div class="mt-m"><span class="l">Reason</span><span class="v">${esc(t.exit_reason||'—')}</span></div>
         </div>
-        ${t.trade_notes?`<div style="margin-top:8px;font-size:11px;color:var(--muted);font-style:italic">${esc(t.trade_notes)}</div>`:''}</div>`;
+        ${t.trade_notes?`<div style="margin-top:8px;font-size:11px;color:var(--muted);font-style:italic">${esc(t.trade_notes)}</div>`:''}
+        <div class="mt-pos-actions" style="margin-top:10px">
+          <button class="mt-btn mt-btn-g mt-btn-sm" id="cbtn-${t.id}" onclick="toggleClosedChart('${t.id}','${esc(t.symbol)}')">\uD83D\uDCC8 View Chart</button>
+          <button class="mt-btn mt-btn-g mt-btn-sm" id="cpdf-${t.id}" onclick="downloadClosedPDF('${t.id}')">Download PDF</button>
+        </div>
+        <div id="cchart-${t.id}" style="display:none;margin-top:10px"></div></div>`;
     }).join('');
   }
   function closedTable(list){
@@ -2626,9 +2635,13 @@ const MT = (() => {
     if(error){ ['mt-manage-list','mt-open-list'].forEach(id=>{const el=$(id); if(el) el.innerHTML=`<div class="mt-empty">Error: ${error.message}</div>`;}); return; }
     const list=data||[], free=isFree();
     const manageHtml = list.length ? (free?openTable(list,true):list.map(t=>openCard(t,true)).join('')) : '<div class="mt-empty">No open positions. Add a trade using the form above.</div>';
-    const reviewHtml = list.length ? (free?openTable(list,false):list.map(t=>openCard(t,false)).join('')) : '<div class="mt-empty">No open positions yet.</div>';
+    const reviewHtml = list.length ? (free?openTable(list,false):list.map(t=>openCard(t,false,true)).join('')) : '<div class="mt-empty">No open positions yet.</div>';
     if($('mt-manage-list')) $('mt-manage-list').innerHTML=manageHtml;
     if($('mt-open-list'))   $('mt-open-list').innerHTML=reviewHtml;
+    if(!free){
+      list.forEach(t=>{ if(tvCharts[t.id]){ try{tvCharts[t.id].remove();}catch(e){} delete tvCharts[t.id]; } });
+      list.forEach(t=>{ const ae=t.avg_entry_price||t.entry_price; requestAnimationFrame(()=>renderTVChart(t.id,t.symbol,ae,t.sl_price,t.cmp||ae,t.entry_date,t.has_pyramid,t.has_partial_exit)); });
+    }
     if($('mt-manage-count'))$('mt-manage-count').textContent=list.length;
     if($('mt-open-count'))  $('mt-open-count').textContent=list.length;
     let invested=0, openPnl=0, pnlKnown=false;
@@ -4616,14 +4629,24 @@ async function renderClosedChart(id, symbol){
   box.innerHTML = '<div style="padding:30px;text-align:center;color:var(--muted);font-size:11px">Loading chart…</div>';
 
   // Frozen candle snapshot for this closed trade
-  const { data: candles, error } = await sb
+  let { data: candles, error } = await sb
     .from('closed_trade_candles')
     .select('date,open,high,low,close')
     .eq('closed_trade_id', id)
     .order('date', { ascending: true });
 
+  // Personal trades have no frozen snapshot — reuse the symbol's daily candles
+  // (the same data the open-trade charts use). Model trades keep their snapshot.
+  if((!candles || candles.length < 3) && symbol){
+    const r = await sb.from('trade_candles')
+      .select('date,open,high,low,close')
+      .eq('symbol', symbol)
+      .order('date', { ascending: true });
+    if(r.data && r.data.length >= 3){ candles = r.data; error = null; }
+  }
+
   if(error || !candles || candles.length < 3){
-    box.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">No chart snapshot for this trade.<br><span style="font-size:9px">(Only trades closed after this feature was added have snapshots.)</span></div>';
+    box.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">No chart data available for this trade yet.</div>';
     return;
   }
 
@@ -4729,6 +4752,12 @@ async function downloadClosedPDF(id){
     doc.text('MARKET BASECAMP', M+50, 34);
     doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(150,160,190);
     doc.text('Trade Archive', M+50, 50);
+    // Downloading user + date (right of brand band)
+    const _uname = (window.USER_NAME||'').toString();
+    const _ddate = new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+    if(_uname){ doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(235,238,250); doc.text(_uname, W-M, 30, { align:'right' }); }
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(150,160,190);
+    doc.text('Downloaded: '+_ddate, W-M, _uname?46:38, { align:'right' });
 
     // ── Title row: symbol (left) + Realised gain / % (right, opposite symbol) ──
     doc.setTextColor(20,20,20); doc.setFont('helvetica','bold'); doc.setFontSize(17);
@@ -4887,6 +4916,21 @@ async function downloadClosedPDF(id){
     doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(120,120,120);
     doc.text('© 2026 Trader Hikes. All rights reserved.', W/2, fy+FH-12, {align:'center'});
 
+    // Watermark for paid exports (faint, diagonal, every page)
+    if((window.USER_ROLE||'free')!=='free'){
+      let gs=null, gsr=null;
+      try{ gs=new doc.GState({opacity:0.06}); gsr=new doc.GState({opacity:1}); }catch(e){}
+      if(gs){
+        const pages=doc.internal.getNumberOfPages(), H=doc.internal.pageSize.getHeight();
+        for(let p=1;p<=pages;p++){
+          doc.setPage(p); doc.setGState(gs);
+          doc.setTextColor(92,111,251); doc.setFont('helvetica','bold'); doc.setFontSize(58);
+          doc.text('MARKET BASECAMP', W/2, H/2, { align:'center', angle:32 });
+          try{ doc.addImage(TH_LOGO_B64,'PNG', W/2-38, H/2-118, 76, 76); }catch(e){}
+          doc.setGState(gsr);
+        }
+      }
+    }
     doc.save(`${t.symbol}_${t.exit_date}_trade.pdf`);
     if(wasHidden && box){ box.style.display = 'none'; const b=document.getElementById('cbtn-'+id); if(b) b.innerHTML='📈 View Chart'; }
   } catch(err){
