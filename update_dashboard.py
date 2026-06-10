@@ -839,15 +839,29 @@ def fetch_fii_dii(nifty_close=None):
         print(f"   ⚠️  FII/DII unavailable ({last_err}) — skipping write (keeping existing data)\n")
         return
 
+    def _num(v):
+        try:
+            t = str(v).replace(",", "").strip()
+            return float(t) if t not in ("", "-", "None") else None
+        except (TypeError, ValueError):
+            return None
+
     fii_net = dii_net = None
     for row in data:
-        cat = str(row.get("category", "")).upper()
-        # netPurchases can be a number or string; netSales is the fallback key
-        raw_val = row.get("netPurchases", row.get("netSales", None))
-        try:
-            val = float(str(raw_val).replace(",", "")) if raw_val not in (None, "", "-") else None
-        except (TypeError, ValueError):
-            val = None
+        cat  = str(row.get("category", "")).upper()
+        # TRUE net = gross buy − gross sell (sign-correct: sell-heavy → negative).
+        # NSE's fiidiiTradeReact exposes buyValue/sellValue; older feeds use
+        # netValue. We deliberately do NOT trust "netPurchases" alone — it is a
+        # purchases-side (positive) figure and was the cause of FII selling
+        # showing up as a large positive inflow.
+        buy  = _num(row.get("buyValue",  row.get("buyAmount")))
+        sell = _num(row.get("sellValue", row.get("sellAmount")))
+        if buy is not None and sell is not None:
+            val = buy - sell
+        else:
+            val = _num(row.get("netValue",
+                       row.get("netPurchaseSales",
+                       row.get("netPurchases", row.get("netSales")))))
         if val is None:
             continue
         if "FII" in cat or "FPI" in cat:
