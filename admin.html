@@ -3193,6 +3193,33 @@ function applyAdminOtSort() {
 
 // ════════════════════════════════════════════
 
+function toggleWlHistory(){
+  const b=document.getElementById('wlh-body'), c=document.getElementById('wlh-caret');
+  if(!b) return;
+  const open = b.style.display==='none';
+  b.style.display = open ? 'block' : 'none';
+  if(c) c.style.transform = open ? 'rotate(180deg)' : 'none';
+}
+
+async function loadWlBreadthHistory(){
+  const tb=document.getElementById('wlh-rows'); if(!tb) return;
+  let data=null;
+  try { ({ data } = await sb.from('watchlist_breadth_history').select('*').order('snapshot_date',{ascending:false}).limit(120)); } catch(e){}
+  if(!data || !data.length){ tb.innerHTML='<tr><td colspan="5" style="padding:14px;color:var(--muted);text-align:center">No history yet.</td></tr>'; return; }
+  tb.innerHTML = data.map(r=>{
+    const pct = r.total_stocks ? Math.round((r.in_buy_range||0)/r.total_stocks*100) : 0;
+    const pc  = pct>=25 ? '#2ed8a0' : pct>=10 ? '#ffb340' : '#ff5d7a';
+    const d   = new Date(r.snapshot_date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+    return `<tr style="border-top:1px solid var(--bdr)">
+      <td style="padding:9px 12px;color:var(--text);font-family:var(--fm)">${d}</td>
+      <td style="padding:9px 12px;text-align:right;font-family:var(--fm)">${r.total_stocks??'\u2014'}</td>
+      <td style="padding:9px 12px;text-align:right;font-family:var(--fm);color:#2ed8a0">${r.in_buy_range??'\u2014'}</td>
+      <td style="padding:9px 12px;text-align:right;font-family:var(--fm);color:${pc};font-weight:700">${pct}%</td>
+      <td style="padding:9px 12px;text-align:right;font-family:var(--fm);color:var(--blue-lt)">${r.avg_rs_rating??'\u2014'}</td>
+    </tr>`;
+  }).join('');
+}
+
 async function loadWatchlistAdmin() {
   // Load stats from watchlist_enriched
   const { data: enriched } = await sb.from('watchlist_enriched').select('*').order('rs_rating', { ascending: false });
@@ -3227,6 +3254,22 @@ async function loadWatchlistAdmin() {
   if(_s('wl-stat-buy'))   _s('wl-stat-buy').textContent   = inBuy || '—';
   if(_s('wl-stat-date'))  _s('wl-stat-date').textContent  = lastDt;
   if(_s('wl-stat-rs'))    _s('wl-stat-rs').textContent    = avgRS || '—';
+
+  // Snapshot today's breadth numbers (history of how many names clear the filter).
+  // Keyed by date + upserted, so re-viewing or re-uploading the same day just updates it.
+  try {
+    if (total > 0) {
+      await sb.from('watchlist_breadth_history').upsert({
+        snapshot_date: new Date().toISOString().slice(0,10),
+        total_stocks:  total,
+        in_buy_range:  inBuy,
+        avg_rs_rating: avgRS,
+        enriched_date: (lastDt && lastDt !== '\u2014') ? lastDt : null,
+        updated_at:    new Date().toISOString()
+      }, { onConflict: 'snapshot_date' });
+    }
+  } catch(e) { /* table may not exist yet — run watchlist_breadth_history.sql */ }
+  loadWlBreadthHistory();
 
   // Merge raw + enriched for table
   const enrichedMap = {};
@@ -3613,6 +3656,31 @@ async function wlUploadCSV() {
       <div style="background:var(--card);border:1px solid var(--bdr);border-radius:10px;padding:14px;text-align:center">
         <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Avg RS Rating</div>
         <div style="font-size:24px;font-weight:800;font-family:var(--fm);color:var(--blue-lt)" id="wl-stat-rs">—</div>
+      </div>
+    </div>
+
+    <!-- Watchlist Breadth History (dropdown) -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-hdr" style="cursor:pointer;flex-wrap:wrap;gap:8px" onclick="toggleWlHistory()">
+        <span class="card-title">Watchlist Breadth History</span>
+        <span style="font-size:10px;color:var(--muted);font-weight:400">How many names clear your watchlist &amp; buy-range filter over time</span>
+        <span id="wlh-caret" style="margin-left:auto;color:var(--muted);font-size:13px;transition:transform .2s">&#9662;</span>
+      </div>
+      <div id="wlh-body" style="display:none">
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead>
+              <tr style="color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.08em">
+                <th style="padding:8px 12px;text-align:left">Date</th>
+                <th style="padding:8px 12px;text-align:right">Total</th>
+                <th style="padding:8px 12px;text-align:right">In Buy Range</th>
+                <th style="padding:8px 12px;text-align:right">Buy %</th>
+                <th style="padding:8px 12px;text-align:right">Avg RS</th>
+              </tr>
+            </thead>
+            <tbody id="wlh-rows"><tr><td colspan="5" style="padding:14px;color:var(--muted);text-align:center">No history yet.</td></tr></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
