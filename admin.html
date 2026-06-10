@@ -1654,7 +1654,7 @@ async function loadOpenTrades() {
   const tbody = document.getElementById('open-trades-tbody');
   tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:20px">Loading...</td></tr>';
   const { data, error } = await sb
-    .from('open_trades').select('*').order('entry_date', { ascending: false });
+    .from('open_trades').select('*').eq('is_model', true).order('entry_date', { ascending: false });
   if (error) { tbody.innerHTML = `<tr><td colspan="13" style="color:var(--red);padding:16px">${error.message}</td></tr>`; return; }
   if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:20px">No open trades yet.</td></tr>'; return; }
   _adminOtData = data; // cache for sort
@@ -1710,7 +1710,7 @@ async function loadOpenTradesForSelect() {
 
   const { data } = await sb
     .from('open_trades').select('id,symbol,company_name,remaining_qty,avg_entry_price,entry_price,quantity')
-    .order('entry_date', { ascending: false });
+    .eq('is_model', true).order('entry_date', { ascending: false });
   if(!data) return;
 
   const opts = '<option value="">— select an open trade —</option>' +
@@ -2754,7 +2754,7 @@ async function loadAllFinalExits() {
   tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px">Loading\u2026</td></tr>';
 
   const { data: cts, error } = await sb.from('closed_trades')
-    .select('*').order('exit_date', { ascending: false });
+    .select('*').eq('is_model', true).order('exit_date', { ascending: false });
   if (error) { tbody.innerHTML = `<tr><td colspan="10" style="color:var(--red);padding:16px">${error.message}</td></tr>`; return; }
   if (!cts || cts.length === 0) {
     tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px">No closed trades yet.</td></tr>';
