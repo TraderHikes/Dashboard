@@ -373,7 +373,7 @@ body{overflow-x:hidden;
 .msc-score .msc-of{font-size:18px;font-weight:600;color:var(--muted);letter-spacing:0}
 .msc-signal{font-size:15px;font-weight:800;letter-spacing:.2px;margin-top:4px}
 .msc-rt{display:flex;gap:10px;width:100%;max-width:280px;margin-top:2px}
-.msc-rt>div{flex:1;background:var(--card2);border:1px solid var(--bdr);border-radius:10px;padding:9px 12px;text-align:center}
+.msc-rt>div{flex:1;background:var(--card2);border:1px solid rgba(255,255,255,.55);border-radius:10px;padding:9px 12px;text-align:center;box-shadow:0 0 12px rgba(255,255,255,.22),inset 0 1px 0 rgba(255,255,255,.12)}
 .msc-rt-l{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:700;margin-bottom:3px}
 .msc-rt-v{font-size:20px;font-weight:800;font-family:var(--fm);color:var(--text2)}
 .msc-rt-sub{display:block;font-size:8.5px;color:var(--muted);margin-top:1px;letter-spacing:.3px}
@@ -395,6 +395,15 @@ body{overflow-x:hidden;
 .msc-rationale-btn.open .msc-rat-arrow{transform:rotate(180deg)}
 .msc-rationale{max-height:0;overflow:hidden;transition:max-height .35s ease;background:var(--card2);border-top:0 solid var(--bdr)}
 .msc-rationale.open{max-height:320px;border-top:1px solid var(--bdr)}
+#msh-wrap{max-height:0;overflow:hidden;transition:max-height .32s ease}
+.msh-inner{max-height:420px;overflow-y:auto;border-top:1px solid var(--bdr)}
+.msh-table{width:100%;border-collapse:collapse;font-size:12px}
+.msh-table thead th{padding:9px 14px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);position:sticky;top:0;background:var(--card2);z-index:1}
+.msh-table thead th:last-child,.msh-table tbody td:last-child{text-align:right}
+.msh-table tbody tr{border-top:1px solid var(--bdr)}
+.msh-table tbody tr:hover{background:rgba(255,255,255,.02)}
+.msh-check{background:linear-gradient(180deg,rgba(92,111,251,.34),rgba(143,163,255,.08));border:1px solid rgba(143,163,255,.5);color:#fff;font-size:10.5px;font-weight:700;padding:4px 16px;border-radius:7px;cursor:pointer;font-family:var(--f);transition:all .15s}
+.msh-check:hover{box-shadow:0 0 12px rgba(92,111,251,.4);transform:translateY(-1px)}
 .msc-rationale-inner{padding:16px 24px 18px}
 .msc-rationale p{font-size:13px;line-height:1.62;color:var(--text);margin:0}
 .msc-rat-foot{display:flex;align-items:center;gap:7px;margin-top:11px;font-size:10px;color:var(--muted);letter-spacing:.2px}
@@ -1439,6 +1448,18 @@ canvas.tc{display:block;width:100%;height:100%}
         <div class="msc-rat-foot" id="msc-rat-foot"><span class="dot"></span><span>Generated from live breadth data</span></div>
       </div>
     </div>
+    <button class="msc-rationale-btn" id="msh-btn" onclick="toggleScoreHistory()">
+      <span>Market Score History</span>
+      <span class="msc-rat-arrow" id="msh-arrow">&#9662;</span>
+    </button>
+    <div id="msh-wrap">
+      <div class="msh-inner">
+        <table class="msh-table">
+          <thead><tr><th>Date</th><th>Market Score</th><th>Market Breadth Details</th></tr></thead>
+          <tbody id="msh-rows"><tr><td colspan="3" style="padding:16px;text-align:center;color:var(--muted)">Open to load history\u2026</td></tr></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <!-- ── Row 1: 3 EMA Cards ── -->
@@ -2220,6 +2241,17 @@ canvas.tc{display:block;width:100%;height:100%}
     <div class="sb-pmt"><span class="sb-pix" id="sb-pix"></span><span class="sb-pch" id="sb-pch"></span></div>
   </div>
   <div class="sb-pb" id="sb-pb"></div>
+</div>
+
+<!-- Market Score History detail drawer (mirrors the sectoral side panel) -->
+<div class="sb-ov" id="msh-ov" onclick="MSH.close()"></div>
+<div class="sb-pan" id="msh-pan">
+  <div class="sb-pph">
+    <div class="sb-pcl" onclick="MSH.close()">\u2715</div>
+    <div class="sb-pnm" id="msh-pnm">Market Score</div>
+    <div class="sb-pmt"><span class="sb-pix" id="msh-pdate"></span><span class="sb-pch" id="msh-psig"></span></div>
+  </div>
+  <div class="sb-pb" id="msh-pb"></div>
 </div>
 <div class="pane" id="pane-charts">
   <div class="ch-wrap wm-focused" id="ch-wrap">
@@ -5810,6 +5842,93 @@ function mscFallbackRationale(sig, comp, R, T, P){
   if(strong.length) s += ` Support is coming from ${join(strong)}.`;
   if(weak.length)   s += ` The main drag is ${join(weak)}.`;
   return s;
+}
+
+// ── Market Score History (daily snapshots from market_breadth) ──
+function mshBreakdownHTML(d){
+  const bd = d.score_breakdown || {};
+  const P  = bd.pillars || {};
+  const comp = d.composite_smoothed!=null?Math.round(d.composite_smoothed):'\u2014';
+  const sig  = d.market_signal||'\u2014';
+  const col  = signalCol(sig);
+  const R = (bd.regime!=null)?Math.round(bd.regime):(d.regime_score!=null?Math.round(d.regime_score):'\u2014');
+  const T = (bd.tactical!=null)?Math.round(bd.tactical):(d.tactical_score!=null?Math.round(d.tactical_score):'\u2014');
+  const groups = [
+    { title:'Regime \u00b7 slow', rows:[['above200ema','200 EMA breadth'],['key_indices','Key-index trend'],['above50ema','50 EMA breadth']] },
+    { title:'Tactical \u00b7 fast', rows:[['above21ema','21 EMA breadth'],['advance_decline','Advance / Decline'],['high_low_52w','52-week H / L'],['prev_day_hl','Prev-day H / L'],['thrust','Breadth thrust'],['fii_dii','FII / DII flow']] },
+  ];
+  const pill = groups.map(g=>{
+    const rows = g.rows.map(([k,label])=>{
+      const v=(P[k]!=null)?+P[k]:50, c=mscCol(v);
+      return `<div class="msc-prow"><span class="msc-pl">${label}</span><span class="msc-pbar"><i style="width:${Math.max(2,Math.min(100,v))}%;background:${c}"></i></span><span class="msc-pv" style="color:${c}">${Math.round(v)}</span></div>`;
+    }).join('');
+    return `<div style="margin-bottom:12px"><div class="msc-pgroup-h">${g.title}</div>${rows}</div>`;
+  }).join('');
+  const vetoes = (bd.vetoes&&bd.vetoes.length)
+    ? `<div style="margin-top:8px;display:flex;flex-direction:column;gap:5px">${bd.vetoes.map(v=>`<div style="font-size:10.5px;color:var(--red);display:flex;gap:7px;align-items:center"><span style="width:5px;height:5px;border-radius:50%;background:var(--red);flex-shrink:0"></span>${esc(v)}</div>`).join('')}</div>` : '';
+  const cpct = (typeof comp==='number')?comp:0;
+  return `
+    <div><div class="sb-pl">Composite</div>
+      <div class="sb-gr"><div class="sb-sbig" style="color:${col}">${comp}</div>
+        <div class="sb-grt"><div style="font-size:9px;color:var(--muted);margin-bottom:5px">Score / 100 \u00b7 <span style="color:${col};font-weight:700">${esc(sig)}</span></div>
+          <div class="sb-gtk"><div class="sb-gfil" style="width:${cpct}%;background:${col}"></div></div>
+          <div class="sb-gticks"><span>0</span><span>BEAR</span><span>NEUTRAL</span><span>BULL</span><span>100</span></div>
+        </div></div>
+      <div class="msc-rt" style="margin-top:12px;max-width:none">
+        <div><span class="msc-rt-l">Regime</span><span class="msc-rt-v" style="color:${typeof R==='number'?mscCol(R):'var(--text2)'}">${R}</span><span class="msc-rt-sub">slow \u00b7 ceiling</span></div>
+        <div><span class="msc-rt-l">Tactical</span><span class="msc-rt-v" style="color:${typeof T==='number'?mscCol(T):'var(--text2)'}">${T}</span><span class="msc-rt-sub">fast \u00b7 timing</span></div>
+      </div>
+    </div>
+    <div><div class="sb-pl">Indicator Breakdown</div>${pill}${vetoes}</div>
+    ${d.score_rationale?`<div><div class="sb-pl">Rationale</div><div style="font-size:11.5px;color:var(--text2);line-height:1.6">${esc(d.score_rationale)}</div></div>`:''}`;
+}
+
+const MSH = (()=>{
+  let data = [];
+  async function load(){
+    const rowsEl = document.getElementById('msh-rows'); if(!rowsEl) return;
+    try{
+      const { data:d } = await sb.from('market_breadth')
+        .select('snapshot_date,composite_smoothed,market_signal,regime_score,tactical_score,score_breakdown,score_rationale')
+        .order('snapshot_date',{ascending:false}).limit(90);
+      data = (d||[]).filter(r=>r.composite_smoothed!=null);
+    }catch(e){ data=[]; }
+    if(!data.length){ rowsEl.innerHTML='<tr><td colspan="3" style="padding:16px;text-align:center;color:var(--muted)">No score history yet.</td></tr>'; return; }
+    rowsEl.innerHTML = data.map(r=>{
+      const c=Math.round(r.composite_smoothed), col=mscCol(c);
+      const dt=new Date(r.snapshot_date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+      return `<tr>
+        <td style="padding:10px 14px;font-family:var(--fm);color:var(--text)">${dt}</td>
+        <td style="padding:10px 14px;font-family:var(--fm);font-weight:800;color:${col}">${c}<span style="color:var(--muted);font-weight:400;font-size:10px"> \u00b7 ${esc(r.market_signal||'')}</span></td>
+        <td style="padding:10px 14px"><button class="msh-check" onclick="MSH.open('${r.snapshot_date}')">Check</button></td>
+      </tr>`;
+    }).join('');
+  }
+  function open(date){
+    const d = data.find(r=>String(r.snapshot_date)===String(date)); if(!d) return;
+    const dt = new Date(d.snapshot_date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+    const sig = d.market_signal||'\u2014', col=signalCol(sig);
+    const pd=document.getElementById('msh-pdate'); if(pd) pd.textContent=dt;
+    const ps=document.getElementById('msh-psig'); if(ps){ ps.textContent=sig; ps.style.color=col; }
+    const pb=document.getElementById('msh-pb'); if(pb) pb.innerHTML=mshBreakdownHTML(d);
+    document.getElementById('msh-ov').classList.add('open');
+    document.getElementById('msh-pan').classList.add('open');
+  }
+  function close(){
+    document.getElementById('msh-ov').classList.remove('open');
+    document.getElementById('msh-pan').classList.remove('open');
+  }
+  return { load, open, close };
+})();
+
+let _mshLoaded=false;
+function toggleScoreHistory(){
+  const w=document.getElementById('msh-wrap'), b=document.getElementById('msh-btn');
+  if(!w) return;
+  const opening = (w.style.maxHeight==='' || w.style.maxHeight==='0px');
+  w.style.maxHeight = opening ? '460px' : '0px';
+  if(b) b.classList.toggle('open', opening);
+  if(opening && !_mshLoaded){ _mshLoaded=true; MSH.load(); }
 }
 
 function renderMarketScore(d){
