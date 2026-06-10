@@ -2358,6 +2358,7 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
   if (email === ADMIN_EMAIL.toLowerCase()) document.getElementById('btn-admin').style.display = 'block';
 
   NAVUI.build(role);
+  if(role!=='admin'){ try{ MT.init(); MT.loadOpen(); }catch(e){} }
 })();
 
 /* ── SIGN OUT ── */
@@ -2386,7 +2387,7 @@ function sw(id){
 /* ── TWO-LEVEL NAV (role-aware) ── */
 const MSTP_URL='https://www.traderhikes.com';   // ← set exact MSTP enrolment link later
 const NAV=[
-  {key:'model',    label:'Model Swing Trader Portfolio', roles:['admin','paid','free'], lockFor:['free','paid'],
+  {key:'model',    label:'Model Portfolio', roles:['admin','paid','free'], lockFor:['free','paid'],
    lock:{kind:'course', title:'Learn live from the Model Swing Trader Portfolio',
          body:'This is the real book behind the Master Swing Trader Program — followed hands-on inside the course.',
          cta:'Explore the MSTP Course →', url:MSTP_URL},
@@ -2396,11 +2397,11 @@ const NAV=[
          body:'Unlock the full multi-indicator market score, breadth across every EMA, and sectoral rotation.',
          cta:'Unlock Full Access', url:MSTP_URL},
    subs:[{id:'breadth',label:'Market Breadth'},{id:'sectoral',label:'Sectoral Analysis'}]},
-  {key:'screener', label:'Leading Stocks Screener', roles:['admin','paid','free'], lockFor:['free'],
+  {key:'screener', label:'Leading Stocks', roles:['admin','paid','free'], lockFor:['free'],
    lock:{kind:'upgrade', title:'Leading Stocks Screener',
          body:'Unlock curated watchlists and chart scans of the market\'s leading stocks.',
          cta:'Unlock Full Access', url:MSTP_URL},
-   subs:[{id:'filter',label:'Watchlists'},{id:'charts',label:'Screen Charts'}]},
+   subs:[{id:'filter',label:'Watchlists'},{id:'charts',label:'Chart Scan'}]},
   {key:'desk',     label:'My Trading Desk', roles:['paid','free'], lockFor:[],
    subs:[{id:'mtmanager',label:'Trade Manager'},{id:'mtportfolio',label:'Portfolio'},{id:'mtclosed',label:'Closed Trades'}]},
 ];
@@ -2497,11 +2498,12 @@ const NAVUI=(()=>{
 window._hdr = { model:null, desk:null };
 function applyHeader(){
   const role=(window.USER_ROLE||'free');
-  const grp=window._curGroup||(role==='free'?'desk':'model');
-  const src=(grp==='desk'||role==='free') ? window._hdr.desk : window._hdr.model;
+  // Dashboard users (paid + free) always see their OWN trading-desk numbers in the
+  // header. Only admin sees the model portfolio's Deployed / Open P&L.
+  const src = (role==='admin') ? window._hdr.model : window._hdr.desk;
   const dep=document.getElementById('hdr-deployed'), pnl=document.getElementById('hdr-pnl');
   if(!dep||!pnl) return;
-  if(!src){ if(grp==='desk'){ dep.textContent='—'; pnl.textContent='—'; pnl.style.color='var(--muted)'; } return; }
+  if(!src){ dep.textContent='—'; pnl.textContent='—'; pnl.style.color='var(--muted)'; return; }
   dep.textContent=src.dep; pnl.textContent=src.pnl; pnl.style.color=src.col||'var(--muted)';
 }
 window.applyHeader=applyHeader;
