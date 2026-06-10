@@ -3255,20 +3255,6 @@ async function loadWatchlistAdmin() {
   if(_s('wl-stat-date'))  _s('wl-stat-date').textContent  = lastDt;
   if(_s('wl-stat-rs'))    _s('wl-stat-rs').textContent    = avgRS || '—';
 
-  // Snapshot today's breadth numbers (history of how many names clear the filter).
-  // Keyed by date + upserted, so re-viewing or re-uploading the same day just updates it.
-  try {
-    if (total > 0) {
-      await sb.from('watchlist_breadth_history').upsert({
-        snapshot_date: new Date().toISOString().slice(0,10),
-        total_stocks:  total,
-        in_buy_range:  inBuy,
-        avg_rs_rating: avgRS,
-        enriched_date: (lastDt && lastDt !== '\u2014') ? lastDt : null,
-        updated_at:    new Date().toISOString()
-      }, { onConflict: 'snapshot_date' });
-    }
-  } catch(e) { /* table may not exist yet — run watchlist_breadth_history.sql */ }
   loadWlBreadthHistory();
 
   // Merge raw + enriched for table
@@ -3398,6 +3384,32 @@ async function wlUploadCSV() {
 
   statusEl.textContent = `⏳ Uploading ${rows.length} stocks…`;
 
+  // ── Archive the OUTGOING list's breadth BEFORE replacing it ──
+  // By the time you upload a new list, the pipeline has already enriched the
+  // previous one, so its in_buy_range is accurate. Snapshot it now, keyed to the
+  // enrichment date it represents (not today), then proceed with the replace.
+  try {
+    const [{ data: prevRaw }, { data: prevEnr }] = await Promise.all([
+      sb.from('watchlist').select('rs_rating'),
+      sb.from('watchlist_enriched').select('in_buy_range,enriched_date')
+    ]);
+    const pTotal = prevRaw?.length || 0;
+    if (pTotal > 0 && prevEnr && prevEnr.length) {
+      const pBuy   = prevEnr.filter(r => r.in_buy_range).length;
+      const pAvg   = Math.round(prevRaw.reduce((a,r)=>a+(r.rs_rating||0),0)/pTotal);
+      const eDates = prevEnr.map(r=>r.enriched_date).filter(Boolean).sort().reverse();
+      const eDate  = eDates[0] || new Date().toISOString().slice(0,10);
+      await sb.from('watchlist_breadth_history').upsert({
+        snapshot_date: eDate,
+        total_stocks:  pTotal,
+        in_buy_range:  pBuy,
+        avg_rs_rating: pAvg,
+        enriched_date: eDate,
+        updated_at:    new Date().toISOString()
+      }, { onConflict: 'snapshot_date' });
+    }
+  } catch(e) { /* table may not exist yet — run watchlist_breadth_history.sql */ }
+
   // Test single row first to detect schema issues early
   const testRow = rows[0];
   const { error: testErr } = await sb.from('watchlist')
@@ -3452,7 +3464,7 @@ async function wlUploadCSV() {
     setTimeout(()=>{ alertOk.style.display='none'; }, 8000);
   }
   toast(`✓ Watchlist: ${uploaded} stocks uploaded`);
-  await loadWatchlistAdmin(); // reloads table + updates history bar
+  await loadWatchlistAdmin(); // reloads table + history
 }
 
 </script>
