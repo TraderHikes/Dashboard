@@ -963,15 +963,10 @@ canvas.tc{display:block;width:100%;height:100%}
     <div class="hdr-stat"><div class="hdr-stat-l">Deployed</div><div class="hdr-stat-v" id="hdr-deployed">—</div></div>
     <div class="hdr-sep"></div>
     <div class="hdr-stat"><div class="hdr-stat-l">Open P&L</div><div class="hdr-stat-v" id="hdr-pnl" style="color:var(--green)">—</div></div>
-    <div class="hdr-sep"></div>
-    <div class="hdr-stat"><div class="hdr-stat-l">Signed in as</div><div class="hdr-stat-v" id="hdr-user" style="font-size:11px">—</div></div>
   </div>
   <div class="hdr-r">
     <div class="live-pill"><div class="ldot"></div>LIVE NSE</div>
     <div class="htime" id="clk">10:34:52 IST</div>
-    <button class="btn-set" id="btn-admin" style="display:none"
-      onclick="window.location.href='https://dashboard.traderhikes.com/admin.html'">⚙ Admin</button>
-    <button class="btn-set" id="btn-signout" onclick="signOut()">Sign Out</button>
   </div>
 </header>
 
@@ -1054,10 +1049,67 @@ canvas.tc{display:block;width:100%;height:100%}
 .lb-dot{width:6px;height:6px;border-radius:50%;background:var(--amber);margin-top:6px;flex-shrink:0;box-shadow:0 0 6px var(--amber)}
 .lock-cta-gold{background:linear-gradient(135deg,#ffc861,#ff9b3d);color:#241600;box-shadow:0 6px 22px rgba(255,179,64,.40)}
 </style>
-<nav class="nav2">
-  <div class="nav2-groups" id="nav-groups"></div>
-  <div class="nav2-subs" id="nav-subs"></div>
-</nav>
+<style>
+@media(min-width:901px){ body{padding-left:96px} .hdr{margin-left:-96px;width:calc(100% + 96px)} }
+.side{position:fixed;left:0;top:62px;bottom:0;width:96px;background:var(--bg2);border-right:1px solid var(--bdr);display:flex;flex-direction:column;justify-content:space-between;gap:10px;padding:12px 8px;z-index:195;overflow-y:auto}
+.side-nav{display:flex;flex-direction:column;gap:8px}
+.side .ng-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:11px 4px;border-radius:13px;color:var(--muted);cursor:pointer;border:1px solid transparent;transition:all .16s;text-align:center;line-height:1.15;background:none;box-shadow:none;white-space:normal}
+.side .ng-btn .ng-ic{width:23px;height:23px;display:flex;align-items:center;justify-content:center}
+.side .ng-btn .ng-ic svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.side .ng-btn .ng-lbl{font-size:9.5px;font-weight:600;letter-spacing:.01em}
+.side .ng-btn:hover{color:var(--text2);background:var(--card2)}
+.side .ng-btn.active{color:#fff;background:linear-gradient(160deg,rgba(92,111,251,.34),rgba(92,111,251,.10));border-color:rgba(143,163,255,.5);box-shadow:0 0 0 1px rgba(92,111,251,.25),0 6px 18px rgba(92,111,251,.28)}
+.side .ng-btn.active .ng-ic{color:var(--blue-lt)}
+.side .ng-btn.active::after{display:none}
+.side-acct{position:relative;flex-shrink:0}
+.acct-btn{display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 4px;border-radius:13px;cursor:pointer;transition:all .16s}
+.acct-btn:hover{background:var(--card2)}
+.acct-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--blue-lt));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;box-shadow:0 2px 10px rgba(92,111,251,.5);flex-shrink:0}
+.acct-av.lg{width:40px;height:40px;font-size:16px}
+.acct-nm{font-size:9px;color:var(--muted);max-width:84px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+.acct-pop{position:absolute;left:calc(100% + 12px);bottom:0;width:236px;background:var(--card);border:1px solid var(--blue-dim);border-radius:14px;box-shadow:0 16px 48px rgba(0,0,0,.55);padding:8px;display:none;z-index:400}
+.acct-pop.open{display:block}
+.acct-hd{display:flex;align-items:center;gap:11px;padding:9px 9px 11px}
+.acct-pop-nm{font-size:13px;font-weight:700;color:var(--white)}
+.acct-pop-sub{font-size:10px;color:var(--muted);margin-top:1px}
+.acct-div{height:1px;background:var(--bdr);margin:4px 6px}
+.acct-item{display:flex;align-items:center;gap:11px;padding:10px 10px;border-radius:9px;font-size:12.5px;font-weight:600;color:var(--text2);cursor:pointer;transition:all .14s}
+.acct-item:hover{background:var(--card2);color:var(--white)}
+.acct-item .ai-ic{width:18px;text-align:center;color:var(--blue-lt);font-size:14px}
+.acct-item.danger{color:var(--red)}.acct-item.danger .ai-ic{color:var(--red)}
+.acct-item.danger:hover{background:rgba(255,93,122,.12);color:var(--red)}
+.acct-toggle{margin-left:auto;background:var(--blue);color:#fff;font-size:10px;font-weight:700;padding:3px 11px;border-radius:20px}
+.subbar{background:var(--bg2);border-bottom:1px solid var(--bdr);position:sticky;top:62px;z-index:180}
+.subbar .nav2-subs{display:flex;gap:6px;padding:9px 24px;flex-wrap:wrap;justify-content:flex-start;border-top:none;background:transparent}
+body.theme-light{--bg:#eef2f8;--bg2:#e6ebf4;--card:#ffffff;--card2:#f5f8fc;--card3:#eef2f9;--bdr:#e0e6f0;--bdr2:#d2dae8;--bdr3:#c5cee0;--text:#16203a;--text2:#43507a;--muted:#76819c;--white:#0e1626}
+@media(max-width:900px){
+  .side{position:static;top:auto;width:auto;flex-direction:row;align-items:center;border-right:none;border-bottom:1px solid var(--bdr);justify-content:flex-start;gap:6px;padding:8px 12px;overflow-x:auto;overflow-y:hidden}
+  .side-nav{flex-direction:row;gap:6px}
+  .side .ng-btn{flex-direction:row;gap:7px;padding:9px 12px;white-space:nowrap}
+  .side .ng-btn .ng-lbl{font-size:11.5px}
+  .side-acct{margin-left:auto}
+  .acct-pop{left:auto;right:0;bottom:auto;top:calc(100% + 8px)}
+  .hm-wrap{width:auto !important;left:auto !important;transform:none !important}
+}
+</style>
+<aside class="side">
+  <div class="side-nav" id="nav-groups"></div>
+  <div class="side-acct">
+    <div class="acct-btn" onclick="toggleAcct(event)">
+      <div class="acct-av" id="acct-av">A</div>
+      <div class="acct-nm" id="hdr-user">—</div>
+    </div>
+    <div class="acct-pop" id="acct-pop">
+      <div class="acct-hd"><div class="acct-av lg" id="acct-av2">A</div><div><div class="acct-pop-nm" id="acct-pop-nm">—</div><div class="acct-pop-sub">Account</div></div></div>
+      <div class="acct-div"></div>
+      <div class="acct-item" id="acct-admin" style="display:none" onclick="window.location.href='https://dashboard.traderhikes.com/admin.html'"><span class="ai-ic">&#9881;</span> Admin Panel</div>
+      <div class="acct-item" onclick="toggleTheme()"><span class="ai-ic">&#9680;</span> Theme <span class="acct-toggle"><span id="theme-state">Dark</span></span></div>
+      <div class="acct-div"></div>
+      <div class="acct-item danger" onclick="signOut()"><span class="ai-ic">&#9211;</span> Sign Out</div>
+    </div>
+  </div>
+</aside>
+<nav class="subbar"><div class="nav2-subs" id="nav-subs"></div></nav>
 
 <div class="wrap">
 
@@ -2255,7 +2307,7 @@ canvas.tc{display:block;width:100%;height:100%}
 </div>
 <div class="pane" id="pane-heatmap">
 <style>
-.hm-wrap{position:relative;left:50%;transform:translateX(-50%);width:98vw;max-width:1820px;padding:14px 20px}
+.hm-wrap{position:relative;left:50%;transform:translateX(-50%);width:calc(100vw - 124px);max-width:1820px;padding:14px 20px}
 .hm-card{background:var(--card);border:1px solid var(--blue-dim);border-radius:14px;box-shadow:0 0 0 1px rgba(92,111,251,.16),0 10px 34px rgba(0,0,0,.4);overflow:hidden}
 .hm-toolbar{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--bdr);flex-wrap:wrap;min-height:54px}
 .hm-title{font-family:var(--f);font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--white)}
@@ -2398,7 +2450,13 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
     || session.user.user_metadata?.name || email.split('@')[0];
   document.getElementById('hdr-user').textContent = displayName;
   window.USER_NAME = displayName;
-  if (email === ADMIN_EMAIL.toLowerCase()) document.getElementById('btn-admin').style.display = 'block';
+  if (email === ADMIN_EMAIL.toLowerCase()) { const a=document.getElementById('acct-admin'); if(a) a.style.display='flex'; }
+  (function(){
+    const ini=((displayName||'A').trim().charAt(0)||'A').toUpperCase();
+    const av=document.getElementById('acct-av'), av2=document.getElementById('acct-av2'), pn=document.getElementById('acct-pop-nm');
+    if(av) av.textContent=ini; if(av2) av2.textContent=ini; if(pn) pn.textContent=displayName;
+    try{ if(localStorage.getItem('mb-theme')==='light'){ document.body.classList.add('theme-light'); const ts=document.getElementById('theme-state'); if(ts) ts.textContent='Light'; } }catch(e){}
+  })();
 
   NAVUI.build(role);
   if(role!=='admin'){ try{ MT.init(); MT.loadOpen(); }catch(e){} }
@@ -2409,6 +2467,9 @@ async function signOut() {
   await sb.auth.signOut();
   window.location.href = LOGIN_URL;
 }
+function toggleAcct(e){ if(e) e.stopPropagation(); const p=document.getElementById('acct-pop'); if(p) p.classList.toggle('open'); }
+document.addEventListener('click', e=>{ const p=document.getElementById('acct-pop'); if(p && p.classList.contains('open') && !e.target.closest('.side-acct')) p.classList.remove('open'); });
+function toggleTheme(){ const on=document.body.classList.toggle('theme-light'); const ts=document.getElementById('theme-state'); if(ts) ts.textContent=on?'Light':'Dark'; try{ localStorage.setItem('mb-theme', on?'light':'dark'); }catch(e){} }
 
 /* ── CLOCK ── */
 const clkEl=document.getElementById('clk');
@@ -2567,6 +2628,12 @@ const NAV=[
   {key:'desk',     label:'My Trading Desk', roles:['paid','free'], lockFor:[],
    subs:[{id:'mtmanager',label:'Trade Manager'},{id:'mtportfolio',label:'Portfolio'},{id:'mtclosed',label:'Closed Trades'}]},
 ];
+const NAV_ICONS={
+  model:'<svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 12h18"/></svg>',
+  market:'<svg viewBox="0 0 24 24"><path d="M3 12h3l3-8 4 16 3-8h5"/></svg>',
+  screener:'<svg viewBox="0 0 24 24"><path d="M3 17l5-5 4 4 8-9"/><path d="M16 7h5v5"/></svg>',
+  desk:'<svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 3v4h6V3"/><path d="M8 12h8M8 16h5"/></svg>'
+};
 const NAVUI=(()=>{
   let role='free', curGroup=null;
   const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -2576,7 +2643,7 @@ const NAVUI=(()=>{
     const gs=vis();
     document.getElementById('nav-groups').innerHTML = gs.map(g=>{
       const locked=g.lockFor.includes(role);
-      return `<div class="ng-btn${locked?' locked':''}" data-g="${g.key}" onclick="NAVUI.selectGroup('${g.key}')">${esc(g.label)}</div>`;
+      return `<div class="ng-btn${locked?' locked':''}" data-g="${g.key}" onclick="NAVUI.selectGroup('${g.key}')" title="${esc(g.label)}"><span class="ng-ic">${NAV_ICONS[g.key]||''}</span><span class="ng-lbl">${esc(g.label)}</span></div>`;
     }).join('');
     selectGroup(role==='admin' ? 'model' : role==='paid' ? 'market' : 'desk');
   }
