@@ -2255,15 +2255,15 @@ canvas.tc{display:block;width:100%;height:100%}
 </div>
 <div class="pane" id="pane-heatmap">
 <style>
-.hm-wrap{padding:16px 20px}
+.hm-wrap{position:relative;left:50%;transform:translateX(-50%);width:98vw;max-width:1820px;padding:14px 20px}
 .hm-card{background:var(--card);border:1px solid var(--blue-dim);border-radius:14px;box-shadow:0 0 0 1px rgba(92,111,251,.16),0 10px 34px rgba(0,0,0,.4);overflow:hidden}
-.hm-bar{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--bdr);flex-wrap:wrap}
+.hm-toolbar{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--bdr);flex-wrap:wrap;min-height:54px}
 .hm-title{font-family:var(--f);font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--white)}
 .hm-pills{display:flex;gap:6px}
 .hm-pill{padding:5px 16px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--bdr2);background:transparent;color:var(--muted);transition:all .18s;font-family:var(--fm)}
 .hm-pill.on{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 0 12px rgba(92,111,251,.45)}
 .hm-meta{margin-left:auto;font-size:10px;color:var(--muted);font-family:var(--fm)}
-.hm-canvas{position:relative;width:100%;height:640px;overflow:hidden;background:var(--bg)}
+.hm-canvas{position:relative;width:100%;height:700px;overflow:hidden;background:var(--bg)}
 .hm-sector{position:absolute;overflow:hidden}
 .hm-sector-lbl{position:absolute;top:0;left:0;right:0;height:17px;line-height:17px;padding:0 7px;font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text2);background:rgba(7,11,23,.5);font-family:var(--f);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:2;pointer-events:none}
 .hm-tile{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;border:1px solid rgba(7,11,23,.6);cursor:default;transition:filter .12s}
@@ -2273,10 +2273,15 @@ canvas.tc{display:block;width:100%;height:100%}
 .hm-legend{display:flex;align-items:center;gap:3px;padding:10px 18px;border-top:1px solid var(--bdr);font-family:var(--fm);font-size:9px;color:var(--muted)}
 .hm-legend i{width:26px;height:10px;display:inline-block;border-radius:2px}
 .hm-empty{padding:70px 20px;text-align:center;color:var(--muted);font-size:13px}
+#hm-tip{position:fixed;display:none;z-index:9999;pointer-events:none;background:rgba(10,15,28,.97);border:1px solid var(--blue-dim);box-shadow:0 8px 28px rgba(0,0,0,.55);border-radius:10px;padding:10px 13px;font-family:var(--f);min-width:150px}
+.hm-tip-sym{font-family:var(--fm);font-weight:800;color:#fff;font-size:13px;letter-spacing:.02em}
+.hm-tip-co{font-size:10px;color:var(--muted);margin:1px 0 7px;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hm-tip-row{display:flex;gap:12px;font-family:var(--fm);font-size:11px;color:var(--text2);align-items:center}
+.hm-tip-row b{color:var(--white);font-weight:700}
 </style>
   <div class="hm-wrap">
     <div class="hm-card">
-      <div class="hm-bar">
+      <div class="hm-toolbar">
         <span class="hm-title">Market Heatmap</span>
         <div class="hm-pills">
           <div class="hm-pill on" id="hm-p50"  onclick="setHeatmapIndex('nifty50')">Nifty 50</div>
@@ -2288,6 +2293,7 @@ canvas.tc{display:block;width:100%;height:100%}
       <div class="hm-legend" id="hm-legend"></div>
     </div>
   </div>
+  <div id="hm-tip"></div>
 </div>
 
 <div class="pane" id="pane-charts">
@@ -2411,14 +2417,33 @@ setInterval(tick,1000);tick();
 
 /* ── PANE SWITCH ── */
 /* ── MARKET HEATMAP (squarified treemap · sector-grouped · cap-sized · %-colored) ── */
-let _hmData=null, _hmIndex='nifty50', _hmLoaded=false;
+let _hmData=null, _hmIndex='nifty50', _hmLoaded=false, _hmTipReady=false;
+function hmCap(mc){ if(!mc||mc<=0) return '—'; const cr=mc/1e7; return cr>=1e5 ? '₹'+(cr/1e5).toFixed(2)+' L Cr' : '₹'+Math.round(cr).toLocaleString('en-IN')+' Cr'; }
+function hmTipInit(){
+  if(_hmTipReady) return;
+  const cv=document.getElementById('hm-canvas'), tip=document.getElementById('hm-tip');
+  if(!cv||!tip) return; _hmTipReady=true;
+  cv.addEventListener('mousemove',e=>{
+    const t=e.target.closest('.hm-tile');
+    if(!t){ tip.style.display='none'; return; }
+    const pct=parseFloat(t.dataset.p||'0'), col=pct>=0?'#15cd7b':'#f63e4f';
+    tip.innerHTML=`<div class="hm-tip-sym">${t.dataset.s}</div>`+(t.dataset.c?`<div class="hm-tip-co">${t.dataset.c}</div>`:'')+`<div class="hm-tip-row"><span>\u20b9<b>${t.dataset.pr}</b></span><span>${t.dataset.mc}</span><span style="color:${col};font-weight:700">${pct>=0?'+':''}${pct.toFixed(2)}%</span></div>`;
+    tip.style.display='block';
+    const pad=14, r=tip.getBoundingClientRect();
+    let x=e.clientX+pad, y=e.clientY+pad;
+    if(x+r.width>window.innerWidth) x=e.clientX-r.width-pad;
+    if(y+r.height>window.innerHeight) y=e.clientY-r.height-pad;
+    tip.style.left=x+'px'; tip.style.top=y+'px';
+  });
+  cv.addEventListener('mouseleave',()=>{ tip.style.display='none'; });
+}
 const _hmEsc=v=>(v==null?'':String(v)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 function hmColor(pct){
-  const t=Math.max(-1,Math.min(1,(pct||0)/3));     // clamp to ±3%
-  const base=[40,48,66];                            // neutral slate
-  const tgt = t>=0 ? [38,190,130] : [226,74,94];     // green / red
-  const k=Math.abs(t);
+  const t=Math.max(-1,Math.min(1,(pct||0)/3));         // clamp to ±3%
+  const k=Math.pow(Math.abs(t),0.72);                   // ease so small moves still show, big moves vivid
+  const base=[63,67,79];                                // neutral grey (0%)
+  const tgt = t>=0 ? [0,205,123] : [246,62,79];          // vivid green / red at the extremes
   return `rgb(${Math.round(base[0]+(tgt[0]-base[0])*k)},${Math.round(base[1]+(tgt[1]-base[1])*k)},${Math.round(base[2]+(tgt[2]-base[2])*k)})`;
 }
 
@@ -2452,6 +2477,7 @@ async function loadHeatmap(){
     catch(e){ _hmData=[]; }
     _hmLoaded=true;
   }
+  hmTipInit();
   requestAnimationFrame(renderHeatmap);
 }
 
@@ -2487,8 +2513,7 @@ function renderHeatmap(){
     tiles.forEach(t=>{
       const r=t.node._r, pct=+r.pct_change, col=hmColor(pct);
       const showSym=t.w>=38&&t.h>=22, showChg=t.w>=44&&t.h>=38, fs=Math.max(8,Math.min(13,Math.round(t.w/6)));
-      const tip=`${_hmEsc(r.symbol)} · ${_hmEsc(r.company_name||'')}\n${pct>=0?'+':''}${pct.toFixed(2)}%  ·  ₹${(+r.last_price||0).toLocaleString('en-IN')}`;
-      html+=`<div class="hm-tile" style="left:${t.x}px;top:${t.y}px;width:${Math.max(0,t.w-1)}px;height:${Math.max(0,t.h-1)}px;background:${col}" title="${tip}">`;
+      html+=`<div class="hm-tile" data-s="${_hmEsc(r.symbol)}" data-c="${_hmEsc(r.company_name||'')}" data-p="${pct}" data-pr="${(+r.last_price||0).toLocaleString('en-IN')}" data-mc="${_hmEsc(hmCap(+r.market_cap))}" style="left:${t.x}px;top:${t.y}px;width:${Math.max(0,t.w-1)}px;height:${Math.max(0,t.h-1)}px;background:${col}">`;
       if(showSym) html+=`<span class="hm-sym" style="font-size:${fs}px">${_hmEsc(r.symbol)}</span>`;
       if(showChg) html+=`<span class="hm-chg" style="font-size:${Math.max(7,fs-2)}px">${pct>=0?'+':''}${pct.toFixed(2)}%</span>`;
       html+=`</div>`;
@@ -2502,7 +2527,8 @@ function renderHeatmap(){
 
 function renderHmLegend(){
   const el=document.getElementById('hm-legend'); if(!el) return;
-  el.innerHTML='<span style="margin-right:7px">Daily change</span>'+[-3,-2,-1,0,1,2,3].map(p=>`<i style="background:${hmColor(p)}"></i>`).join('')+'<span style="margin-left:7px">\u22123%&nbsp;\u2192&nbsp;+3%</span>';
+  const stops=[-3,-2,-1,0,1,2,3];
+  el.innerHTML='<span style="margin-right:8px;letter-spacing:.04em">DAILY CHANGE</span>'+stops.map(p=>`<span style="display:inline-flex;flex-direction:column;align-items:center;gap:3px"><i style="background:${hmColor(p)}"></i><b style="font-size:8px;color:var(--muted);font-weight:600">${p>0?'+':''}${p}%</b></span>`).join('');
 }
 
 let _hmRz;
