@@ -191,7 +191,10 @@ def build_index_heatmap(n500_symbols):
 
     n500_meta = _fetch_index_csv("https://archives.nseindia.com/content/indices/ind_nifty500list.csv")
     n50_set   = set(_fetch_index_csv("https://archives.nseindia.com/content/indices/ind_nifty50list.csv").keys())
-    universe  = [s.replace(".NS", "") for s in (n500_symbols or [k + ".NS" for k in n500_meta.keys()])]
+    universe_raw = [s.replace(".NS", "") for s in (n500_symbols or [k + ".NS" for k in n500_meta.keys()])]
+    # Fetch Nifty 50 caps first so the 50-stock heatmap is fully market-cap sized
+    # after a single run; the rest of the 500 fill in over subsequent runs.
+    universe = sorted(universe_raw, key=lambda b: (0 if b in n50_set else 1))
 
     # ── Market-cap cache (refresh weekly, capped per run to avoid a 500-call spike) ──
     from datetime import datetime, timezone, timedelta
@@ -210,7 +213,7 @@ def build_index_heatmap(n500_symbols):
     except Exception as e:
         print(f"   ⚠️  cap cache read: {e}")
 
-    CAP_PER_RUN, refreshed = 60, 0
+    CAP_PER_RUN, refreshed = 150, 0
     for base in universe:
         if refreshed >= CAP_PER_RUN:
             break
