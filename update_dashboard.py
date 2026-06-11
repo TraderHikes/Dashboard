@@ -149,6 +149,113 @@ def fetch_nifty500_symbols():
         ]]
 
 
+def _now_iso():
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _fetch_index_csv(url):
+    """Return {BASE_SYMBOL: {'company':..., 'industry':...}} from an NSE index CSV.
+    NSE columns: Company Name, Industry, Symbol, Series, ISIN Code."""
+    out = {}
+    try:
+        r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=20)
+        r.raise_for_status()
+        df   = pd.read_csv(pd.io.common.BytesIO(r.content))
+        cols = {c.lower().strip(): c for c in df.columns}
+        symc = next((cols[k] for k in cols if "symbol"  in k), None)
+        comc = next((cols[k] for k in cols if "company" in k), None)
+        indc = next((cols[k] for k in cols if "industry" in k), None)
+        if not symc:
+            return out
+        for _, row in df.iterrows():
+            sym = str(row[symc]).strip()
+            if not sym or sym.lower() == "nan":
+                continue
+            out[sym] = {
+                "company":  str(row[comc]).strip() if comc and pd.notna(row[comc]) else sym,
+                "industry": str(row[indc]).strip() if indc and pd.notna(row[indc]) else "Other",
+            }
+    except Exception as e:
+        print(f"   ⚠️  index CSV fetch failed ({url.split('/')[-1]}): {e}")
+    return out
+
+
+def build_index_heatmap(n500_symbols):
+    """Per-stock heatmap data: % change (from breadth), sector + company (NSE CSV),
+    cached market cap (refreshed ~weekly), and Nifty 50 / 500 membership flags."""
+    print("🗺️  Building index heatmap...")
+    prices = globals().get("_HEATMAP_PRICES") or {}
+    if not prices:
+        print("   ⚠️  no per-stock moves (breadth didn't run) — skipping\n"); return
+
+    n500_meta = _fetch_index_csv("https://archives.nseindia.com/content/indices/ind_nifty500list.csv")
+    n50_set   = set(_fetch_index_csv("https://archives.nseindia.com/content/indices/ind_nifty50list.csv").keys())
+    universe  = [s.replace(".NS", "") for s in (n500_symbols or [k + ".NS" for k in n500_meta.keys()])]
+
+    # ── Market-cap cache (refresh weekly, capped per run to avoid a 500-call spike) ──
+    from datetime import datetime, timezone, timedelta
+    cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+    cap_map, need_refresh = {}, set()
+    try:
+        rows = sb.table("stock_master").select("symbol,market_cap,market_cap_updated_at").execute().data or []
+        for r in rows:
+            cap_map[r["symbol"]] = r.get("market_cap")
+            ts, fresh = r.get("market_cap_updated_at"), False
+            if ts:
+                try: fresh = datetime.fromisoformat(str(ts).replace("Z", "+00:00")) > cutoff
+                except Exception: pass
+            if r.get("market_cap") is None or not fresh:
+                need_refresh.add(r["symbol"])
+    except Exception as e:
+        print(f"   ⚠️  cap cache read: {e}")
+
+    CAP_PER_RUN, refreshed = 60, 0
+    for base in universe:
+        if refreshed >= CAP_PER_RUN:
+            break
+        if cap_map.get(base) is None or base in need_refresh:
+            mc = fetch_fundamentals(base + ".NS").get("market_cap")
+            if mc:
+                cap_map[base] = mc
+                try:
+                    sb.table("stock_master").update(
+                        {"market_cap": mc, "market_cap_updated_at": _now_iso()}
+                    ).eq("symbol", base).execute()
+                except Exception:
+                    pass
+                refreshed += 1
+
+    rows_out = []
+    for base in universe:
+        if base not in prices:          # no move data (illiquid / missing) — skip
+            continue
+        pct, last = prices[base]
+        meta = n500_meta.get(base, {})
+        ind  = meta.get("industry", "Other") or "Other"
+        rows_out.append({
+            "symbol":        base,
+            "company_name":  meta.get("company", base),
+            "sector_name":   ind,
+            "sector_key":    ind.lower().replace(" ", "_").replace("&", "and"),
+            "pct_change":    pct,
+            "last_price":    last,
+            "market_cap":    cap_map.get(base),
+            "is_nifty50":    base in n50_set,
+            "is_nifty500":   True,
+            "snapshot_date": TODAY,
+            "updated_at":    _now_iso(),
+        })
+    if not rows_out:
+        print("   ⚠️  no heatmap rows built\n"); return
+    for i in range(0, len(rows_out), 200):
+        try:
+            sb.table("index_heatmap").upsert(rows_out[i:i+200], on_conflict="symbol").execute()
+        except Exception as e:
+            print(f"   ⚠️  heatmap upsert: {e}")
+    print(f"   ✓ heatmap: {len(rows_out)} stocks (refreshed {refreshed} caps)\n")
+
+
 # ════════════════════════════════════════════════════════════
 # SECTOR STOCKS — live from NSE CSVs
 #
@@ -750,6 +857,9 @@ def calculate_market_breadth(symbols, nifty50_close=None):
         vix_cl = get_close_series("^INDIAVIX", period="5d")
         if len(vix_cl): india_vix = round(float(vix_cl.iloc[-1]), 2)
     except: pass
+    # Expose the full per-stock move map so the heatmap step can reuse it
+    # (avoids re-downloading prices for all 500 names).
+    globals()["_HEATMAP_PRICES"] = { s: (p, c) for (s, p, c) in movers }
     movers_sorted = sorted(movers, key=lambda m: m[1], reverse=True)
     top_gainers = [{"s": s, "p": p, "c": c} for s, p, c in movers_sorted if p > 0][:50]
     top_losers  = [{"s": s, "p": p, "c": c} for s, p, c in reversed(movers_sorted) if p < 0][:50]
@@ -1356,6 +1466,7 @@ if __name__ == "__main__":
             # (params are optional / None-safe from earlier hardening).
             run_step("portfolio_snapshot", save_portfolio_snapshot, cmp_map, n500_val)
             run_step("market_breadth",     calculate_market_breadth, symbols, nifty50_val)
+            run_step("index_heatmap",      build_index_heatmap, symbols)
             run_step("open_trade_candles", fetch_candles_for_open_trades)
             # FII/DII fed manually via CSV import — pipeline step disabled.
             # run_step("fii_dii",            fetch_fii_dii, nifty50_val)
