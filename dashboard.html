@@ -1085,7 +1085,34 @@ canvas.tc{display:block;width:100%;height:100%}
 .acct-toggle{margin-left:auto;background:var(--blue);color:#fff;font-size:10px;font-weight:700;padding:3px 11px;border-radius:20px}
 .subbar{background:var(--bg2);border-bottom:1px solid var(--bdr);position:sticky;top:62px;z-index:180}
 .subbar .nav2-subs{display:flex;gap:6px;padding:9px 24px;flex-wrap:wrap;justify-content:flex-start;border-top:none;background:transparent}
-body.theme-light{--bg:#eef2f8;--bg2:#e6ebf4;--card:#ffffff;--card2:#f5f8fc;--card3:#eef2f9;--bdr:#e0e6f0;--bdr2:#d2dae8;--bdr3:#c5cee0;--text:#16203a;--text2:#43507a;--muted:#76819c;--white:#0e1626}
+body.theme-light{
+  /* surfaces */
+  --bg:#e9edf5; --bg2:#ffffff; --card:#ffffff; --card2:#f2f5fb; --card3:#e8edf6; --card4:#dde4f0;
+  /* borders — visible but soft */
+  --bdr:rgba(18,32,72,.11); --bdr2:rgba(18,32,72,.18); --bdr3:rgba(51,68,230,.42);
+  /* text — dark & sharp */
+  --white:#0a1330; --text:#1b2742; --text2:#0f1a36; --muted:#5a6788;
+  /* accents — deeper/saturated so they pop on white */
+  --blue:#3344e6; --blue-lt:#5161ff; --blue-dim:rgba(51,68,230,.12); --blue-glow:rgba(51,68,230,.30);
+  --cyan:#0891b2; --cyan-dim:rgba(8,145,178,.12);
+  --green:#0a9d63; --green-dim:rgba(10,157,99,.13); --green-bd:rgba(10,157,99,.34);
+  --red:#e11d48; --red-dim:rgba(225,29,72,.10); --red-bd:rgba(225,29,72,.30);
+  --amber:#c97a00; --amber-dim:rgba(201,122,0,.13); --amber-bd:rgba(201,122,0,.32); --gold:#b8860b;
+}
+/* active sidebar widget: solid blue + white text (a pale tint would hide white text) */
+body.theme-light .side .ng-btn.active{background:linear-gradient(160deg,#3344e6,#4a5bf0);border-color:#3344e6;color:#fff;box-shadow:0 4px 14px rgba(51,68,230,.32)}
+body.theme-light .side .ng-btn.active .ng-ic{color:#fff}
+body.theme-light .side .ng-btn:hover{background:var(--card3)}
+/* sub-nav active tab — blue text on a clearer tint */
+body.theme-light .ns-btn.active{background:linear-gradient(180deg,rgba(51,68,230,.13),rgba(51,68,230,.03));color:var(--blue)}
+/* chart OHLC overlay sits ON the dark chart canvas — keep it light regardless of theme */
+body.theme-light .ch-ohlc{color:#f4f8ff;background:rgba(12,18,34,.86);border-color:rgba(255,255,255,.16)}
+body.theme-light .ch-ohlc .oh-k{color:#9fb0d8}
+/* heatmap sector labels ride a dark strip → keep light */
+body.theme-light .hm-sector-lbl{color:#eef2fb;background:rgba(10,16,30,.6)}
+/* frosted lock card is dark-tinted → lighten so its dark text reads */
+body.theme-light .lock-glass{background:rgba(255,255,255,.9)}
+body.theme-light .acct-item.danger,body.theme-light .acct-item.danger .ai-ic{color:var(--red)}
 @media(max-width:900px){
   .side{position:static;top:auto;width:auto;flex-direction:row;align-items:center;border-right:none;border-bottom:1px solid var(--bdr);justify-content:flex-start;gap:6px;padding:8px 12px;overflow-x:auto;overflow-y:hidden}
   .side-nav{flex-direction:row;gap:6px}
