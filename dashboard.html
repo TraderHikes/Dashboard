@@ -1138,10 +1138,12 @@ body.theme-light .ch-rbtn.active,body.theme-light .ch-rbtn.ch-tf.active{backgrou
 body.theme-light .ch-tbl-h{color:#46506b}
 body.theme-light .ch-wrap.wm-focused .ch-tbl-h{color:#0a8d59;background:rgba(10,157,99,.08);border-bottom-color:rgba(10,157,99,.35)}
 body.theme-light .ch-wrap.wm-full .ch-tbl-h{color:#3344e6;background:rgba(51,68,230,.07);border-bottom-color:rgba(51,68,230,.35)}
+body.theme-light .ch-wrap.wm-focused .ch-rs{color:#0a8d59;background:rgba(10,157,99,.15);border:1px solid rgba(10,157,99,.32)}
+body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230,.12);border:1px solid rgba(51,68,230,.3)}
 /* Gainers / Losers — centre-align all cells (both themes) */
-.gl-head span,.gl-row>*{text-align:center}
-.gl-head span:nth-child(3),.gl-head span:nth-child(4){text-align:center}
-.gl-sym{text-align:center}
+.gl-head span,.gl-row>*{text-align:left}
+.gl-head span:nth-child(3),.gl-head span:nth-child(4){text-align:left}
+.gl-sym,.gl-pct,.gl-ltp{text-align:left}
 @media(max-width:900px){
   .side{position:static;top:auto;width:auto;flex-direction:row;align-items:center;border-right:none;border-bottom:1px solid var(--bdr);justify-content:flex-start;gap:6px;padding:8px 12px;overflow-x:auto;overflow-y:hidden}
   .side-nav{flex-direction:row;gap:6px}
