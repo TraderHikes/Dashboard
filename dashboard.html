@@ -1113,6 +1113,35 @@ body.theme-light .hm-sector-lbl{color:#eef2fb;background:rgba(10,16,30,.6)}
 /* frosted lock card is dark-tinted → lighten so its dark text reads */
 body.theme-light .lock-glass{background:rgba(255,255,255,.9)}
 body.theme-light .acct-item.danger,body.theme-light .acct-item.danger .ai-ic{color:var(--red)}
+/* Sectoral terrain map — deeper tints + darker label pills */
+body.theme-light .sb-tile::before{opacity:.18}
+body.theme-light .sb-tile:hover::before{opacity:.3}
+body.theme-light .sb-tile.rc-sb::before{background:#0a9d63}
+body.theme-light .sb-tile.rc-b::before{background:#0c7d8a}
+body.theme-light .sb-tile.rc-n::before{background:#c97a00}
+body.theme-light .sb-tile.rc-br::before{background:#dd5f1a}
+body.theme-light .sb-tile.rc-sd::before{background:#d21f44}
+body.theme-light .sba-sb{background:rgba(10,157,99,.16);color:#0a8d59}
+body.theme-light .sba-b{background:rgba(12,125,138,.16);color:#0c7d8a}
+body.theme-light .sba-n{background:rgba(201,122,0,.16);color:#b86f00}
+body.theme-light .sba-br{background:rgba(221,95,26,.16);color:#cc5614}
+body.theme-light .sba-sd{background:rgba(225,29,72,.16);color:#cc1a40}
+/* Watchlist table headers — darker shades of their accent */
+body.theme-light #sf-view-focused .sf-table th{color:#0a8d59}
+body.theme-light #sf-view-focused .sf-table th:hover,body.theme-light #sf-view-focused .sf-table th.sf-srt{color:#0a9d63}
+body.theme-light #sf-view-full .sf-table th{color:#3344e6}
+body.theme-light #sf-view-full .sf-table th:hover,body.theme-light #sf-view-full .sf-table th.sf-srt{color:#5161ff}
+/* Chart Scan: range/timeframe buttons readable; active = solid green */
+body.theme-light .ch-rbtn{color:#46506b}
+body.theme-light .ch-rbtn.active,body.theme-light .ch-rbtn.ch-tf.active{background:#0a9d63;border-color:#0a9d63;color:#fff}
+/* Fundamentals / Technicals headers darker */
+body.theme-light .ch-tbl-h{color:#46506b}
+body.theme-light .ch-wrap.wm-focused .ch-tbl-h{color:#0a8d59;background:rgba(10,157,99,.08);border-bottom-color:rgba(10,157,99,.35)}
+body.theme-light .ch-wrap.wm-full .ch-tbl-h{color:#3344e6;background:rgba(51,68,230,.07);border-bottom-color:rgba(51,68,230,.35)}
+/* Gainers / Losers — centre-align all cells (both themes) */
+.gl-head span,.gl-row>*{text-align:center}
+.gl-head span:nth-child(3),.gl-head span:nth-child(4){text-align:center}
+.gl-sym{text-align:center}
 @media(max-width:900px){
   .side{position:static;top:auto;width:auto;flex-direction:row;align-items:center;border-right:none;border-bottom:1px solid var(--bdr);justify-content:flex-start;gap:6px;padding:8px 12px;overflow-x:auto;overflow-y:hidden}
   .side-nav{flex-direction:row;gap:6px}
@@ -2532,10 +2561,11 @@ function hmTipInit(){
 const _hmEsc=v=>(v==null?'':String(v)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 function hmColor(pct){
-  const t=Math.max(-1,Math.min(1,(pct||0)/3));         // clamp to ±3%
-  const k=Math.pow(Math.abs(t),0.72);                   // ease so small moves still show, big moves vivid
-  const base=[63,67,79];                                // neutral grey (0%)
-  const tgt = t>=0 ? [0,205,123] : [246,62,79];          // vivid green / red at the extremes
+  const light=document.body.classList.contains('theme-light');
+  const t=Math.max(-1,Math.min(1,(pct||0)/3));           // clamp to ±3%
+  const k=Math.pow(Math.abs(t), light?0.55:0.72);         // steeper in light → punchier mid-range
+  const base = light ? [98,106,124] : [63,67,79];         // neutral (0%) — lighter+richer in light
+  const tgt = t>=0 ? (light?[5,196,116]:[0,205,123]) : (light?[243,44,66]:[246,62,79]);
   return `rgb(${Math.round(base[0]+(tgt[0]-base[0])*k)},${Math.round(base[1]+(tgt[1]-base[1])*k)},${Math.round(base[2]+(tgt[2]-base[2])*k)})`;
 }
 
@@ -3104,8 +3134,13 @@ const SB=(()=>{
   let all=[],fil=[],filt='all',srt='score_desc',actTile=null,loaded=false,view='heat',heatMode='pct';
   const rC=l=>({'STRONG BULL':'rc-sb','BULL':'rc-b','NEUTRAL':'rc-n','BEAR':'rc-br','STRONG BEAR':'rc-sd'}[l]||'rc-n');
   const bC=l=>({'STRONG BULL':'sba-sb','BULL':'sba-b','NEUTRAL':'sba-n','BEAR':'sba-br','STRONG BEAR':'sba-sd'}[l]||'sba-n');
-  const sC=s=>s>=80?'#2ed8a0':s>=60?'#2ee8dc':s>=40?'#ffb340':s>=20?'#ff8c42':'#ff5d7a';
-  const eC=p=>p>=70?'#2ed8a0':p>=50?'#2ee8dc':p>=30?'#ffb340':'#ff5d7a';
+  const _LT=()=>document.body.classList.contains('theme-light');
+  const sC=s=>_LT()
+    ? (s>=80?'#0a9d63':s>=60?'#0c7d8a':s>=40?'#b86f00':s>=20?'#cc5a14':'#cc1a40')
+    : (s>=80?'#2ed8a0':s>=60?'#2ee8dc':s>=40?'#ffb340':s>=20?'#ff8c42':'#ff5d7a');
+  const eC=p=>_LT()
+    ? (p>=70?'#0a9d63':p>=50?'#0c7d8a':p>=30?'#b86f00':'#cc1a40')
+    : (p>=70?'#2ed8a0':p>=50?'#2ee8dc':p>=30?'#ffb340':'#ff5d7a');
   // Diverging breadth heat scale: 0%→red, 50%→yellow (neutral pivot), 100%→green
   const heatC=p=>{ if(p==null||isNaN(p))return 'var(--card2)';
     p=Math.max(0,Math.min(100,parseFloat(p)));
