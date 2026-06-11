@@ -2253,6 +2253,43 @@ canvas.tc{display:block;width:100%;height:100%}
   </div>
   <div class="sb-pb" id="msh-pb"></div>
 </div>
+<div class="pane" id="pane-heatmap">
+<style>
+.hm-wrap{padding:16px 20px}
+.hm-card{background:var(--card);border:1px solid var(--blue-dim);border-radius:14px;box-shadow:0 0 0 1px rgba(92,111,251,.16),0 10px 34px rgba(0,0,0,.4);overflow:hidden}
+.hm-bar{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--bdr);flex-wrap:wrap}
+.hm-title{font-family:var(--f);font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--white)}
+.hm-pills{display:flex;gap:6px}
+.hm-pill{padding:5px 16px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--bdr2);background:transparent;color:var(--muted);transition:all .18s;font-family:var(--fm)}
+.hm-pill.on{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 0 12px rgba(92,111,251,.45)}
+.hm-meta{margin-left:auto;font-size:10px;color:var(--muted);font-family:var(--fm)}
+.hm-canvas{position:relative;width:100%;height:640px;overflow:hidden;background:var(--bg)}
+.hm-sector{position:absolute;overflow:hidden}
+.hm-sector-lbl{position:absolute;top:0;left:0;right:0;height:17px;line-height:17px;padding:0 7px;font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text2);background:rgba(7,11,23,.5);font-family:var(--f);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:2;pointer-events:none}
+.hm-tile{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;border:1px solid rgba(7,11,23,.6);cursor:default;transition:filter .12s}
+.hm-tile:hover{filter:brightness(1.2);z-index:3;outline:1px solid var(--blue-lt);outline-offset:-1px}
+.hm-sym{font-family:var(--fm);font-weight:800;color:#fff;line-height:1.1;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.hm-chg{font-family:var(--fm);font-weight:600;color:rgba(255,255,255,.94);line-height:1.25;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.hm-legend{display:flex;align-items:center;gap:3px;padding:10px 18px;border-top:1px solid var(--bdr);font-family:var(--fm);font-size:9px;color:var(--muted)}
+.hm-legend i{width:26px;height:10px;display:inline-block;border-radius:2px}
+.hm-empty{padding:70px 20px;text-align:center;color:var(--muted);font-size:13px}
+</style>
+  <div class="hm-wrap">
+    <div class="hm-card">
+      <div class="hm-bar">
+        <span class="hm-title">Market Heatmap</span>
+        <div class="hm-pills">
+          <div class="hm-pill on" id="hm-p50"  onclick="setHeatmapIndex('nifty50')">Nifty 50</div>
+          <div class="hm-pill"    id="hm-p500" onclick="setHeatmapIndex('nifty500')">Nifty 500</div>
+        </div>
+        <span class="hm-meta" id="hm-meta"></span>
+      </div>
+      <div class="hm-canvas" id="hm-canvas"><div class="hm-empty">Loading heatmap\u2026</div></div>
+      <div class="hm-legend" id="hm-legend"></div>
+    </div>
+  </div>
+</div>
+
 <div class="pane" id="pane-charts">
   <div class="ch-wrap wm-focused" id="ch-wrap">
     <div class="ch-side">
@@ -2373,6 +2410,104 @@ function tick(){const d=new Date(new Date().toLocaleString('en-US',{timeZone:'As
 setInterval(tick,1000);tick();
 
 /* ── PANE SWITCH ── */
+/* ── MARKET HEATMAP (squarified treemap · sector-grouped · cap-sized · %-colored) ── */
+let _hmData=null, _hmIndex='nifty50', _hmLoaded=false;
+const _hmEsc=v=>(v==null?'':String(v)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function hmColor(pct){
+  const t=Math.max(-1,Math.min(1,(pct||0)/3));     // clamp to ±3%
+  const base=[40,48,66];                            // neutral slate
+  const tgt = t>=0 ? [38,190,130] : [226,74,94];     // green / red
+  const k=Math.abs(t);
+  return `rgb(${Math.round(base[0]+(tgt[0]-base[0])*k)},${Math.round(base[1]+(tgt[1]-base[1])*k)},${Math.round(base[2]+(tgt[2]-base[2])*k)})`;
+}
+
+function hmSquarify(items, rect){
+  const out=[]; const total=items.reduce((a,b)=>a+b.value,0);
+  if(total<=0||!items.length) return out;
+  const area=rect.w*rect.h;
+  const ch=items.map(d=>({d,a:Math.max(d.value/total*area,0.0001)}));
+  const short=r=>Math.min(r.w,r.h);
+  const worst=(row,w)=>{const sm=row.reduce((a,b)=>a+b.a,0),mx=Math.max.apply(0,row.map(x=>x.a)),mn=Math.min.apply(0,row.map(x=>x.a)),w2=w*w,s2=sm*sm;return Math.max(w2*mx/s2,s2/(w2*mn));};
+  function layoutrow(row,r){
+    const sm=row.reduce((a,b)=>a+b.a,0);
+    if(r.w>=r.h){ const colW=sm/r.h; let yy=r.y; row.forEach(it=>{const hh=it.a/colW; out.push({node:it.d,x:r.x,y:yy,w:colW,h:hh}); yy+=hh;}); return {x:r.x+colW,y:r.y,w:r.w-colW,h:r.h}; }
+    const rowH=sm/r.w; let xx=r.x; row.forEach(it=>{const ww=it.a/rowH; out.push({node:it.d,x:xx,y:r.y,w:ww,h:rowH}); xx+=ww;}); return {x:r.x,y:r.y+rowH,w:r.w,h:r.h-rowH};
+  }
+  let rc={x:rect.x,y:rect.y,w:rect.w,h:rect.h}, row=[], i=0;
+  while(i<ch.length){
+    const row2=row.concat([ch[i]]);
+    if(row.length===0 || worst(row,short(rc))>=worst(row2,short(rc))){ row=row2; i++; }
+    else { rc=layoutrow(row,rc); row=[]; }
+  }
+  if(row.length) layoutrow(row,rc);
+  return out;
+}
+
+async function loadHeatmap(){
+  const cv=document.getElementById('hm-canvas'); if(!cv) return;
+  if(!_hmLoaded){
+    cv.innerHTML='<div class="hm-empty">Loading heatmap\u2026</div>';
+    try{ const { data } = await sb.from('index_heatmap').select('*'); _hmData=data||[]; }
+    catch(e){ _hmData=[]; }
+    _hmLoaded=true;
+  }
+  requestAnimationFrame(renderHeatmap);
+}
+
+function setHeatmapIndex(ix){
+  _hmIndex=ix;
+  const a=document.getElementById('hm-p50'), b=document.getElementById('hm-p500');
+  if(a) a.classList.toggle('on', ix==='nifty50');
+  if(b) b.classList.toggle('on', ix==='nifty500');
+  renderHeatmap();
+}
+
+function renderHeatmap(){
+  const cv=document.getElementById('hm-canvas'); if(!cv) return;
+  const W=cv.clientWidth||0, H=cv.clientHeight||640;
+  if(W<50){ requestAnimationFrame(renderHeatmap); return; }   // pane not laid out yet
+  const all=_hmData||[];
+  let rows=(_hmIndex==='nifty50' ? all.filter(r=>r.is_nifty50) : all.filter(r=>r.is_nifty500!==false)).filter(r=>r.pct_change!=null);
+  renderHmLegend();
+  if(!rows.length){ cv.innerHTML='<div class="hm-empty">No heatmap data yet. It populates after the next pipeline run.</div>'; const m=document.getElementById('hm-meta'); if(m) m.textContent=''; return; }
+  const caps=rows.map(r=>+r.market_cap).filter(v=>v>0);
+  const minCap=caps.length?Math.min.apply(0,caps):1;
+  rows.forEach(r=>{ r._v=(+r.market_cap>0)?+r.market_cap:minCap*0.5; });
+  const bySec={}; rows.forEach(r=>{ const k=r.sector_name||'Other'; (bySec[k]=bySec[k]||[]).push(r); });
+  const sectors=Object.keys(bySec).map(name=>({name, stocks:bySec[name], value:bySec[name].reduce((s,r)=>s+r._v,0)}));
+  const secRects=hmSquarify(sectors.map(x=>({value:x.value,_s:x})), {x:0,y:0,w:W,h:H});
+  let html='';
+  secRects.forEach(sr=>{
+    const sec=sr.node._s, pad=1, hdr=(sr.w>62&&sr.h>36)?17:0;
+    const sw2=Math.max(0,sr.w-pad*2), sh2=Math.max(0,sr.h-pad*2);
+    html+=`<div class="hm-sector" style="left:${sr.x+pad}px;top:${sr.y+pad}px;width:${sw2}px;height:${sh2}px">`;
+    if(hdr) html+=`<div class="hm-sector-lbl">${_hmEsc(sec.name)}</div>`;
+    const tiles=hmSquarify(sec.stocks.map(r=>({value:r._v,_r:r})), {x:0,y:hdr,w:sw2,h:Math.max(0,sh2-hdr)});
+    tiles.forEach(t=>{
+      const r=t.node._r, pct=+r.pct_change, col=hmColor(pct);
+      const showSym=t.w>=38&&t.h>=22, showChg=t.w>=44&&t.h>=38, fs=Math.max(8,Math.min(13,Math.round(t.w/6)));
+      const tip=`${_hmEsc(r.symbol)} · ${_hmEsc(r.company_name||'')}\n${pct>=0?'+':''}${pct.toFixed(2)}%  ·  ₹${(+r.last_price||0).toLocaleString('en-IN')}`;
+      html+=`<div class="hm-tile" style="left:${t.x}px;top:${t.y}px;width:${Math.max(0,t.w-1)}px;height:${Math.max(0,t.h-1)}px;background:${col}" title="${tip}">`;
+      if(showSym) html+=`<span class="hm-sym" style="font-size:${fs}px">${_hmEsc(r.symbol)}</span>`;
+      if(showChg) html+=`<span class="hm-chg" style="font-size:${Math.max(7,fs-2)}px">${pct>=0?'+':''}${pct.toFixed(2)}%</span>`;
+      html+=`</div>`;
+    });
+    html+=`</div>`;
+  });
+  cv.innerHTML=html;
+  const dt=(_hmData[0]&&_hmData[0].snapshot_date)?` · ${new Date(_hmData[0].snapshot_date).toLocaleDateString('en-IN',{day:'2-digit',month:'short'})}`:'';
+  const m=document.getElementById('hm-meta'); if(m) m.textContent=`${rows.length} stocks${dt}`;
+}
+
+function renderHmLegend(){
+  const el=document.getElementById('hm-legend'); if(!el) return;
+  el.innerHTML='<span style="margin-right:7px">Daily change</span>'+[-3,-2,-1,0,1,2,3].map(p=>`<i style="background:${hmColor(p)}"></i>`).join('')+'<span style="margin-left:7px">\u22123%&nbsp;\u2192&nbsp;+3%</span>';
+}
+
+let _hmRz;
+window.addEventListener('resize', ()=>{ clearTimeout(_hmRz); _hmRz=setTimeout(()=>{ const p=document.getElementById('pane-heatmap'); if(p&&p.classList.contains('active')) renderHeatmap(); },220); });
+
 function sw(id){
   document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
   const pane=document.getElementById('pane-'+id); if(pane) pane.classList.add('active');
@@ -2380,6 +2515,7 @@ function sw(id){
   if(id==='breadth'){loadMarketBreadth();}
   if(id==='filter'){loadStockFilter();}
   if(id==='sectoral'){SB.init();}
+  if(id==='heatmap'){loadHeatmap();}
   if(id==='charts'){loadCharts();}
   if(id==='mtmanager'||id==='mtportfolio'||id==='mtclosed'){MT.init();MT.loadAll();}
 }
@@ -2396,7 +2532,7 @@ const NAV=[
    lock:{kind:'upgrade', title:'Market Data Tracker',
          body:'Unlock the full multi-indicator market score, breadth across every EMA, and sectoral rotation.',
          cta:'Unlock Full Access', url:MSTP_URL},
-   subs:[{id:'breadth',label:'Market Breadth'},{id:'sectoral',label:'Sectoral Analysis'}]},
+   subs:[{id:'breadth',label:'Market Breadth'},{id:'sectoral',label:'Sectoral Analysis'},{id:'heatmap',label:'Heatmap'}]},
   {key:'screener', label:'Leading Stocks', roles:['admin','paid','free'], lockFor:['free'],
    lock:{kind:'upgrade', title:'Leading Stocks Screener',
          body:'Unlock curated watchlists and chart scans of the market\'s leading stocks.',
@@ -2966,7 +3102,7 @@ const SB=(()=>{
     try{
       const{data}=await sb.from('sector_stocks').select('symbol,company_name').eq('sector_key',key).order('symbol');
       if(!data||!data.length){el.innerHTML='<div class="sb-stocks-loading">No constituent data. Run seed SQL.</div>';return;}
-      el.innerHTML=`<div class="sb-stocks-grid">${data.map(s=>`<div class="sb-stock-chip"><div>${s.symbol}</div><div class="sb-stock-name">${s.company_name?s.company_name.replace(/ (Ltd\.|Limited|Industries|Corporation)/g,''):'—'}</div></div>`).join('')}</div><div style="margin-top:8px;font-size:9px;color:var(--muted)">${data.length} stocks</div>`;
+      el.innerHTML=`<div class="sb-stocks-grid">${data.map(s=>`<div class="sb-stock-chip"><div>${s.symbol}</div></div>`).join('')}</div><div style="margin-top:8px;font-size:9px;color:var(--muted)">${data.length} stocks</div>`;
     }catch(e){el.innerHTML='<div class="sb-stocks-loading">Could not load.</div>';}
   }
   function open(key){
@@ -2994,12 +3130,6 @@ const SB=(()=>{
       <div><div class="sb-pl">Advance / Decline</div>
         <div class="sb-ab"><div class="sb-an" style="color:${s.ad_ratio>=1.5?'var(--green)':s.ad_ratio<0.7?'var(--red)':'var(--amber)'}">${f1(s.ad_ratio)}</div>
           <div class="sb-abs">${[['Adv',adw,s.advances,'var(--green)'],['Dec',ddw,s.declines,'#ef5350']].map(([l,w,n,c])=>`<div class="sb-ar"><div class="sb-al" style="color:${c}">${l}</div><div class="sb-at"><div class="sb-af" style="width:${w}%;background:${c}"></div></div><div class="sb-av" style="color:${c}">${n}</div></div>`).join('')}</div>
-        </div>
-      </div>
-      <div><div class="sb-pl">52-Week Proximity</div>
-        <div class="sb-wg">
-          <div class="sb-wc" style="border-left:3px solid var(--green)"><div class="sb-wv" style="color:var(--green)">${pf(s.pct_near_52w_high)}</div><div class="sb-wl">Near 52W High</div></div>
-          <div class="sb-wc" style="border-left:3px solid #ef5350"><div class="sb-wv" style="color:#ef5350">${pf(s.pct_near_52w_low)}</div><div class="sb-wl">Near 52W Low</div></div>
         </div>
       </div>
       <div><div class="sb-pl">Relative Strength vs Nifty 500</div>
