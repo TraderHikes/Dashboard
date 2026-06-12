@@ -299,6 +299,15 @@
     .form-grid,.form-grid.four { grid-template-columns:1fr; }
     .span2,.span3 { grid-column:span 1; }
   }
+.ot-ac{position:absolute;top:100%;left:0;right:0;margin-top:4px;background:var(--card2);border:1px solid var(--bdr2);border-radius:9px;max-height:300px;overflow-y:auto;z-index:80;display:none;box-shadow:0 14px 36px rgba(0,0,0,.55)}
+.ot-ac.show{display:block}
+.ot-ac-item{padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:10px}
+.ot-ac-item:last-child{border-bottom:none}
+.ot-ac-item:hover{background:rgba(92,111,251,.16)}
+.ot-ac-sym{font-weight:700;color:var(--white);font-size:13px;min-width:88px}
+.ot-ac-co{color:var(--text2);font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ot-ac-bd{color:var(--muted);font-size:10px;border:1px solid var(--bdr2);padding:1px 6px;border-radius:5px}
+.ot-ac-empty{color:var(--muted);cursor:default;padding:10px 12px}
 </style>
 </head>
 <body>
@@ -394,13 +403,14 @@
         <div class="alert alert-error"   id="open-error"></div>
         <form id="form-open-trade">
           <div class="form-grid four" style="margin-bottom:14px">
-            <div class="form-group">
+            <div class="form-group" style="position:relative">
               <label class="form-label">NSE Symbol *</label>
-              <input class="form-input" type="text" name="symbol" placeholder="DIXON" required style="text-transform:uppercase">
+              <input class="form-input" type="text" name="symbol" id="ot-symbol" placeholder="Search symbol or company…" required style="text-transform:uppercase" autocomplete="off" oninput="otSearch(this.value)" onfocus="otSearch(this.value)">
+              <div class="ot-ac" id="ot-ac"></div>
             </div>
             <div class="form-group span2">
               <label class="form-label">Company Name *</label>
-              <input class="form-input" type="text" name="company_name" placeholder="Dixon Technologies" required>
+              <input class="form-input" type="text" name="company_name" id="ot-company" placeholder="Dixon Technologies" required>
             </div>
             <div class="form-group">
               <label class="form-label">Sector</label>
@@ -1278,6 +1288,39 @@ function showAlert(id, msg, type = 'success') {
 // ════════════════════════════════════════════
 // POSITION SIZE CALCULATOR (new trade form)
 // ════════════════════════════════════════════
+let _otTimer=null;
+function otSearch(q){
+  q=(q||'').trim();
+  const ac=document.getElementById('ot-ac'); if(!ac) return;
+  if(_otTimer) clearTimeout(_otTimer);
+  if(q.length<1){ ac.classList.remove('show'); ac.innerHTML=''; return; }
+  _otTimer=setTimeout(async ()=>{
+    let data=null,error=null;
+    try{ ({data,error}=await sb.rpc('search_stocks',{q,lim:8})); }catch(e){ error=e; }
+    if(error || !data || !data.length){
+      ac.innerHTML='<div class="ot-ac-empty">No matches in stock master</div>'; ac.classList.add('show'); return;
+    }
+    ac.innerHTML=data.map(r=>{
+      const o=JSON.stringify({symbol:r.symbol,company_name:r.company_name||'',board:r.board||'',exchange:r.exchange||'NSE'}).replace(/'/g,'&#39;');
+      return `<div class="ot-ac-item" onclick='otPick(${o})'>`+
+        `<span class="ot-ac-sym">${r.symbol}</span>`+
+        `<span class="ot-ac-co">${r.company_name||''}</span>`+
+        `<span class="ot-ac-bd">${r.board||''}</span></div>`;
+    }).join('');
+    ac.classList.add('show');
+  },180);
+}
+function otPick(r){
+  const sym=document.getElementById('ot-symbol'), co=document.getElementById('ot-company');
+  if(sym) sym.value=r.symbol;
+  if(co) co.value=r.company_name||'';
+  const ac=document.getElementById('ot-ac'); if(ac) ac.classList.remove('show');
+}
+document.addEventListener('click', e=>{
+  const ac=document.getElementById('ot-ac'), sym=document.getElementById('ot-symbol');
+  if(ac && sym && !sym.contains(e.target) && !ac.contains(e.target)) ac.classList.remove('show');
+});
+
 function calcPositionSize() {
   const price   = parseFloat(document.getElementById('nt-entry-price')?.value) || 0;
   const qty     = parseFloat(document.getElementById('nt-quantity')?.value) || 0;
