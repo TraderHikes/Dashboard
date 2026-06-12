@@ -1773,6 +1773,7 @@ document.getElementById('form-open-trade').addEventListener('submit', async e =>
 
   const fd = new FormData(e.target);
   const payload = {
+    is_model:          true,
     symbol:            fd.get('symbol').toUpperCase().trim(),
     company_name:      fd.get('company_name').trim(),
     sector:            fd.get('sector').trim() || null,
