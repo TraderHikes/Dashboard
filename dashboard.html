@@ -1321,7 +1321,7 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
       <table class="mt-dt mt-fe" id="mt-fe-table">
         <thead><tr>
           <th>Symbol</th><th>Company</th><th>Trade Status</th><th>Exit Date</th>
-          <th>Avg Exit \u20B9</th><th>Final Qty</th><th>Realised P&L \u20B9</th><th>Return %</th><th>Notes</th><th>Action</th>
+          <th>Avg Exit ₹</th><th>Final Qty</th><th>Realised P&L ₹</th><th>Return %</th><th>Notes</th><th>Action</th>
         </tr></thead>
         <tbody id="mt-fe-tbody">
           <tr><td colspan="10" class="mt-empty">Loading…</td></tr>
@@ -1339,7 +1339,7 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
       <input type="hidden" id="mt-fe-edit-id">
       <div class="mt-grid" style="grid-template-columns:1fr 1fr 1fr">
         <div class="mt-fg"><label>Exit Date</label><input class="mt-in" type="date" id="mt-fe-edit-date"></div>
-        <div class="mt-fg"><label>Avg Exit \u20B9</label><input class="mt-in" type="number" step="0.05" id="mt-fe-edit-price"></div>
+        <div class="mt-fg"><label>Avg Exit ₹</label><input class="mt-in" type="number" step="0.05" id="mt-fe-edit-price"></div>
         <div class="mt-fg"><label>Exit Reason</label><input class="mt-in" type="text" id="mt-fe-edit-reason"></div>
       </div>
       <div class="mt-fg"><label>Notes</label><input class="mt-in" type="text" id="mt-fe-edit-notes"></div>
@@ -2998,7 +2998,8 @@ const MT = (() => {
         sl_price: fd.get('sl_price')? parseFloat(fd.get('sl_price')) : null,
         cmp: fd.get('cmp')? parseFloat(fd.get('cmp')) : null,
         status:'long', trade_notes: fd.get('trade_notes')?.trim() || null,
-        avg_entry_price:entry, total_quantity:qty, remaining_qty:qty, has_pyramid:false
+        avg_entry_price:entry, total_quantity:qty, remaining_qty:qty, has_pyramid:false,
+        is_model:false
       };
       const { error } = await sb.from('open_trades').insert(payload);
       btn.disabled=false; btn.textContent='Add Trade';
@@ -3353,7 +3354,7 @@ const MT = (() => {
       exit_date:date, avg_exit_price:px, realised_pnl:Math.round(totalRealised*100)/100,
       return_pct:Math.round(ret*100)/100, holding_days:holding, exit_reason:$('mm-reason').value||null,
       trade_notes:$('mm-notes').value||t.trade_notes||null, partial_exit_qty:partialQty>0?partialQty:null,
-      origin_open_trade_id:t.id };
+      origin_open_trade_id:t.id, is_model:false };
     const { error } = await sb.from('closed_trades').insert(payload);
     if(error){ alert('mt-modal-alert','Error: '+error.message,'err'); return; }
     await sb.from('open_trades').delete().eq('id',t.id);
