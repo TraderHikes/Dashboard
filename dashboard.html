@@ -1233,9 +1233,25 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
 .mt-pos-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
 .mt-tag{font-size:9px;font-weight:700;padding:1px 7px;border-radius:100px;border:1px solid var(--bdr2);color:var(--blue-lt);background:var(--blue-dim)}
 .mt-empty{padding:24px;text-align:center;color:var(--muted);font-size:13px}
-.mt-modal{position:fixed;inset:0;background:rgba(3,6,15,.72);backdrop-filter:blur(4px);z-index:1000;display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto}
+/* Professional Manage-Open-Positions table (mirrors Admin Current Open Trades) */
+.mt-dt{width:100%;border-collapse:collapse}
+.mt-dt th{padding:9px 12px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:700;background:var(--card3);border-bottom:1px solid var(--bdr);white-space:nowrap}
+.mt-dt td{padding:9px 12px;border-bottom:1px solid var(--bdr);font-size:12px;vertical-align:middle;color:var(--text2)}
+.mt-dt tr:last-child td{border-bottom:none}
+.mt-dt tr:hover td{background:rgba(255,255,255,.02)}
+.mt-dt td.mono{font-family:var(--fm)}
+/* Edit dropdown */
+.mt-dd{position:relative;display:inline-block}
+.mt-dd-menu{position:fixed;background:var(--card2);border:1px solid var(--bdr2);border-radius:9px;box-shadow:0 14px 34px rgba(0,0,0,.5);padding:5px;min-width:152px;z-index:1500;display:none}
+.mt-dd.open .mt-dd-menu{display:block}
+.mt-dd-item{display:block;width:100%;text-align:left;background:none;border:none;color:var(--text2);font-family:var(--f);font-size:12px;font-weight:600;padding:8px 11px;border-radius:6px;cursor:pointer;white-space:nowrap}
+.mt-dd-item:hover{background:var(--card3);color:var(--white)}
+.mt-dd-item.danger:hover{background:rgba(255,93,122,.12);color:var(--red)}
+.mt-dd-cap{transition:transform .15s}
+.mt-dd.open .mt-dd-cap{transform:rotate(180deg)}
+.mt-modal{position:fixed;inset:0;background:rgba(3,6,15,.72);backdrop-filter:blur(4px);z-index:2000;display:none;align-items:center;justify-content:center;padding:24px 16px;overflow-y:auto}
 .mt-modal.show{display:flex}
-.mt-modal-box{background:var(--card2);border:1px solid var(--bdr2);border-radius:16px;padding:22px;width:100%;max-width:440px}
+.mt-modal-box{background:var(--card2);border:1px solid var(--bdr2);border-radius:16px;padding:22px;width:100%;max-width:440px;max-height:calc(100dvh - 48px);overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.55)}
 .mt-modal-h{display:flex;justify-content:space-between;align-items:center;font-size:16px;font-weight:700;color:var(--white);margin-bottom:16px}
 .mt-x{background:none;border:none;color:var(--muted);font-size:24px;cursor:pointer;line-height:1}
 .mt-res{background:var(--card3);border:1px dashed var(--bdr2);border-radius:9px;padding:10px 12px;margin:10px 0;font-size:12px;color:var(--text2);line-height:1.8}
@@ -1270,42 +1286,101 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
     </form>
   </div>
   <div class="mt-card">
-    <div class="mt-card-h">Manage Open Positions <span class="mt-count" id="mt-manage-count"></span></div>
-    <div id="mt-manage-list"><div class="mt-empty">Loading…</div></div>
+    <div class="mt-card-h" style="flex-wrap:wrap;gap:10px">
+      <span style="display:flex;align-items:center;gap:10px">Manage Open Positions <span class="mt-count" id="mt-manage-count"></span></span>
+      <div style="display:flex;align-items:center;gap:10px;margin-left:auto">
+        <span style="font-size:10px;color:var(--muted);letter-spacing:.04em">SORT</span>
+        <select id="mt-manage-sort" onchange="MT.sortManage()" style="background:var(--card2);border:1px solid var(--bdr);color:var(--text);font-family:var(--fm);font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;outline:none">
+          <option value="default">Entry Date ↓</option>
+          <option value="alpha_asc">A → Z</option>
+          <option value="alpha_desc">Z → A</option>
+          <option value="pct_desc">Return % ↓</option>
+          <option value="pct_asc">Return % ↑</option>
+          <option value="pnl_desc">P&L ↓</option>
+          <option value="pnl_asc">P&L ↑</option>
+          <option value="size_desc">Position Size ↓</option>
+          <option value="size_asc">Position Size ↑</option>
+        </select>
+        <button class="mt-btn mt-btn-g mt-btn-sm" onclick="MT.loadAll()">↻ Refresh</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto"><div id="mt-manage-list"><div class="mt-empty">Loading…</div></div></div>
   </div>
 </div>
 
-<!-- ══ MY TRADING DESK · Portfolio ══ -->
+<!-- ══ MY TRADING DESK · Open Trades (replica of Model Portfolio Open Trades) ══ -->
 <div class="pane" id="pane-mtportfolio">
-  <div class="sh"><div class="st">My Portfolio</div><div class="sb">Your open positions</div></div>
-  <div class="mt-strip">
-    <div class="mt-stat"><div class="l">Invested (Open)</div><div class="v" id="mt-s-invested">—</div></div>
-    <div class="mt-stat"><div class="l">Notional P&amp;L (Open)</div><div class="v" id="mt-s-open-pnl">—</div></div>
-    <div class="mt-stat"><div class="l">Realised P&amp;L (Closed)</div><div class="v" id="mt-s-realised">—</div></div>
-    <div class="mt-stat"><div class="l">Open / Closed</div><div class="v" id="mt-s-counts">—</div></div>
+  <div class="sh"><div class="st">Open Positions</div><div class="sb" id="uopen-sub">Loading...</div></div>
+  <div class="sstrip" id="uos-sstrip" style="grid-template-columns:repeat(6,1fr)">
+    <div class="sc">
+      <div class="scl">Deployed</div>
+      <div class="scv" id="uos-deployed">—</div>
+      <div class="sc-badge sky" id="uos-deployed-badge">—</div>
+    </div>
+    <div class="sc">
+      <div class="scl">Day's P&amp;L</div>
+      <div class="scv" id="uos-daypnl">—</div>
+      <div class="scs">Today's mark-to-market</div>
+      <div class="sc-badge" id="uos-daypnl-badge">—</div>
+    </div>
+    <div class="sc">
+      <div class="scl">Net Open P&amp;L</div>
+      <div class="scv" id="uos-netpnl">—</div>
+      <div class="scs">Unrealised on open trades</div>
+      <div class="sc-badge" id="uos-netpnl-badge">—</div>
+    </div>
+    <div class="sc">
+      <div class="scl">Locked P&amp;L</div>
+      <div class="scv" id="uos-locked">—</div>
+      <div class="scs">Banked from partial exits</div>
+      <div class="sc-badge" id="uos-locked-badge">—</div>
+    </div>
+    <div class="sc">
+      <div class="scl">Open Risk</div>
+      <div class="scv r" id="uos-risk">—</div>
+      <div class="scs">If all SLs hit simultaneously</div>
+      <div class="sc-badge dn" id="uos-riskpct">—</div>
+    </div>
+    <div class="sc">
+      <div class="scl">Total Realised P&L</div>
+      <div class="scv" id="uos-realised">—</div>
+      <div class="scs">All closed trades</div>
+      <div class="sc-badge info" id="uos-realised-badge">—</div>
+    </div>
   </div>
-  <div class="mt-card">
-    <div class="mt-card-h">Open Positions <span class="mt-count" id="mt-open-count"></span></div>
-    <div id="mt-open-list"><div class="mt-empty">Loading…</div></div>
+  <div class="card">
+    <div class="ch"><span class="ct">Active Positions — Annotated Charts</span><div class="ch-r" style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:10px;color:var(--muted);letter-spacing:.04em">SORT</span>
+      <select id="uot-sort" onchange="renderUserOpen()" style="background:var(--card2);border:1px solid var(--bdr);color:var(--text);font-family:var(--fm);font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;outline:none">
+        <option value="default">Entry Date ↓</option>
+        <option value="alpha_asc">A → Z</option>
+        <option value="alpha_desc">Z → A</option>
+        <option value="size_desc">Position Size ↓</option>
+        <option value="size_asc">Position Size ↑</option>
+        <option value="pnl_desc">Notional P&L ↓</option>
+        <option value="pnl_asc">Notional P&L ↑</option>
+        <option value="pct_desc">Return % ↓</option>
+        <option value="pct_asc">Return % ↑</option>
+      </select>
+      </div></div>
+    <div id="uot-container" class="trades-grid"></div>
   </div>
 </div>
 
-<!-- ══ MY TRADING DESK · Closed Trades ══ -->
+<!-- ══ MY TRADING DESK · Closed Trades (replica of Model Portfolio Closed Trades) ══ -->
 <div class="pane" id="pane-mtclosed">
-  <div class="sh"><div class="st">My Closed Trades</div><div class="sb">Your trade history</div></div>
-  <div class="mt-card">
-    <div class="mt-card-h">Closed Trades <span class="mt-count" id="mt-closed-count"></span></div>
-    <div id="mt-closed-list"><div class="mt-empty">Loading…</div></div>
+  <div class="sh"><div class="st">Trade Journal</div><div class="sb">Full journey — Entry → Partial Exits → Final Exit · Realised P&L</div></div>
+  <div class="sstrip" id="uct-strip" style="grid-template-columns:repeat(6,1fr);margin-bottom:20px">
+    <div class="sc"><div class="scl">Total Realised P&L</div><div class="scv" id="ucs-pnl">—</div><div class="scs">All closed trades</div><div class="sc-badge info" id="ucs-pnl-badge">—</div></div>
+    <div class="sc"><div class="scl">Win Rate</div><div class="scv" id="ucs-wr">—</div><div class="scs" id="ucs-wr-sub">—</div><div class="sc-badge info" id="ucs-wr-badge">—</div></div>
+    <div class="sc"><div class="scl">Profit Factor</div><div class="scv" id="ucs-pf">—</div><div class="scs">Gross win / gross loss</div><div class="sc-badge info" id="ucs-pf-badge">—</div></div>
+    <div class="sc"><div class="scl">Avg Return</div><div class="scv" id="ucs-avg">—</div><div class="scs">Per closed trade</div><div class="sc-badge info">Per trade avg</div></div>
+    <div class="sc"><div class="scl">Max Profit</div><div class="scv g" id="ucs-best">—</div><div class="scs" id="ucs-best-sym">Best trade</div><div class="sc-badge up" id="ucs-best-badge">—</div></div>
+    <div class="sc"><div class="scl">Max Loss</div><div class="scv r" id="ucs-worst">—</div><div class="scs" id="ucs-worst-sym">Worst trade</div><div class="sc-badge dn" id="ucs-worst-badge">—</div></div>
   </div>
+  <div id="uct-container"></div>
 </div>
 
-<div class="mt-modal" id="mt-modal">
-  <div class="mt-modal-box">
-    <div class="mt-modal-h"><span id="mt-modal-title">Action</span><button class="mt-x" onclick="MT.closeModal()">&times;</button></div>
-    <div class="mt-alert" id="mt-modal-alert"></div>
-    <div id="mt-modal-body"></div>
-  </div>
-</div>
 
 <!-- ══════════════════════════════════════
      TAB 1 — PORTFOLIO OVERVIEW
@@ -2683,7 +2758,9 @@ function sw(id){
   if(id==='sectoral'){SB.init();}
   if(id==='heatmap'){loadHeatmap();}
   if(id==='charts'){loadCharts();}
-  if(id==='mtmanager'||id==='mtportfolio'||id==='mtclosed'){MT.init();MT.loadAll();}
+  if(id==='mtmanager'){MT.init();MT.loadOpen();MT.loadClosed();}
+  if(id==='mtportfolio'){MT.init();renderUserOpen();}
+  if(id==='mtclosed'){MT.init();renderUserClosed();}
 }
 
 /* ── TWO-LEVEL NAV (role-aware) ── */
@@ -2705,7 +2782,7 @@ const NAV=[
          cta:'Unlock Full Access', url:MSTP_URL},
    subs:[{id:'filter',label:'Watchlists'},{id:'charts',label:'Chart Scan'}]},
   {key:'desk',     label:'My Trading Desk', roles:['paid','free'], lockFor:[],
-   subs:[{id:'mtmanager',label:'Trade Manager'},{id:'mtportfolio',label:'Portfolio'},{id:'mtclosed',label:'Closed Trades'}]},
+   subs:[{id:'mtmanager',label:'Trade Manager'},{id:'mtportfolio',label:'Open Trades'},{id:'mtclosed',label:'Closed Trades'}]},
 ];
 const NAV_ICONS={
   model:'<svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 12h18"/></svg>',
@@ -2893,6 +2970,108 @@ const MT = (() => {
   // ---------- role-aware lists + stats ----------
   const isFree = () => (window.USER_ROLE||'free')==='free';
 
+  // ---------- Professional Manage-Open-Positions table (mirrors Admin) ----------
+  function manageActions(t){
+    const id = esc(t.id);
+    return `<div style="display:flex;gap:6px;align-items:center;justify-content:flex-end">
+      <div class="mt-dd" id="dd-${id}">
+        <button class="mt-btn mt-btn-g mt-btn-sm" onclick="MT.toggleMenu('${id}')">&#9998; Edit <span class="mt-dd-cap">&#9662;</span></button>
+        <div class="mt-dd-menu">
+          <button class="mt-dd-item" onclick="MT.menuAct('pyramid','${id}')">Add Pyramid</button>
+          <button class="mt-dd-item" onclick="MT.menuAct('partial','${id}')">Partial Exit</button>
+          <button class="mt-dd-item" onclick="MT.menuAct('close','${id}')">Final Exit</button>
+        </div>
+      </div>
+      <button class="mt-btn mt-btn-d mt-btn-sm" onclick="MT.del('${id}','${esc(t.symbol)}')">Delete</button>
+    </div>`;
+  }
+  function manageRow(t){
+    const avg = t.avg_entry_price || t.entry_price;
+    const rem = t.remaining_qty ?? t.quantity;
+    const tot = t.total_quantity || t.quantity;
+    const pnl = (t.cmp!=null) ? (t.cmp - avg) * rem : null;
+    const pnlStr = pnl!==null
+      ? `<span style="color:${col(pnl)}">${sgn(pnl)}</span>`
+      : '<span style="color:var(--muted)">\u2014</span>';
+    const ret = (t.cmp!=null && avg) ? ((t.cmp - avg) / avg * 100) : null;
+    const retStr = ret!==null
+      ? `<span style="color:${col(ret)};font-weight:700">${ret>=0?'+':''}${ret.toFixed(2)}%</span>`
+      : '<span style="color:var(--muted)">\u2014</span>';
+    const cap = t.capital_at_entry || 0;
+    const posNum = cap>0 ? (avg*rem/cap*100) : (t.position_size_pct!=null ? parseFloat(t.position_size_pct) : null);
+    const posStr = posNum!=null ? posNum.toFixed(2)+'%' : '\u2014';
+    const badgeMap = { long:'bl', trail_sl:'bt', watch:'bw' };
+    const flags = [
+      t.has_pyramid      ? '<span class="badge bl" style="font-size:8px;padding:2px 6px">P</span>'  : '',
+      t.has_partial_exit ? '<span class="badge bw" style="font-size:8px;padding:2px 6px">PE</span>' : '',
+    ].filter(Boolean).join(' ');
+    return `<tr>
+      <td class="mono" style="font-weight:700;color:var(--white)">${esc(t.symbol)} ${flags}</td>
+      <td style="color:var(--text2)">${esc(t.company_name||'')}</td>
+      <td class="mono">${t.entry_date||'\u2014'}</td>
+      <td class="mono">\u20B9${Number(avg).toLocaleString('en-IN')}</td>
+      <td class="mono">${rem}<span style="color:var(--muted);font-size:10px">/${tot}</span></td>
+      <td class="mono" style="color:var(--text2)">\u20B9${Number(avg*rem).toLocaleString('en-IN',{maximumFractionDigits:0})}</td>
+      <td class="mono" style="color:var(--red)">${t.sl_price!=null?'\u20B9'+Number(t.sl_price).toLocaleString('en-IN'):'\u2014'}</td>
+      <td class="mono">${t.cmp!=null?'\u20B9'+Number(t.cmp).toLocaleString('en-IN'):'<span style="color:var(--muted)">\u2014</span>'}</td>
+      <td>${pnlStr}</td>
+      <td>${retStr}</td>
+      <td style="color:var(--blue-lt);font-weight:700">${posStr}</td>
+      <td><span class="badge ${badgeMap[t.status]||'bw'}">${(t.status||'').replace('_',' ')}</span></td>
+      <td>${manageActions(t)}</td>
+    </tr>`;
+  }
+  function manageTable(list){
+    if(!list.length) return '<div class="mt-empty">No open positions. Add a trade using the form above.</div>';
+    return `<table class="mt-dt"><thead><tr>
+      <th>Symbol</th><th>Company</th><th>Entry Date</th><th>Avg Entry \u20B9</th><th>Rem/Total Qty</th>
+      <th>Invested \u20B9</th><th>SL \u20B9</th><th>CMP \u20B9</th><th>P&L \u20B9</th><th>Return %</th>
+      <th>Pos Size</th><th>Status</th><th>Actions</th>
+    </tr></thead><tbody>${list.map(manageRow).join('')}</tbody></table>`;
+  }
+  function sortManage(){
+    const list = (MT._manageData||[]).slice();
+    if(!list.length) return;
+    const mode = document.getElementById('mt-manage-sort')?.value || 'default';
+    list.forEach(t=>{
+      const ae=t.avg_entry_price||t.entry_price, rq=t.remaining_qty??t.quantity;
+      t._pct  = (t.cmp&&ae)?((t.cmp-ae)/ae*100):0;
+      t._pnl  = (t.cmp&&ae)?((t.cmp-ae)*rq):0;
+      t._size = (ae||0)*(rq||0);
+    });
+    switch(mode){
+      case 'alpha_asc':  list.sort((a,b)=>a.symbol.localeCompare(b.symbol)); break;
+      case 'alpha_desc': list.sort((a,b)=>b.symbol.localeCompare(a.symbol)); break;
+      case 'pct_desc':   list.sort((a,b)=>b._pct-a._pct);  break;
+      case 'pct_asc':    list.sort((a,b)=>a._pct-b._pct);  break;
+      case 'pnl_desc':   list.sort((a,b)=>b._pnl-a._pnl);  break;
+      case 'pnl_asc':    list.sort((a,b)=>a._pnl-b._pnl);  break;
+      case 'size_desc':  list.sort((a,b)=>b._size-a._size); break;
+      case 'size_asc':   list.sort((a,b)=>a._size-b._size); break;
+      default: break;
+    }
+    const el=$('mt-manage-list'); if(el) el.innerHTML=manageTable(list);
+  }
+  function toggleMenu(id){
+    const dd=document.getElementById('dd-'+id); if(!dd) return;
+    const isOpen=dd.classList.contains('open');
+    document.querySelectorAll('.mt-dd.open').forEach(o=>o.classList.remove('open'));
+    if(!isOpen){
+      dd.classList.add('open');
+      const btn=dd.querySelector('button'), menu=dd.querySelector('.mt-dd-menu');
+      if(btn&&menu){
+        const r=btn.getBoundingClientRect();
+        menu.style.top  = (r.bottom+4)+'px';
+        menu.style.left = Math.max(8, r.right - menu.offsetWidth)+'px';
+      }
+    }
+  }
+  function closeMenus(){ document.querySelectorAll('.mt-dd.open').forEach(o=>o.classList.remove('open')); }
+  function menuAct(action,id){
+    document.querySelectorAll('.mt-dd.open').forEach(o=>o.classList.remove('open'));
+    openModal(action,id);
+  }
+
   function posActions(t){
     return `<button class="mt-btn mt-btn-g mt-btn-sm" onclick="MT.openModal('pyramid','${t.id}')">+ Add</button>
       <button class="mt-btn mt-btn-g mt-btn-sm" onclick="MT.openModal('partial','${t.id}')">Partial</button>
@@ -2970,26 +3149,30 @@ const MT = (() => {
     return `<table class="mt-tbl"><thead><tr><th>Stock</th><th>Entry</th><th>Exit</th><th>Qty</th><th>P&L</th><th>Return</th><th>Held</th><th>Reason</th></tr></thead><tbody>${rows}</tbody></table>`;
   }
 
-  async function loadAll(){ await Promise.all([loadOpen(), loadClosed()]); }
+  async function loadAll(){
+    await Promise.all([loadOpen(), loadClosed()]);
+    // Keep the Open Trades / Closed Trades replica panes in sync after any action
+    if(document.getElementById('uot-container') && typeof renderUserOpen==='function') renderUserOpen();
+    if(document.getElementById('uct-container') && typeof renderUserClosed==='function') renderUserClosed();
+  }
 
   async function loadOpen(){
     const { data, error } = await sb.from('open_trades').select('*').eq('is_model', false).order('entry_date',{ascending:false});
-    if(error){ ['mt-manage-list','mt-open-list'].forEach(id=>{const el=$(id); if(el) el.innerHTML=`<div class="mt-empty">Error: ${error.message}</div>`;}); return; }
-    const list=data||[], free=isFree();
-    const manageHtml = list.length ? (free?openTable(list,true):list.map(t=>openCard(t,true)).join('')) : '<div class="mt-empty">No open positions. Add a trade using the form above.</div>';
-    const reviewHtml = list.length ? (free?openTable(list,false):list.map(t=>openCard(t,false,true)).join('')) : '<div class="mt-empty">No open positions yet.</div>';
-    if($('mt-manage-list')) $('mt-manage-list').innerHTML=manageHtml;
-    if($('mt-open-list'))   $('mt-open-list').innerHTML=reviewHtml;
-    if(!free){
-      list.forEach(t=>{ if(tvCharts[t.id]){ try{tvCharts[t.id].remove();}catch(e){} delete tvCharts[t.id]; } });
-      list.forEach(t=>{ const ae=t.avg_entry_price||t.entry_price; requestAnimationFrame(()=>renderTVChart(t.id,t.symbol,ae,t.sl_price,t.cmp||ae,t.entry_date,t.has_pyramid,t.has_partial_exit)); });
+    if(error){ const el=$('mt-manage-list'); if(el) el.innerHTML=`<div class="mt-empty">Error: ${error.message}</div>`; return; }
+    const list=data||[];
+    MT._manageData = list;                 // cache for sort
+    // Re-render the manage table honouring the current sort selection
+    if($('mt-manage-list')){
+      if(document.getElementById('mt-manage-sort') && document.getElementById('mt-manage-sort').value!=='default'){
+        sortManage();
+      } else {
+        $('mt-manage-list').innerHTML = manageTable(list);
+      }
     }
     if($('mt-manage-count'))$('mt-manage-count').textContent=list.length;
-    if($('mt-open-count'))  $('mt-open-count').textContent=list.length;
+    // Desk header (Deployed / Open P&L)
     let invested=0, openPnl=0, pnlKnown=false;
     list.forEach(t=>{ const avg=t.avg_entry_price||t.entry_price, rem=t.remaining_qty??t.quantity; invested+=avg*rem; if(t.cmp!=null){ openPnl+=(t.cmp-avg)*rem; pnlKnown=true; } });
-    if($('mt-s-invested')) $('mt-s-invested').textContent = invested>0?inr(invested):'—';
-    if($('mt-s-open-pnl')) $('mt-s-open-pnl').innerHTML = pnlKnown?`<span style="color:${col(openPnl)}">${sgn(openPnl)}</span>`:'—';
     window._hdr.desk={dep: invested>0?inr(invested):'—', pnl: pnlKnown?sgn(openPnl):'—', col: pnlKnown?col(openPnl):'var(--muted)'};
     if(window.applyHeader) applyHeader();
     MT._openCount=list.length; updateCounts();
@@ -2997,13 +3180,8 @@ const MT = (() => {
 
   async function loadClosed(){
     const { data, error } = await sb.from('closed_trades').select('*').eq('is_model', false).order('exit_date',{ascending:false});
-    const el=$('mt-closed-list'); if(!el) return;
-    if(error){ el.innerHTML=`<div class="mt-empty">Error: ${error.message}</div>`; return; }
-    const list=data||[], free=isFree();
-    el.innerHTML = list.length ? (free?closedTable(list):closedCards(list)) : '<div class="mt-empty">No closed trades yet.</div>';
-    if($('mt-closed-count')) $('mt-closed-count').textContent=list.length;
-    let realised=0; list.forEach(t=>realised+=(t.realised_pnl||0));
-    if($('mt-s-realised')) $('mt-s-realised').innerHTML = list.length?`<span style="color:${col(realised)}">${sgn(realised)}</span>`:'—';
+    if(error){ return; }
+    const list=data||[];
     MT._closedCount=list.length; updateCounts();
   }
   function updateCounts(){ if($('mt-s-counts')) $('mt-s-counts').textContent = (MT._openCount??0)+' / '+(MT._closedCount??0); }
@@ -3142,9 +3320,17 @@ const MT = (() => {
     if(inited) return; inited=true;
     bindSearch(); bindNew();
     const d=document.querySelector('#mt-form-new [name=entry_date]'); if(d) d.value=today();
+    // Close any open "Edit" action dropdown when clicking elsewhere
+    document.addEventListener('click', e=>{
+      if(!e.target.closest || !e.target.closest('.mt-dd'))
+        document.querySelectorAll('.mt-dd.open').forEach(o=>o.classList.remove('open'));
+    });
+    // The action menu is position:fixed — close it if the user scrolls or resizes
+    window.addEventListener('scroll', closeMenus, true);
+    window.addEventListener('resize', closeMenus);
   }
 
-  return { init, loadAll, loadOpen, loadClosed, pick, clearPick, del, openModal, closeModal, preview, submitPyramid, submitPartial, submitClose };
+  return { init, loadAll, loadOpen, loadClosed, pick, clearPick, del, openModal, closeModal, preview, submitPyramid, submitPartial, submitClose, sortManage, toggleMenu, menuAct };
 })();
 
 /* ══ SECTORAL BREADTH CONTROLLER ══ */
@@ -4382,9 +4568,7 @@ async function renderOpen(){
   const c=document.getElementById('ot-container');
   c.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted)">Loading trades...</div>';
 
-  // Destroy existing TV chart instances
-  Object.values(tvCharts).forEach(ch => { try { ch.remove(); } catch(e){} });
-  Object.keys(tvCharts).forEach(k => delete tvCharts[k]);
+  // (chart cleanup is scoped per-trade below so user/desk charts are untouched)
 
   const { data: trades, error } = await sb
     .from('open_trades')
@@ -4705,6 +4889,7 @@ async function renderOpen(){
     c.appendChild(el);
 
     // Load trade log and render TV chart in parallel
+    if(tvCharts[t.id]){ try{ tvCharts[t.id].remove(); }catch(e){} delete tvCharts[t.id]; }
     loadTradeLog(t);
     requestAnimationFrame(() => {
       renderTVChart(t.id, t.symbol, avgEntry, t.sl_price, t.cmp || avgEntry,
@@ -4942,6 +5127,577 @@ async function renderClosed(){
     grid.appendChild(card);
   }
 }
+
+/* ══════════════════════════════════════════════════
+   USER DESK — Open Trades replica (mirrors renderOpen)
+══════════════════════════════════════════════════ */
+async function renderUserOpen(){
+  const c=document.getElementById('uot-container');
+  c.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted)">Loading trades...</div>';
+
+  // (chart cleanup is scoped per-trade below so model charts are untouched)
+
+  const { data: trades, error } = await sb
+    .from('open_trades')
+    .select('*')
+    .eq('is_model', false)
+    .order('entry_date', { ascending: false });
+
+  if (error || !trades || trades.length === 0) {
+    c.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted)">No open trades yet.</div>';
+    // Update badge and header
+    const ob = document.getElementById('ubadge-open-x');
+    if(ob) ob.textContent = '0';
+    window._hdr.desk={dep:'₹0', pnl:'—', col:'var(--muted)'};
+    if(window.applyHeader) applyHeader();
+    return;
+  }
+
+  // Update nav badge with real count
+  const ob = document.getElementById('ubadge-open-x');
+  if(ob) ob.textContent = trades.length;
+
+  // ── Sort positions per the dropdown (mirrors Admin Open Trades sort) ──
+  const otSortMode = document.getElementById('uot-sort')?.value || 'default';
+  trades.forEach(t => {
+    const ae = t.avg_entry_price || t.entry_price;
+    const rq = t.remaining_qty   || t.quantity;
+    t._pct  = (t.cmp && ae) ? ((t.cmp - ae) / ae * 100) : 0;
+    t._pnl  = (t.cmp && ae) ? ((t.cmp - ae) * rq)       : 0;
+    t._size = (ae || 0) * (rq || 0);
+  });
+  switch (otSortMode) {
+    case 'alpha_asc':  trades.sort((a,b) => a.symbol.localeCompare(b.symbol)); break;
+    case 'alpha_desc': trades.sort((a,b) => b.symbol.localeCompare(a.symbol)); break;
+    case 'size_desc':  trades.sort((a,b) => b._size - a._size); break;
+    case 'size_asc':   trades.sort((a,b) => a._size - b._size); break;
+    case 'pnl_desc':   trades.sort((a,b) => b._pnl  - a._pnl);  break;
+    case 'pnl_asc':    trades.sort((a,b) => a._pnl  - b._pnl);  break;
+    case 'pct_desc':   trades.sort((a,b) => b._pct  - a._pct);  break;
+    case 'pct_asc':    trades.sort((a,b) => a._pct  - b._pct);  break;
+    default: break; // 'default' keeps entry_date DESC from the query
+  }
+
+  // Calculate summary numbers
+  const fmt  = (n) => '₹' + Math.abs(n).toLocaleString('en-IN',{maximumFractionDigits:0});
+  const fmtL = (n) => {
+    if (Math.abs(n) >= 10000000) return '₹' + (n/10000000).toFixed(2) + 'Cr';
+    return '₹' + (n/100000).toFixed(2) + 'L';
+  };
+  const setT = (id,v,col) => { const e=document.getElementById(id); if(e){e.textContent=v; if(col)e.style.color=col;} };
+
+  let totalDeployed=0, totalPnl=0;
+  trades.forEach(t=>{
+    const ae=t.avg_entry_price||t.entry_price,rq=t.remaining_qty||t.quantity;
+    totalDeployed += ae*rq;
+    if(t.cmp) totalPnl += (t.cmp-ae)*rq;
+  });
+
+  const wins   = trades.filter(t=>t.cmp && t.cmp>(t.avg_entry_price||t.entry_price));
+  const losses  = trades.filter(t=>t.cmp && t.cmp<(t.avg_entry_price||t.entry_price));
+  const gainSum = wins.reduce((s,t)=>{const ae=t.avg_entry_price||t.entry_price,rq=t.remaining_qty||t.quantity;return s+(t.cmp-ae)*rq;},0);
+  const lossSum = losses.reduce((s,t)=>{const ae=t.avg_entry_price||t.entry_price,rq=t.remaining_qty||t.quantity;return s+(t.cmp-ae)*rq;},0);
+  const totalRisk = trades.reduce((s,t)=>{const ae=t.avg_entry_price||t.entry_price,rq=t.remaining_qty||t.quantity;return s+Math.max(0,(ae-t.sl_price)*rq);},0);
+  const riskPct = totalDeployed>0?(totalRisk/totalDeployed*100).toFixed(1):0;
+
+  // Update open pane heading + strip
+  setT('open-sub', '');
+
+  // ── Deployed ──────────────────────────────────
+  setT('uos-deployed', fmtL(totalDeployed));
+  setT('uos-deployed-badge', `◆ ${trades.length} position${trades.length!==1?'s':''}`);
+
+  // ── Net Open P&L badge ────────────────────────
+  const netPct = totalDeployed > 0 ? (totalPnl/totalDeployed*100) : 0;
+  setT('uos-netpnl', (totalPnl>=0?'+':'')+fmt(totalPnl), totalPnl>=0?'var(--green)':'var(--red)');
+  setT('uos-netpct', ''); // subtitle handled by HTML
+  const netBadge = document.getElementById('uos-netpnl-badge');
+  if(netBadge){
+    netBadge.textContent = (netPct>=0?'▲ +':'▼ ')+Math.abs(netPct).toFixed(1)+'% return on deployed';
+    netBadge.className = 'sc-badge ' + (totalPnl>=0?'up':'dn');
+  }
+
+  // ── Locked P&L (sum of partial exits across all open trades) ──
+  sb.from('partial_exits').select('realised_pnl,open_trade_id').then(({ data: pxAll }) => {
+    const currentIds = (trades||[]).map(t => t.id);
+    const locked = (pxAll||[]).filter(p=>currentIds.includes(p.open_trade_id)).reduce((s,p)=>s+(p.realised_pnl||0),0);
+    const lockedEl    = document.getElementById('uos-locked');
+    const lockedBadge = document.getElementById('uos-locked-badge');
+    if(lockedEl){
+      lockedEl.textContent = locked !== 0 ? (locked>=0?'+':'')+fmt(locked) : '₹0';
+      lockedEl.style.color = locked > 0 ? 'var(--green)' : locked < 0 ? 'var(--red)' : 'var(--muted)';
+    }
+    if(lockedBadge){
+      if(locked > 0){ lockedBadge.textContent='🔒 Profits banked'; lockedBadge.className='sc-badge up'; }
+      else if(locked < 0){ lockedBadge.textContent='🔒 Losses realised'; lockedBadge.className='sc-badge dn'; }
+      else { lockedBadge.textContent='No partial exits yet'; lockedBadge.className='sc-badge info'; }
+    }
+  });
+
+  // ── Open Risk badge ───────────────────────────
+  setT('uos-risk', fmt(totalRisk));
+  const riskPctDeployed = totalDeployed > 0 ? (totalRisk/totalDeployed*100) : 0;
+  const riskBadge = document.getElementById('uos-riskpct');
+  if(riskBadge){
+    riskBadge.textContent = '▼ '+riskPctDeployed.toFixed(1)+'% of deployed';
+    riskBadge.className = 'sc-badge dn';
+  }
+  // ── Day's P&L: true mark-to-market move across open positions ──
+  // For each open trade: (today's CMP − yesterday's close) × remaining qty.
+  // Yesterday's close comes from trade_candles (last close before today).
+  // Badge shows Day's P&L ÷ yesterday's portfolio_value × 100.
+  (async () => {
+    const dayChgEl = document.getElementById('uos-daypnl');
+    const dayBadge = document.getElementById('uos-daypnl-badge');
+    const dayScs   = document.querySelector('#uos-sstrip .sc:nth-child(2) .scs');
+    try {
+      const syms = [...new Set(trades.map(t => (t.symbol||'').toUpperCase()).filter(Boolean))];
+      // Pull recent candles for all open symbols (last ~5 trading days each)
+      const { data: candles } = await sb
+        .from('trade_candles')
+        .select('symbol,date,close')
+        .in('symbol', syms)
+        .order('date', { ascending: false })
+        .limit(syms.length * 6);
+
+      // Group → newest two distinct dates per symbol
+      const bySym = {};
+      (candles || []).forEach(c => {
+        const s = (c.symbol||'').toUpperCase();
+        (bySym[s] = bySym[s] || []).push(c);
+      });
+
+      let dayPnl = 0;
+      let prevMktValue = 0;          // Σ (yesterday's close × remaining qty)
+      trades.forEach(t => {
+        const s  = (t.symbol||'').toUpperCase();
+        const rq = t.remaining_qty || t.quantity || 0;
+        const rows = bySym[s] || [];               // already newest-first
+        if(rows.length < 1 || !t.cmp) return;
+        // yesterday's close = the most recent candle strictly before today
+        const today = new Date().toISOString().split('T')[0];
+        const prev  = rows.find(r => r.date < today) || rows[1] || rows[0];
+        if(!prev) return;
+        dayPnl       += (t.cmp - prev.close) * rq;
+        prevMktValue += prev.close * rq;
+      });
+
+      if(dayChgEl){
+        dayChgEl.textContent = (dayPnl>=0?'+':'')+fmt(dayPnl);
+        dayChgEl.style.color = dayPnl>=0?'var(--green)':'var(--red)';
+      }
+      if(dayScs) dayScs.textContent = "Today's mark-to-market";
+
+      // Badge: return on the previous-close market value of holdings
+      const dayPct = (prevMktValue > 0) ? (dayPnl / prevMktValue * 100) : null;
+      if(dayBadge){
+        dayBadge.className = 'sc-badge ' + (dayPnl>=0?'up':'dn');
+        dayBadge.textContent = (dayPnl>=0?'▲ +':'▼ ')
+          + (dayPct!=null ? Math.abs(dayPct).toFixed(2)+'% Return on Current Portfolio Value' : 'Return on Current Portfolio Value');
+      }
+    } catch(err){
+      console.warn("Day's P&L calc failed:", err);
+      if(dayChgEl){ dayChgEl.textContent = '—'; }
+      if(dayBadge){ dayBadge.textContent = 'Return on Current Portfolio Value'; dayBadge.className = 'sc-badge info'; }
+    }
+  })();
+
+
+  // ── Open Risk ─────────────────────────────────
+  setT('uos-risk', fmt(totalRisk));
+  const riskBadgeEl = document.getElementById('uos-riskpct');
+  if(riskBadgeEl){
+    const rp = totalDeployed > 0 ? (totalRisk/totalDeployed*100).toFixed(1) : 0;
+    riskBadgeEl.textContent = '\u25bc '+rp+'% of deployed';
+    riskBadgeEl.className = 'sc-badge dn';
+  }
+
+  // ── Total Realised P&L (sum of all closed trades) ──────────
+  sb.from('closed_trades')
+    .select('realised_pnl')
+    .eq('is_model', false)
+    .then(({ data: closed }) => {
+      const totalRealised = (closed || []).reduce((s,t)=> s + (t.realised_pnl||0), 0);
+      const pos = totalRealised >= 0;
+      setT('uos-realised', (pos?'+':'')+'₹'+Math.abs(totalRealised).toLocaleString('en-IN',{maximumFractionDigits:0}),
+           pos?'var(--green)':'var(--red)');
+      const rBadge = document.getElementById('uos-realised-badge');
+      if(rBadge){
+        rBadge.className = 'sc-badge ' + (pos?'up':'dn');
+        rBadge.textContent = (pos?'▲':'▼') + ' FY26-27';
+      }
+      const rScs = document.querySelector('#uos-sstrip .sc:last-child .scs');
+      if(rScs && closed) rScs.textContent = closed.length + ' closed trade' + (closed.length!==1?'s':'');
+    });
+
+  // Header capital figure (was previously updated alongside cash margin)
+  sb.from('portfolio_snapshots')
+    .select('total_capital')
+    .order('snapshot_date', { ascending: false })
+    .limit(1).single()
+    .then(({ data: snap }) => {
+      const totalCap = Math.max(snap?.total_capital||0, 8500000);
+      const hdrCap = document.getElementById('uhdr-capital-x');
+      if(hdrCap) hdrCap.textContent = '\u20b9'+(totalCap/100000).toFixed(2)+'L';
+    });
+
+
+  // Update header (model book) via group-aware store
+  window._hdr.desk={dep:fmtL(totalDeployed), pnl:(totalPnl>=0?'+':'')+fmt(totalPnl), col:totalPnl>=0?'var(--green)':'var(--red)'};
+  if(window.applyHeader) applyHeader();
+
+  c.innerHTML='';
+  trades.forEach(t=>{
+    // Use avg_entry_price + remaining_qty if pyramided, else fall back to originals
+    const avgEntry = t.avg_entry_price || t.entry_price;
+    const remQty   = t.remaining_qty   || t.quantity;
+    const pp = t.cmp ? t.cmp > avgEntry : false;
+    const pnl = t.cmp ? (t.cmp - avgEntry) * remQty : null;
+    const pct = t.cmp ? ((t.cmp - avgEntry) / avgEntry * 100) : null;
+    const risk = (avgEntry - t.sl_price) * remQty;
+    const riskPct = ((avgEntry - t.sl_price) / avgEntry * 100);
+    const badgeMap = { long:'bl', trail_sl:'bt', watch:'bw' };
+    const bc = badgeMap[t.status] || 'bw';
+    const badgeLabel = t.status.replace('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
+
+    // Generate simulated bars based on avg entry price
+    const trend = t.cmp && t.cmp > avgEntry ? 0.004 : -0.002;
+    const bars = gen(avgEntry * 0.97, 60, trend, 0.018);
+    if(t.cmp && bars.length > 0) bars[bars.length-1].c = t.cmp;
+
+    // ── Calculated fields ──────────────────────────
+    const posValue    = avgEntry * remQty;
+    const reward      = t.cmp ? (t.cmp - avgEntry) : 0;
+    const riskPerSh   = avgEntry - t.sl_price;
+    const rrRatio     = riskPerSh > 0 ? (reward / riskPerSh) : null;
+    const fromInitial = t.avg_entry_price && t.entry_price && t.avg_entry_price !== t.entry_price
+      ? ((t.avg_entry_price - t.entry_price) / t.entry_price * 100)
+      : null;
+    const holdingDays = t.entry_date
+      ? Math.max(1, Math.round((Date.now() - new Date(t.entry_date).getTime()) / 86400000))
+      : 1;
+
+    const el=document.createElement('div');
+    el.className='trade-card';
+    el.innerHTML=`
+      <div class="chart-col" id="chart_${t.id}">
+        <div class="tv-loading">
+          <div style="width:14px;height:14px;border:2px solid rgba(255,255,255,.1);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite"></div>
+          <span style="font-size:10px;color:var(--muted)">Loading chart...</span>
+        </div>
+      </div>
+      <div class="info-col">
+        <div class="trade-top">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:2px">
+              <span class="tnm">${t.symbol}</span>
+              <span class="badge ${bc}" style="font-size:8px;padding:2px 6px">${badgeLabel}</span>
+              ${t.has_pyramid ? '<span style="background:rgba(92,111,251,.15);border:1px solid rgba(92,111,251,.3);color:var(--blue-lt);padding:2px 5px;border-radius:100px;font-size:8px;font-weight:700">Pyramided</span>' : ''}
+              ${t.has_partial_exit ? '<span style="background:var(--amber-dim);border:1px solid var(--amber-bd);color:var(--amber);padding:2px 5px;border-radius:100px;font-size:8px;font-weight:700">Reduced</span>' : ''}
+            </div>
+            <div style="font-size:9px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.company_name}</div>
+            <div style="font-size:8px;color:var(--muted);margin-top:1px;opacity:.7">${t.sector||''} ${t.chart_pattern?'· '+t.chart_pattern:''}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;margin-left:8px">
+            <div style="font-size:20px;font-weight:800;letter-spacing:-.5px;line-height:1;color:${pct!==null?(pct>=0?'var(--green)':'var(--red)'):'var(--muted)'}">
+              ${pct!==null?(pct>=0?'+':'')+pct.toFixed(1)+'%':'—'}
+            </div>
+            ${rrRatio!==null?`<div style="font-size:9px;font-weight:700;color:${rrRatio>=2?'var(--green)':rrRatio>=1?'var(--amber)':'var(--red)'};margin-top:1px">${(rrRatio>=0?'+':'')+rrRatio.toFixed(1)}R</div>`:''}
+          </div>
+        </div>
+
+        ${t.trade_notes ? `<div style="font-size:9px;color:var(--white);opacity:.75;font-style:italic;padding:3px 7px;background:rgba(255,255,255,.02);border-radius:4px;border-left:2px solid var(--bdr2);margin:4px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">"${t.trade_notes}"</div>` : ''}
+
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);padding:6px 0;border-top:1px solid var(--bdr);border-bottom:1px solid var(--bdr);margin:4px 0">
+          <span>Entry <b style="color:var(--green);font-family:var(--fm)">\u20B9${Number(t.entry_price).toLocaleString('en-IN')}</b></span>
+          ${t.avg_entry_price && t.avg_entry_price !== t.entry_price ? `<span>Avg <b style="color:var(--amber);font-family:var(--fm)">\u20B9${Number(avgEntry).toLocaleString('en-IN')}</b></span>` : ''}
+          <span>CMP <b style="color:${pp?'var(--green)':'var(--red)'};font-family:var(--fm)">${t.cmp?'\u20B9'+Number(t.cmp).toLocaleString('en-IN'):'—'}</b></span>
+          <span>SL <b style="color:var(--red);font-family:var(--fm)">\u20B9${Number(t.sl_price).toLocaleString('en-IN')}</b></span>
+        </div>
+
+        <div class="tc-metrics">
+          <div class="tc-met">
+            <div class="tc-met-l">Position Size</div>
+            <div class="tc-met-v" style="color:var(--blue-lt);font-family:var(--fm)">${t.capital_at_entry ? (posValue/t.capital_at_entry*100).toFixed(2)+'%' : (t.position_size_pct ? Number(t.position_size_pct).toFixed(2)+'%' : '—')}</div>
+            <div style="font-size:8px;color:var(--white);margin-top:1px">\u20B9${(posValue/100000).toFixed(2)}L value</div>
+          </div>
+          <div class="tc-met">
+            <div class="tc-met-l">Qty (Rem / Total)</div>
+            <div class="tc-met-v" style="color:#a78bfa;font-family:var(--fm)">${remQty}<span style="color:#a78bfa;opacity:.7;font-size:9px"> /${t.total_quantity||t.quantity}</span></div>
+            <div style="font-size:8px;color:var(--white);margin-top:1px">${t.entry_date}</div>
+          </div>
+          <div class="tc-met">
+            <div class="tc-met-l">Open Risk</div>
+            <div class="tc-met-v" style="color:var(--red);font-family:var(--fm)">\u20B9${Math.abs(risk).toLocaleString('en-IN',{maximumFractionDigits:0})}</div>
+            <div style="font-size:8px;color:var(--white);margin-top:1px">${riskPct.toFixed(1)}% of pos</div>
+          </div>
+          <div class="tc-met">
+            <div class="tc-met-l">Notional P&L</div>
+            <div class="tc-met-v" style="color:${pnl!==null?(pnl>=0?'var(--green)':'var(--red)'):'var(--muted)'};font-family:var(--fm)">${pnl!==null?(pnl>=0?'+\u20B9':'\u20B9')+Math.abs(pnl).toLocaleString('en-IN',{maximumFractionDigits:0}):'—'}</div>
+            <div style="font-size:8px;color:var(--white);margin-top:1px;font-family:var(--fm)">${pct!==null?(pct>=0?'+':'')+pct.toFixed(2)+'% return':'—'}</div>
+          </div>
+        </div>
+
+        <!-- Holding Period bar -->
+        <div style="display:flex;align-items:center;gap:5px;margin-top:8px;padding-top:6px;border-top:1px solid var(--bdr)">
+          <span style="font-size:8px;color:var(--white);text-transform:uppercase;letter-spacing:.5px;min-width:60px">Holding: ${holdingDays}d</span>
+          <div style="display:flex;gap:2px;align-items:center">
+            ${Array.from({length:Math.min(Math.ceil(holdingDays/7),16)}, (_,i) =>
+              '<div style="width:5px;height:5px;border-radius:1px;background:var(--blue-lt);opacity:'+(1-(i/Math.min(Math.ceil(holdingDays/7),16))*0.5)+'"></div>'
+            ).join('')}
+          </div>
+        </div>
+
+        <!-- Trade Log (loaded async) -->
+        <div id="tlog_${t.id}" style="margin-top:8px;padding-top:6px;border-top:1px solid var(--bdr)">
+          <div style="font-size:9px;color:var(--muted)">Loading trade log...</div>
+        </div>
+      </div>`;
+    c.appendChild(el);
+
+    // Load trade log and render TV chart in parallel (scoped cleanup)
+    if(tvCharts[t.id]){ try{ tvCharts[t.id].remove(); }catch(e){} delete tvCharts[t.id]; }
+    loadTradeLog(t);
+    requestAnimationFrame(() => {
+      renderTVChart(t.id, t.symbol, avgEntry, t.sl_price, t.cmp || avgEntry,
+        t.entry_date, t.has_pyramid, t.has_partial_exit);
+    });
+
+  });
+}
+
+
+/* ══════════════════════════════════════════════════
+   USER DESK — Closed Trades replica (mirrors renderClosed)
+══════════════════════════════════════════════════ */
+async function renderUserClosed(){
+  const c=document.getElementById('uct-container');
+  c.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted)">Loading trade history...</div>';
+
+  const{data:trades,error}=await sb.from('closed_trades')
+    .select('*').eq('is_model', false).order('exit_date',{ascending:false});
+
+  if(error||!trades||trades.length===0){
+    c.innerHTML='<div style="padding:40px;text-align:center;color:var(--muted)">No closed trades yet.</div>';
+    return;
+  }
+
+  // ── Summary strip ────────────────────────────────
+  const wins    = trades.filter(t=>t.realised_pnl>0);
+  const losses  = trades.filter(t=>t.realised_pnl<=0);
+  const totalPnl= trades.reduce((s,t)=>s+(t.realised_pnl||0),0);
+  const winRate = trades.length>0?(wins.length/trades.length*100).toFixed(0):0;
+  const grossW  = wins.reduce((s,t)=>s+(t.realised_pnl||0),0);
+  const grossL  = Math.abs(losses.reduce((s,t)=>s+(t.realised_pnl||0),0));
+  const pf      = grossL>0?(grossW/grossL).toFixed(2):'∞';
+
+  // Best and worst trades for Max Profit / Max Loss boxes
+  const best  = trades.length?trades.reduce((b,t)=>(t.return_pct||0)>(b.return_pct||0)?t:b,trades[0]):null;
+  const worst = trades.length?trades.reduce((b,t)=>(t.return_pct||0)<(b.return_pct||0)?t:b,trades[0]):null;
+  const avgRet= trades.length?(trades.reduce((s,t)=>s+(t.return_pct||0),0)/trades.length).toFixed(1):null;
+  // Populate 6-box strip via element IDs
+  const _set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  const _cls=(id,c)=>{const e=document.getElementById(id);if(e)e.className=c;};
+  // Box 1 P&L
+  _cls('ucs-pnl','scv '+(totalPnl>=0?'g':'r'));
+  _set('ucs-pnl',(totalPnl>=0?'+':'')+'₹'+Math.abs(totalPnl).toLocaleString('en-IN',{maximumFractionDigits:0}));
+  const pnlScs=document.querySelector('#uct-strip .sc:nth-child(1) .scs');
+  if(pnlScs)pnlScs.textContent=trades.length+' closed trade'+(trades.length!==1?'s':'');
+  _cls('ucs-pnl-badge','sc-badge '+(totalPnl>=0?'up':'dn'));
+  _set('ucs-pnl-badge',(totalPnl>=0?'▲':'▼')+' FY26-27');
+  // Box 2 Win Rate
+  _cls('ucs-wr','scv '+(winRate>=50?'g':'r'));_set('ucs-wr',winRate+'%');
+  _set('ucs-wr-sub',wins.length+'W · '+losses.length+'L');
+  _cls('ucs-wr-badge','sc-badge '+(winRate>=50?'up':'dn'));
+  _set('ucs-wr-badge',wins.length+' of '+trades.length+' trades');
+  // Box 3 Profit Factor
+  _cls('ucs-pf','scv '+(pf>=1?'g':'r'));_set('ucs-pf',pf);
+  _cls('ucs-pf-badge','sc-badge '+(pf>=1.5?'up':pf>=1?'info':'dn'));
+  _set('ucs-pf-badge',pf>=1.5?'Strong':pf>=1?'Positive':'Negative');
+  // Box 4 Avg Return
+  _cls('ucs-avg','scv '+(avgRet&&parseFloat(avgRet)>=0?'g':'r'));
+  _set('ucs-avg',avgRet===null?'—':(parseFloat(avgRet)>=0?'+':'')+avgRet+'%');
+  // Box 5 Max Profit
+  _set('ucs-best',best?'+'+(best.return_pct||0).toFixed(1)+'%':'—');
+  _set('ucs-best-sym',best?best.symbol:'Best trade');
+  _set('ucs-best-badge',best?'▲ '+best.symbol:'—');
+  // Box 6 Max Loss
+  _set('ucs-worst',worst?(worst.return_pct||0).toFixed(1)+'%':'—');
+  _set('ucs-worst-sym',worst?worst.symbol:'Worst trade');
+  _set('ucs-worst-badge',worst?'▼ '+worst.symbol:'—');
+
+  // ── Trade cards ──────────────────────────────────
+  c.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.style.cssText = 'display:flex;flex-direction:column;gap:12px';
+  c.appendChild(grid);
+
+  for(const t of trades) {
+    // Fetch partial exits for this trade
+    const{data:partials}=await sb.from('partial_exits')
+      .select('*').eq('symbol', t.symbol)
+      .gte('exit_date', t.entry_date)
+      .lte('exit_date', t.exit_date)
+      .order('exit_date');
+
+    const pxList   = partials || [];
+    _closedCache[t.id] = { trade: t, partials: pxList };
+    const lockedPnl= pxList.reduce((s,p)=>s+(p.realised_pnl||0),0);
+    const finalPnl = (t.realised_pnl||0) - lockedPnl;  // final leg only
+    const totalPnlT= t.realised_pnl||0;
+    const isWin    = totalPnlT >= 0;
+    const pnlCol   = isWin ? 'var(--green)' : 'var(--red)';
+
+    // ── Entry breakdown for the journey: initial + pyramid adds = Total Invested ──
+    let _entryRows = [];
+    if (t.has_pyramid && t.origin_open_trade_id) {
+      const { data: _ents } = await sb.from('trade_entries')
+        .select('*').eq('open_trade_id', t.origin_open_trade_id).order('entry_date');
+      _entryRows = _ents || [];
+    }
+    if (_closedCache[t.id]) _closedCache[t.id].entries = _entryRows;
+    let entriesHtml;
+    if (_entryRows.length > 1) {
+      const sumInv = _entryRows.reduce((s,e)=>s+(Number(e.entry_price)||0)*(Number(e.quantity)||0),0);
+      entriesHtml = _entryRows.map((e,i)=>{
+        const amt=(Number(e.entry_price)||0)*(Number(e.quantity)||0), isInit=i===0;
+        return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:10px${isInit?'':';padding-left:8px'}">
+          <span style="color:var(--blue-lt);font-weight:700;min-width:14px">▲</span>
+          <span style="color:var(--muted);min-width:80px">${e.entry_date||''}</span>
+          <span style="color:${isInit?'var(--white)':'var(--blue-lt)'};min-width:50px">${isInit?'Initial Entry':'Pyramid Add'}</span>
+          <span style="color:var(--text2);font-family:var(--fm)">₹${Number(e.entry_price).toLocaleString('en-IN')} × ${e.quantity} shares</span>
+          <span style="color:var(--blue-lt);margin-left:auto;font-size:9px">${isInit?'':'+ '}₹${amt.toLocaleString('en-IN')}</span>
+        </div>`;
+      }).join('') +
+      `<div style="display:flex;align-items:center;gap:8px;margin:6px 0 5px;font-size:10px;border-top:1px dashed var(--bdr);padding-top:7px">
+        <span style="min-width:14px"></span><span style="min-width:80px"></span>
+        <span style="color:var(--white);font-weight:700;min-width:50px">Total Invested</span>
+        <span style="margin-left:auto;color:var(--white);font-weight:700;font-family:var(--fm)">₹${sumInv.toLocaleString('en-IN')}</span>
+      </div>`;
+    } else {
+      const totalInv=(t.avg_entry_price||0)*(t.quantity||0);
+      entriesHtml = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:10px">
+        <span style="color:var(--blue-lt);font-weight:700;min-width:14px">▲</span>
+        <span style="color:var(--muted);min-width:80px">${t.entry_date}</span>
+        <span style="color:var(--white);min-width:50px">Initial Entry</span>
+        <span style="color:var(--text2);font-family:var(--fm)">₹${Number(t.avg_entry_price||0).toLocaleString('en-IN')} × ${t.quantity||0} shares</span>
+        ${(t.avg_entry_price&&t.quantity)?`<span style="color:var(--blue-lt);margin-left:auto;font-size:9px">Total Invested ₹${Number(totalInv).toLocaleString('en-IN')}</span>`:''}
+      </div>`;
+    }
+
+    const card = document.createElement('div');
+    card.style.cssText = `background:var(--card);border:1px solid var(--bdr);
+      border-radius:12px;overflow:hidden;
+      border-left:3px solid ${isWin?'var(--green)':'var(--red)'}`;
+
+    card.innerHTML = `
+      <!-- Header -->
+      <div style="display:flex;justify-content:space-between;align-items:center;
+        padding:14px 18px;border-bottom:1px solid var(--bdr)">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+            <span style="font-size:15px;font-weight:800;color:var(--white)">${t.symbol}</span>
+            <span style="font-size:9px;padding:2px 7px;border-radius:100px;font-weight:700;
+              background:${isWin?'var(--green-dim)':'var(--red-dim)'};
+              border:1px solid ${isWin?'var(--green-bd)':'var(--red-bd)'};
+              color:${pnlCol}">${isWin?'Winner':'Loss'}</span>
+            ${pxList.length>0?`<span style="font-size:9px;padding:2px 7px;border-radius:100px;font-weight:700;background:var(--amber-dim);border:1px solid var(--amber-bd);color:var(--amber)">Partial Exit</span>`:''}
+          </div>
+          <div style="font-size:11px;color:var(--muted)">${t.company_name||''} · ${t.sector||''}</div>
+        </div>
+        <div style="
+          background:${isWin?'linear-gradient(135deg,rgba(26,184,128,.18),rgba(0,230,118,.08))':'linear-gradient(135deg,rgba(255,93,122,.18),rgba(192,48,80,.08))'};
+          border:1px solid ${isWin?'var(--green-bd)':'var(--red-bd)'};
+          border-radius:10px;padding:10px 16px;text-align:right;
+          box-shadow:0 0 16px ${isWin?'rgba(0,230,118,.1)':'rgba(255,93,122,.1)'};
+          min-width:140px">
+          <div style="font-size:22px;font-weight:900;letter-spacing:-.5px;font-family:var(--fm);color:${pnlCol}">
+            ${totalPnlT>=0?'+':''}₹${Math.abs(totalPnlT).toLocaleString('en-IN',{maximumFractionDigits:0})}
+          </div>
+          <div style="font-size:11px;font-weight:700;color:${pnlCol};margin-top:2px">
+            ${t.return_pct>=0?'+':''}${Number(t.return_pct).toFixed(2)}%
+            <span style="color:var(--muted);font-weight:400"> · ${t.holding_days||0}d held</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Key stats row -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--bdr)">
+        <div style="background:var(--card2);padding:10px 14px">
+          <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Avg Entry</div>
+          <div style="font-size:13px;font-weight:700;color:var(--white);font-family:var(--fm)">₹${Number(t.avg_entry_price||0).toLocaleString('en-IN')}</div>
+        </div>
+        <div style="background:var(--card2);padding:10px 14px">
+          <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Exit Price</div>
+          <div style="font-size:13px;font-weight:700;color:${pnlCol};font-family:var(--fm)">₹${Number(t.avg_exit_price||0).toLocaleString('en-IN')}</div>
+        </div>
+        <div style="background:var(--card2);padding:10px 14px">
+          <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Total Qty</div>
+          <div style="font-size:13px;font-weight:700;color:#a78bfa;font-family:var(--fm)">${t.quantity||0}</div>
+        </div>
+        <div style="background:var(--card2);padding:10px 14px">
+          <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Exit Reason</div>
+          <div style="font-size:11px;font-weight:700;color:var(--text2)">${t.exit_reason||'—'}</div>
+        </div>
+      </div>
+
+      <!-- Trade journey log -->
+      <div style="padding:12px 18px">
+        <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;
+          letter-spacing:.5px;margin-bottom:8px">Trade Journey</div>
+
+        <!-- Entries: initial + pyramid adds = Total Invested -->
+        ${entriesHtml}
+
+        <!-- Partial exits -->
+        ${pxList.map(px=>{
+          const pc = px.realised_pnl>=0?'var(--green)':'var(--red)';
+          return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:10px;padding-left:8px">
+            <span style="color:var(--amber);font-weight:700;min-width:14px">◆</span>
+            <span style="color:var(--muted);min-width:80px">${px.exit_date}</span>
+            <span style="color:var(--amber);min-width:50px">Partial Exit</span>
+            <span style="color:var(--text2);font-family:var(--fm)">₹${Number(px.exit_price).toLocaleString('en-IN')} × ${px.quantity} shares</span>
+            <span style="color:${pc};font-family:var(--fm);font-weight:700;margin-left:auto">
+              ${px.realised_pnl>=0?'+':''}₹${Math.abs(px.realised_pnl).toLocaleString('en-IN',{maximumFractionDigits:0})}
+              <span style="font-size:9px">(${px.return_pct>=0?'+':''}${Number(px.return_pct).toFixed(2)}%)</span>
+            </span>
+          </div>`;
+        }).join('')}
+
+        <!-- Final exit -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:10px">
+          <span style="color:var(--red);font-weight:700;min-width:14px">▼</span>
+          <span style="color:var(--muted);min-width:80px">${t.exit_date}</span>
+          <span style="color:var(--white);min-width:50px">Final Exit</span>
+          <span style="color:var(--text2);font-family:var(--fm)">₹${Number(t.avg_exit_price||0).toLocaleString('en-IN')} × ${(t.quantity||0)-(pxList.reduce((s,p)=>s+p.quantity,0))} shares</span>
+          <span style="color:${finalPnl>=0?'var(--green)':'var(--red)'};font-family:var(--fm);font-weight:700;margin-left:auto">
+            ${finalPnl>=0?'+':''}₹${Math.abs(finalPnl).toLocaleString('en-IN',{maximumFractionDigits:0})}
+          </span>
+        </div>
+
+        <!-- Notes only — P&L shown in header badge -->
+        ${t.trade_notes?`<div style="border-top:1px solid var(--bdr);margin-top:8px;padding-top:8px;font-size:9px;color:var(--muted);font-style:italic">"${t.trade_notes}"</div>`:''}
+
+        <!-- Chart actions -->
+        <div style="border-top:1px solid var(--bdr);margin-top:10px;padding-top:10px;display:flex;gap:8px">
+          <button onclick="toggleClosedChart('${t.id}','${t.symbol}')" id="cbtn-${t.id}"
+            style="font-size:11px;font-weight:600;padding:6px 14px;border-radius:7px;cursor:pointer;
+            background:var(--card2);border:1px solid var(--bdr);color:var(--text2)">
+            📈 View Chart
+          </button>
+          <button onclick="downloadClosedPDF('${t.id}')" id="cpdf-${t.id}"
+            style="font-size:11px;font-weight:600;padding:6px 14px;border-radius:7px;cursor:pointer;
+            background:var(--card2);border:1px solid var(--bdr);color:var(--text2)">
+            ⬇ Download PDF
+          </button>
+        </div>
+        <div id="cchart-${t.id}" style="display:none;margin-top:10px"></div>
+      </div>`;
+
+    grid.appendChild(card);
+  }
+}
+
 
 /* ══════════════════════════════════════════════════
    CLOSED-TRADE ARCHIVE CHARTS  (frozen snapshot + PDF)
@@ -6366,6 +7122,11 @@ window.addEventListener('load', async () => {
     await renderClosed();
     if(document.getElementById('pane-portfolio').classList.contains('active'))
       drawPortfolioCharts();
+    // Re-render the active My-Trading-Desk replica so its charts resize too
+    const mp=document.getElementById('pane-mtportfolio');
+    if(mp && mp.classList.contains('active') && typeof renderUserOpen==='function') renderUserOpen();
+    const mc=document.getElementById('pane-mtclosed');
+    if(mc && mc.classList.contains('active') && typeof renderUserClosed==='function') renderUserClosed();
   });
 });
 
@@ -7044,5 +7805,12 @@ function toggleEma(p, el){
 }
 
 </script>
+<div class="mt-modal" id="mt-modal">
+  <div class="mt-modal-box">
+    <div class="mt-modal-h"><span id="mt-modal-title">Action</span><button class="mt-x" onclick="MT.closeModal()">&times;</button></div>
+    <div class="mt-alert" id="mt-modal-alert"></div>
+    <div id="mt-modal-body"></div>
+  </div>
+</div>
 </body>
 </html>
