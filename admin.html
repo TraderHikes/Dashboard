@@ -155,6 +155,25 @@
     box-shadow:0 0 8px var(--blue);
     border-radius:2px 2px 0 0;
   }
+  /* ── Grouped tabs (dropdowns) ── */
+  .tab-grp { position:relative; display:inline-flex; }
+  .tab-grp-trigger { display:inline-flex; align-items:center; gap:7px; }
+  .tab-grp-caret { font-size:9px; opacity:.8; transition:transform .16s; }
+  .tab-grp.open .tab-grp-caret { transform:rotate(180deg); }
+  .tab-grp-menu {
+    position:absolute; top:100%; left:0; min-width:198px;
+    background:var(--card2); border:1px solid var(--bdr2); border-top:none;
+    border-radius:0 0 11px 11px; box-shadow:0 18px 42px rgba(0,0,0,.55);
+    padding:6px; z-index:300; display:none;
+  }
+  .tab-grp.open .tab-grp-menu { display:block; }
+  .tab-grp-item {
+    display:block; width:100%; text-align:left; background:none; border:none;
+    color:var(--text2); font-family:var(--f); font-size:12.5px; font-weight:600;
+    padding:9px 12px; border-radius:7px; cursor:pointer; white-space:nowrap; transition:all .14s;
+  }
+  .tab-grp-item:hover { background:var(--card3); color:var(--white); }
+  .tab-grp-item.active { background:rgba(92,111,251,.16); color:var(--white); }
 
   .form-tab-wrap { max-width:960px; margin:0 auto; }
   .tab-pane { display:none; }
@@ -381,15 +400,27 @@
 
   <!-- Tabs -->
   <div class="tabs">
-    <button class="tab-btn active" onclick="openTab('tab-open',this)">Open Trades</button>
-    <button class="tab-btn" onclick="openTab('tab-pyramid',this)">Pyramid Buy</button>
-    <button class="tab-btn" onclick="openTab('tab-partial',this)">Partial Exit</button>
-    <button class="tab-btn" onclick="openTab('tab-close',this)">Final Exit</button>
-    <button class="tab-btn" onclick="openTab('tab-closed-edit',this);loadClosedTradesForEdit()">Closed Trades</button>
+    <!-- Trade Manager — grouped dropdown -->
+    <div class="tab-grp" id="grp-trade">
+      <button class="tab-btn tab-grp-trigger active" type="button" onclick="toggleTabGroup(this)">Trade Manager <span class="tab-grp-caret">▾</span></button>
+      <div class="tab-grp-menu">
+        <button class="tab-grp-item active" onclick="openTab('tab-open',this)">Open Trades</button>
+        <button class="tab-grp-item" onclick="openTab('tab-pyramid',this)">Pyramid Buy</button>
+        <button class="tab-grp-item" onclick="openTab('tab-partial',this)">Partial Exit</button>
+        <button class="tab-grp-item" onclick="openTab('tab-close',this)">Final Exit</button>
+        <button class="tab-grp-item" onclick="openTab('tab-closed-edit',this);loadClosedTradesForEdit()">Closed Trades</button>
+      </div>
+    </div>
+    <!-- Market Data Tracker — grouped dropdown -->
+    <div class="tab-grp" id="grp-market">
+      <button class="tab-btn tab-grp-trigger" type="button" onclick="toggleTabGroup(this)">Market Data Tracker <span class="tab-grp-caret">▾</span></button>
+      <div class="tab-grp-menu">
+        <button class="tab-grp-item" onclick="openTab('tab-breadth',this)">Market Breadth</button>
+        <button class="tab-grp-item" onclick="openTab('tab-score',this);loadMarketScore()">Market Score</button>
+        <button class="tab-grp-item" onclick="openTab('tab-indices',this);loadIndexFlags()">Key Indices</button>
+      </div>
+    </div>
     <button class="tab-btn" onclick="openTab('tab-snapshot',this)">Portfolio Snapshot</button>
-    <button class="tab-btn" onclick="openTab('tab-breadth',this)">Market Breadth</button>
-    <button class="tab-btn" onclick="openTab('tab-score',this);loadMarketScore()">Market Score</button>
-    <button class="tab-btn" onclick="openTab('tab-indices',this);loadIndexFlags()">Key Indices</button>
     <button class="tab-btn" onclick="openTab('tab-watchlist',this);loadWatchlistAdmin()">Watchlist</button>
     <button class="tab-btn" onclick="openTab('tab-students',this)">Students</button>
   </div>
@@ -1264,12 +1295,35 @@ async function initApp() {
 function openTab(id, btn) {
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-grp-item').forEach(b => b.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  btn.classList.add('active');
+  // A grouped item lights its group trigger (and itself); a standalone tab lights itself.
+  const grp = (btn && btn.closest) ? btn.closest('.tab-grp') : null;
+  if (grp) {
+    const trg = grp.querySelector('.tab-grp-trigger'); if (trg) trg.classList.add('active');
+    if (btn && btn.classList) btn.classList.add('active');
+  } else if (btn && btn.classList) {
+    btn.classList.add('active');
+  }
+  // Close any open dropdown after a selection
+  document.querySelectorAll('.tab-grp.open').forEach(g => g.classList.remove('open'));
   if (id === 'tab-partial') loadAllPartialExits();
   if (id === 'tab-pyramid') loadAllPyramidEntries();
   if (id === 'tab-close') loadAllFinalExits();
 }
+
+function toggleTabGroup(trigger) {
+  const grp = trigger.closest('.tab-grp');
+  if (!grp) return;
+  const isOpen = grp.classList.contains('open');
+  document.querySelectorAll('.tab-grp.open').forEach(g => g.classList.remove('open'));
+  if (!isOpen) grp.classList.add('open');
+}
+// Close dropdowns when clicking outside a group
+document.addEventListener('click', e => {
+  if (!e.target.closest || !e.target.closest('.tab-grp'))
+    document.querySelectorAll('.tab-grp.open').forEach(g => g.classList.remove('open'));
+});
 
 function toast(msg, type = 'success') {
   const t = document.getElementById('toast');
