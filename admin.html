@@ -2452,17 +2452,22 @@ async function loadEditEntries(tradeId) {
   const { data, error } = await sb.from('trade_entries')
     .select('*').eq('open_trade_id', tradeId).order('entry_date');
 
-  // Read-only note shown when no PYRAMID legs are recorded in trade_entries.
-  // The base buy lives in open_trades (by design) — it is NOT a trade_entries
-  // row, and must NOT be seeded here (doing so double-counts the base).
+  // The base buy lives on the open_trades row (not in trade_entries). It is now
+  // EDITABLE here; saving recomputes avg entry / total qty / remaining qty.
   const baseInfoNote = `
     <div style="background:#0d1520;border:1px solid #1e2d3d;border-radius:8px;padding:14px 16px;margin-bottom:10px">
-      <div style="font-size:11px;font-weight:700;color:#5c6ffb;margin-bottom:6px">Base Entry</div>
-      <div style="font-size:11px;color:#7d93a8;line-height:1.5">
-        The initial buy is recorded automatically on the trade itself
-        (<strong style="color:#e8f0f8">${(_et.quantity||'—')} @ ₹${_et.entry_price||'—'}</strong>)
-        and isn't listed here. This section shows <strong style="color:#e8f0f8">pyramid (add-on) legs</strong> only.
-        To add to the position, use the <strong style="color:#e8f0f8">Pyramid Buy</strong> tab.
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <div style="font-size:11px;font-weight:700;color:#5c6ffb">Base Entry — original buy</div>
+        <span style="font-size:10px;color:#7d93a8">editing recalculates avg entry, total &amp; remaining qty</span>
+      </div>
+      <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:10px">
+        <div class="form-group"><label class="form-label">Entry Date</label><input class="form-input" type="date" id="base-edit-date" value="${_et.entry_date||''}"></div>
+        <div class="form-group"><label class="form-label">Entry Price ₹</label><input class="form-input" type="number" step="0.01" id="base-edit-price" value="${_et.entry_price!=null?_et.entry_price:''}"></div>
+        <div class="form-group"><label class="form-label">Quantity</label><input class="form-input" type="number" step="1" id="base-edit-qty" value="${_et.quantity!=null?_et.quantity:''}"></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div style="font-size:10px;color:#7d93a8;line-height:1.5">Pyramid (add-on) legs are listed below. To add to the position, use the <strong style="color:#e8f0f8">Pyramid Buy</strong> tab.</div>
+        <button class="btn btn-primary btn-sm" onclick="saveBaseEntry()">Save Base Entry</button>
       </div>
     </div>`;
 
@@ -2503,6 +2508,40 @@ async function loadEditEntries(tradeId) {
         </button>
       </div>
     </div>`).join('');
+}
+
+async function saveBaseEntry() {
+  const id    = document.getElementById('edit-trade-id').value;
+  const date  = document.getElementById('base-edit-date').value || null;
+  const price = parseFloat(document.getElementById('base-edit-price').value);
+  const qty   = parseInt(document.getElementById('base-edit-qty').value);
+  if (!(price > 0) || !(qty > 0)) {
+    showEditAlert('Base entry price and quantity must both be greater than zero.','error'); return;
+  }
+
+  // Guard: base qty + pyramid qty must still cover everything already sold via partial
+  // exits, otherwise remaining quantity would go negative.
+  const [{ data: pyr }, { data: exits }] = await Promise.all([
+    sb.from('trade_entries').select('quantity').eq('open_trade_id', id),
+    sb.from('partial_exits').select('quantity').eq('open_trade_id', id),
+  ]);
+  const pyrQty  = (pyr||[]).reduce((s,e)=>s + (e.quantity||0), 0);
+  const soldQty = (exits||[]).reduce((s,e)=>s + (e.quantity||0), 0);
+  if (qty + pyrQty < soldQty) {
+    showEditAlert(`Base quantity too low: total bought (${qty} base + ${pyrQty} pyramid = ${qty+pyrQty}) is less than the ${soldQty} already sold in partial exits. Raise the base quantity or remove a partial exit first.`,'error');
+    return;
+  }
+
+  const { error } = await sb.from('open_trades').update({
+    entry_date: date, entry_price: price, quantity: qty, updated_at: new Date().toISOString(),
+  }).eq('id', id);
+  if (error) { showEditAlert('Error: ' + error.message,'error'); return; }
+
+  // Keep the in-memory cache in sync, recompute the blended position, refresh views.
+  _et.entry_date = date; _et.entry_price = price; _et.quantity = qty;
+  await recomputeOpenTrade(id, 'Base entry updated');
+  await loadOpenTrades();
+  await loadEditEntries(id);
 }
 
 async function saveEntryLeg(entryId, tradeId) {
