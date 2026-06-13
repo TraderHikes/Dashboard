@@ -1935,6 +1935,7 @@ document.getElementById('form-close-trade').addEventListener('submit', async e =
     // Link back to the original open trade so its pyramid legs + partial
     // exits (still keyed by open_trade_id) can be found for the archive chart.
     origin_open_trade_id: openId,
+    is_model: true,
   };
 
   // Insert and get the new closed-trade id back (needed to key the candle snapshot)
@@ -2501,7 +2502,7 @@ async function loadAllPartialExits() {
   if (!tbody) return;
   tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:20px">Loading\u2026</td></tr>';
 
-  const { data: exits, error } = await sb.from('partial_exits')
+  let { data: exits, error } = await sb.from('partial_exits')
     .select('*').order('exit_date', { ascending: false });
   if (error) { tbody.innerHTML = `<tr><td colspan="11" style="color:var(--red);padding:16px">${error.message}</td></tr>`; return; }
   if (!exits || exits.length === 0) {
@@ -2516,7 +2517,7 @@ async function loadAllPartialExits() {
   let openParents = {};
   if (ids.length) {
     const { data: ots } = await sb.from('open_trades')
-      .select('id,company_name,avg_entry_price,entry_price').in('id', ids);
+      .select('id,company_name,avg_entry_price,entry_price,is_model').in('id', ids);
     (ots||[]).forEach(o => { openParents[o.id] = o; });
   }
   // Closed parents — match by origin id, fall back to symbol. This is why
@@ -2524,12 +2525,24 @@ async function loadAllPartialExits() {
   let closedByOrigin = {}, closedBySym = {};
   {
     const { data: cts } = await sb.from('closed_trades')
-      .select('origin_open_trade_id,symbol,company_name,avg_entry_price');
+      .select('origin_open_trade_id,symbol,company_name,avg_entry_price,is_model');
     (cts||[]).forEach(c => {
       if (c.origin_open_trade_id) closedByOrigin[c.origin_open_trade_id] = c;
       if (c.symbol && !(c.symbol in closedBySym)) closedBySym[c.symbol] = c;
     });
   }
+
+  // ── Model-book scoping: only show partial exits whose parent trade is a MODEL
+  // trade (partial_exits has no is_model column, so derive it from the parents).
+  const _modelParentIds = new Set();
+  Object.values(openParents).forEach(o => { if (o && o.is_model) _modelParentIds.add(o.id); });
+  Object.entries(closedByOrigin).forEach(([origin, c]) => { if (c && c.is_model) _modelParentIds.add(origin); });
+  exits = exits.filter(e => _modelParentIds.has(e.open_trade_id));
+  if (!exits.length) {
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:20px">No partial exits booked yet.</td></tr>';
+    _peCache = []; return;
+  }
+  _peCache = exits;
 
   const fmt = (n) => '\u20b9' + Math.abs(n).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
@@ -3055,7 +3068,7 @@ async function loadClosedTradesForEdit() {
   if (!listEl) return;
   listEl.innerHTML = '<div style="color:var(--muted);font-size:12px">Loading…</div>';
   cancelClosedEdit();
-  const { data, error } = await sb.from('closed_trades').select('*').order('exit_date', { ascending: false });
+  const { data, error } = await sb.from('closed_trades').select('*').eq('is_model', true).order('exit_date', { ascending: false });
   if (error || !data || !data.length) {
     listEl.innerHTML = '<div style="color:var(--muted);font-size:12px">No closed trades found.</div>'; return;
   }
