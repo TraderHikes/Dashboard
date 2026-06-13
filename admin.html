@@ -2476,6 +2476,23 @@ let _peCache = [];
 
 // Re-sum a closed trade's realised P&L from its (possibly edited) partial exits
 // plus the final leg, so editing a partial here keeps the closed record in sync.
+// Recompute whichever parent a leg belongs to. If the parent open trade still
+// exists → recompute the OPEN trade (avg / total / remaining / flags). If it has
+// been closed → recompute the CLOSED trade. This lets legs be edited/deleted from
+// the All Partial Exits / All Pyramid Entries tables regardless of trade status.
+async function recomputeLegParent(openTradeId) {
+  if (!openTradeId) return;
+  const { data: ot } = await sb.from('open_trades').select('id').eq('id', openTradeId).maybeSingle();
+  if (ot) {
+    await recomputeOpenTrade(openTradeId, 'Leg updated');
+    // Keep the partial-exit badge honest after editing/removing partial legs
+    const { data: px } = await sb.from('partial_exits').select('id').eq('open_trade_id', openTradeId);
+    await sb.from('open_trades').update({ has_partial_exit: (px || []).length > 0 }).eq('id', openTradeId);
+  } else {
+    await recomputeClosedTradeForOrigin(openTradeId);
+  }
+}
+
 async function recomputeClosedTradeForOrigin(originId) {
   if (!originId) return;
   const { data: ct } = await sb.from('closed_trades')
@@ -2532,12 +2549,13 @@ async function loadAllPartialExits() {
     });
   }
 
-  // ── Model-book scoping: only show partial exits whose parent trade is a MODEL
-  // trade (partial_exits has no is_model column, so derive it from the parents).
-  const _modelParentIds = new Set();
-  Object.values(openParents).forEach(o => { if (o && o.is_model) _modelParentIds.add(o.id); });
-  Object.entries(closedByOrigin).forEach(([origin, c]) => { if (c && c.is_model) _modelParentIds.add(origin); });
-  exits = exits.filter(e => _modelParentIds.has(e.open_trade_id));
+  // ── Model-book scoping: partial_exits has no is_model column, so derive it from
+  // the parent trade — active (open_trades) OR closed (closed_trades, matched by
+  // origin id, then symbol). Show legs of MODEL trades only, active AND closed.
+  const _peParent = e => openParents[e.open_trade_id]
+                      || closedByOrigin[e.open_trade_id]
+                      || closedBySym[e.symbol] || null;
+  exits = exits.filter(e => { const p = _peParent(e); return p && p.is_model; });
   if (!exits.length) {
     tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:20px">No partial exits booked yet.</td></tr>';
     _peCache = []; return;
@@ -2565,7 +2583,7 @@ async function loadAllPartialExits() {
       ? '<span class="badge badge-long" style="font-size:9px">active</span>'
       : '<span class="badge badge-blue" style="font-size:9px">closed</span>';
     const action = isActive
-      ? '<span style="color:var(--muted);font-size:10px">via Open Trades</span>'
+      ? `<span style="color:var(--muted);font-size:11px">via Open Trades \u2192</span>`
       : `<div style="display:flex;gap:6px;align-items:center;justify-content:center">
            <button class="btn btn-ghost btn-sm" onclick="openPartialEdit('${e.id}')">\u270e Edit</button>
            <button class="btn btn-danger btn-sm" onclick="deletePartialExit('${e.id}')">Delete</button>
@@ -2589,12 +2607,12 @@ async function loadAllPartialExits() {
 async function deletePartialExit(id) {
   const row = (_peCache||[]).find(x => String(x.id) === String(id));
   if (!row) return;
-  if (!confirm(`Delete this partial exit for ${row.symbol}? Those shares fold back into the final exit and the closed trade's realised P&L will be recalculated. This cannot be undone.`)) return;
+  if (!confirm(`Delete this partial exit for ${row.symbol}? Those shares fold back into the position and the parent trade's totals (remaining qty / realised P&L) will be recalculated. This cannot be undone.`)) return;
   const { error } = await sb.from('partial_exits').delete().eq('id', id);
   if (error) { alert('Error: ' + error.message); return; }
-  await recomputeClosedTradeForOrigin(row.open_trade_id);
+  await recomputeLegParent(row.open_trade_id);
   await loadAllPartialExits();
-  if (typeof toast === 'function') toast('Partial exit deleted \u2014 closed trade totals recalculated');
+  if (typeof toast === 'function') toast('Partial exit deleted \u2014 parent trade recalculated');
 }
 
 function openPartialEdit(id) {
@@ -2641,10 +2659,10 @@ async function savePartialEdit() {
     notes,
   }).eq('id', id);
   if (error) { alert('Error: ' + error.message); return; }
-  await recomputeClosedTradeForOrigin(row.open_trade_id);
+  await recomputeLegParent(row.open_trade_id);
   cancelPartialEdit();
   await loadAllPartialExits();
-  if (typeof toast === 'function') toast('Partial exit updated \u2014 closed trade totals recalculated');
+  if (typeof toast === 'function') toast('Partial exit updated \u2014 parent trade recalculated');
 }
 
 // ════════════════════════════════════════════
@@ -2690,7 +2708,7 @@ async function loadAllPyramidEntries() {
   if (!tbody) return;
   tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px">Loading\u2026</td></tr>';
 
-  const { data: pyr, error } = await sb.from('trade_entries')
+  let { data: pyr, error } = await sb.from('trade_entries')
     .select('*').order('entry_date', { ascending: false });
   if (error) { tbody.innerHTML = `<tr><td colspan="9" style="color:var(--red);padding:16px">${error.message}</td></tr>`; return; }
   if (!pyr || pyr.length === 0) {
@@ -2702,28 +2720,44 @@ async function loadAllPyramidEntries() {
   const ids = [...new Set(pyr.map(e => e.open_trade_id).filter(Boolean))];
   let openParents = {};
   if (ids.length) {
-    const { data: ots } = await sb.from('open_trades').select('id,symbol,company_name').in('id', ids);
+    const { data: ots } = await sb.from('open_trades').select('id,symbol,company_name,is_model').in('id', ids);
     (ots||[]).forEach(o => { openParents[o.id] = o; });
   }
-  let closedByOrigin = {};
+  let closedByOrigin = {}, closedBySym = {};
   {
-    const { data: cts } = await sb.from('closed_trades').select('origin_open_trade_id,symbol,company_name');
-    (cts||[]).forEach(c => { if (c.origin_open_trade_id) closedByOrigin[c.origin_open_trade_id] = c; });
+    const { data: cts } = await sb.from('closed_trades').select('origin_open_trade_id,symbol,company_name,is_model');
+    (cts||[]).forEach(c => {
+      if (c.origin_open_trade_id) closedByOrigin[c.origin_open_trade_id] = c;
+      if (c.symbol && !(c.symbol in closedBySym)) closedBySym[c.symbol] = c;
+    });
   }
+
+  // Model-book scoping: trade_entries has no is_model column, so derive it from the
+  // parent trade — active (open_trades) OR closed (closed_trades, matched by origin
+  // id, then symbol). Show legs of MODEL trades only, active AND closed.
+  const _pyrParent = e => openParents[e.open_trade_id]
+                       || closedByOrigin[e.open_trade_id]
+                       || closedBySym[e.symbol] || null;
+  pyr = pyr.filter(e => { const p = _pyrParent(e); return p && p.is_model; });
+  if (!pyr.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px">No pyramid entries booked yet.</td></tr>';
+    _pyrCache = []; return;
+  }
+  _pyrCache = pyr;
 
   tbody.innerHTML = pyr.map(e => {
     const openP    = openParents[e.open_trade_id];
-    const closedP  = closedByOrigin[e.open_trade_id];
+    const closedP  = closedByOrigin[e.open_trade_id] || closedBySym[e.symbol];
     const isActive = !!openP;
     const parent   = openP || closedP || {};
-    const symbol   = parent.symbol || '\u2014';
+    const symbol   = parent.symbol || e.symbol || '\u2014';
     const company  = parent.company_name || '\u2014';
     const posPct   = e.position_size_pct != null ? Number(e.position_size_pct).toFixed(2) + '%' : '\u2014';
     const statusBadge = isActive
       ? '<span class="badge badge-long" style="font-size:9px">active</span>'
       : '<span class="badge badge-blue" style="font-size:9px">closed</span>';
     const action = isActive
-      ? '<span style="color:var(--muted);font-size:10px">via Open Trades</span>'
+      ? `<span style="color:var(--muted);font-size:11px">via Open Trades \u2192</span>`
       : `<div style="display:flex;gap:6px;align-items:center;justify-content:center">
            <button class="btn btn-ghost btn-sm" onclick="openPyrEdit('${e.id}')">\u270e Edit</button>
            <button class="btn btn-danger btn-sm" onclick="deletePyrEntry('${e.id}')">Delete</button>
@@ -2782,23 +2816,25 @@ async function savePyrEdit() {
   if (error) { alert('Error: ' + error.message); return; }
 
   if (ct && base) await _rebuildClosed(ct, base.baseQty, base.baseCost);
+  else await recomputeOpenTrade(row.open_trade_id, 'Pyramid leg updated');
   cancelPyrEdit();
   await loadAllPyramidEntries();
-  if (typeof toast === 'function') toast('Pyramid entry updated \u2014 closed trade recalculated');
+  if (typeof toast === 'function') toast('Pyramid entry updated \u2014 parent trade recalculated');
 }
 
 async function deletePyrEntry(id) {
   const row = (_pyrCache||[]).find(x => String(x.id) === String(id));
   if (!row) return;
-  if (!confirm('Delete this pyramid entry from the closed trade? The blended avg entry, total qty, and realised P&L will be recalculated. This cannot be undone.')) return;
+  if (!confirm('Delete this pyramid entry? The parent trade\'s blended avg entry, total qty, remaining qty, and realised P&L will be recalculated. This cannot be undone.')) return;
   const { data: ct } = await sb.from('closed_trades')
     .select('*').eq('origin_open_trade_id', row.open_trade_id).maybeSingle();
   let base = ct ? await _deriveClosedBase(ct) : null;
   const { error } = await sb.from('trade_entries').delete().eq('id', id);
   if (error) { alert('Error: ' + error.message); return; }
   if (ct && base) await _rebuildClosed(ct, base.baseQty, base.baseCost);
+  else await recomputeOpenTrade(row.open_trade_id, 'Pyramid leg deleted');
   await loadAllPyramidEntries();
-  if (typeof toast === 'function') toast('Pyramid entry deleted \u2014 closed trade recalculated');
+  if (typeof toast === 'function') toast('Pyramid entry deleted \u2014 parent trade recalculated');
 }
 
 // ════════════════════════════════════════════
@@ -2819,18 +2855,34 @@ async function loadAllFinalExits() {
   }
   _feCache = cts;
 
-  // Partial qty per origin, to derive the final-leg qty.
-  const origins = [...new Set(cts.map(c => c.origin_open_trade_id).filter(Boolean))];
-  let pqty = {};
-  if (origins.length) {
-    const { data: px } = await sb.from('partial_exits').select('open_trade_id,quantity').in('open_trade_id', origins);
-    (px||[]).forEach(p => { pqty[p.open_trade_id] = (pqty[p.open_trade_id]||0) + (p.quantity||0); });
+  // Partial qty per trade, to derive the final-leg qty. Robust across data ages:
+  //   1) frozen partial_exit_qty on the closed record (most reliable), else
+  //   2) live partials summed by origin id, else
+  //   3) live partials for the same symbol within the holding window (legacy rows
+  //      that pre-date origin linking).
+  const syms = [...new Set(cts.map(c => c.symbol).filter(Boolean))];
+  let pqtyByOrigin = {}, pxBySym = {};
+  if (syms.length) {
+    const { data: px } = await sb.from('partial_exits')
+      .select('open_trade_id,symbol,quantity,exit_date').in('symbol', syms);
+    (px||[]).forEach(p => {
+      if (p.open_trade_id) pqtyByOrigin[p.open_trade_id] = (pqtyByOrigin[p.open_trade_id]||0) + (p.quantity||0);
+      (pxBySym[p.symbol] = pxBySym[p.symbol] || []).push(p);
+    });
   }
+  const partialQtyFor = (c) => {
+    if (c.partial_exit_qty != null) return c.partial_exit_qty;
+    if (c.origin_open_trade_id && pqtyByOrigin[c.origin_open_trade_id] != null) return pqtyByOrigin[c.origin_open_trade_id];
+    return (pxBySym[c.symbol] || [])
+      .filter(p => (!c.entry_date || p.exit_date >= c.entry_date) && (!c.exit_date || p.exit_date <= c.exit_date))
+      .reduce((s,p) => s + (p.quantity||0), 0);
+  };
 
   const fmt = (n) => '\u20b9' + Math.abs(n).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
   tbody.innerHTML = cts.map(c => {
-    const partialQty = pqty[c.origin_open_trade_id] || 0;
+    // Final-leg qty = total ever bought − qty already sold in partials.
+    const partialQty = partialQtyFor(c);
     const finalQty   = Math.max(0, (c.quantity||0) - partialQty);
     const pnl = c.realised_pnl || 0;
     const pnlStr = `<span style="color:${pnl>=0?'var(--green)':'var(--red)'}">${pnl>=0?'+':''}${fmt(pnl)}</span>`;
