@@ -1240,6 +1240,9 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
 .mt-dt tr:last-child td{border-bottom:none}
 .mt-dt tr:hover td{background:rgba(255,255,255,.02)}
 .mt-dt td.mono{font-family:var(--fm)}
+/* All Final Exits table — centered cells (mirrors Admin) */
+.mt-fe th,.mt-fe td{text-align:center;vertical-align:middle}
+.mt-fe td.notes{text-align:left}
 /* Edit dropdown */
 .mt-dd{position:relative;display:inline-block}
 .mt-dd-menu{position:fixed;background:var(--card2);border:1px solid var(--bdr2);border-radius:9px;box-shadow:0 14px 34px rgba(0,0,0,.5);padding:5px;min-width:152px;z-index:1500;display:none}
@@ -1305,6 +1308,45 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
       </div>
     </div>
     <div style="overflow-x:auto"><div id="mt-manage-list"><div class="mt-empty">Loading…</div></div></div>
+  </div>
+
+  <!-- ══ All Final Exits — edit/delete the final exit of CLOSED trades (replica of Admin) ══ -->
+  <div class="mt-card">
+    <div class="mt-card-h" style="flex-wrap:wrap;gap:10px">
+      <span style="display:flex;align-items:center;gap:10px">All Final Exits <span class="mt-count" id="mt-fe-count"></span></span>
+      <button class="mt-btn mt-btn-g mt-btn-sm" style="margin-left:auto" onclick="loadUserFinalExits()">↻ Refresh</button>
+    </div>
+    <div class="mt-alert" id="mt-fe-alert"></div>
+    <div style="overflow-x:auto">
+      <table class="mt-dt mt-fe" id="mt-fe-table">
+        <thead><tr>
+          <th>Symbol</th><th>Company</th><th>Trade Status</th><th>Exit Date</th>
+          <th>Avg Exit \u20B9</th><th>Final Qty</th><th>Realised P&L \u20B9</th><th>Return %</th><th>Notes</th><th>Action</th>
+        </tr></thead>
+        <tbody id="mt-fe-tbody">
+          <tr><td colspan="10" class="mt-empty">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Inline editor — fix the final exit on a CLOSED trade -->
+    <div id="mt-fe-edit-wrap" style="display:none;margin-top:18px;border-top:1px solid var(--bdr);padding-top:18px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+        <div style="font-size:14px;font-weight:700;color:var(--white)" id="mt-fe-edit-sym">—</div>
+        <span style="font-size:11px;color:var(--muted)">Editing the final exit — realised P&L and return % will be recalculated on save.</span>
+        <button class="mt-btn mt-btn-g mt-btn-sm" style="margin-left:auto" onclick="cancelUfeEdit()">✕ Cancel</button>
+      </div>
+      <input type="hidden" id="mt-fe-edit-id">
+      <div class="mt-grid" style="grid-template-columns:1fr 1fr 1fr">
+        <div class="mt-fg"><label>Exit Date</label><input class="mt-in" type="date" id="mt-fe-edit-date"></div>
+        <div class="mt-fg"><label>Avg Exit \u20B9</label><input class="mt-in" type="number" step="0.05" id="mt-fe-edit-price"></div>
+        <div class="mt-fg"><label>Exit Reason</label><input class="mt-in" type="text" id="mt-fe-edit-reason"></div>
+      </div>
+      <div class="mt-fg"><label>Notes</label><input class="mt-in" type="text" id="mt-fe-edit-notes"></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:8px">
+        <button type="button" class="mt-btn mt-btn-p" onclick="saveUfeEdit()">Save Final Exit</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -2758,7 +2800,7 @@ function sw(id){
   if(id==='sectoral'){SB.init();}
   if(id==='heatmap'){loadHeatmap();}
   if(id==='charts'){loadCharts();}
-  if(id==='mtmanager'){MT.init();MT.loadOpen();MT.loadClosed();}
+  if(id==='mtmanager'){MT.init();MT.loadOpen();MT.loadClosed();loadUserFinalExits();}
   if(id==='mtportfolio'){MT.init();renderUserOpen();}
   if(id==='mtclosed'){MT.init();renderUserClosed();}
 }
@@ -3154,6 +3196,8 @@ const MT = (() => {
     // Keep the Open Trades / Closed Trades replica panes in sync after any action
     if(document.getElementById('uot-container') && typeof renderUserOpen==='function') renderUserOpen();
     if(document.getElementById('uct-container') && typeof renderUserClosed==='function') renderUserClosed();
+    // Keep the All Final Exits table in sync (a Final Exit creates a closed trade)
+    if(document.getElementById('mt-fe-tbody') && typeof loadUserFinalExits==='function') loadUserFinalExits();
   }
 
   async function loadOpen(){
@@ -3332,6 +3376,120 @@ const MT = (() => {
 
   return { init, loadAll, loadOpen, loadClosed, pick, clearPick, del, openModal, closeModal, preview, submitPyramid, submitPartial, submitClose, sortManage, toggleMenu, menuAct };
 })();
+
+/* ══════════════════════════════════════════════════
+   USER · ALL FINAL EXITS — edit / delete the final exit of CLOSED trades
+   (replica of the Admin "All Final Exits" feature, scoped to is_model = false)
+══════════════════════════════════════════════════ */
+let _ufeCache = [];
+function _ufeAlert(msg, kind){
+  const el=document.getElementById('mt-fe-alert'); if(!el) return;
+  el.textContent=msg; el.className='mt-alert '+(kind||'ok');
+  if(kind==='ok') setTimeout(()=>{ el.className='mt-alert'; }, 5000);
+}
+function _ufeEsc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+
+async function loadUserFinalExits(){
+  const tbody=document.getElementById('mt-fe-tbody'); if(!tbody) return;
+  tbody.innerHTML='<tr><td colspan="10" class="mt-empty">Loading\u2026</td></tr>';
+  const { data: cts, error } = await sb.from('closed_trades')
+    .select('*').eq('is_model', false).order('exit_date', { ascending:false });
+  const cnt=document.getElementById('mt-fe-count');
+  if(error){ tbody.innerHTML=`<tr><td colspan="10" style="color:var(--red);padding:16px;text-align:center">${error.message}</td></tr>`; return; }
+  if(!cts || !cts.length){
+    tbody.innerHTML='<tr><td colspan="10" class="mt-empty">No closed trades yet.</td></tr>';
+    _ufeCache=[]; if(cnt) cnt.textContent='0'; return;
+  }
+  _ufeCache=cts; if(cnt) cnt.textContent=cts.length;
+
+  // Partial qty per origin → derive the final-leg qty
+  const origins=[...new Set(cts.map(x=>x.origin_open_trade_id).filter(Boolean))];
+  let pqty={};
+  if(origins.length){
+    const { data: px } = await sb.from('partial_exits').select('open_trade_id,quantity').in('open_trade_id', origins);
+    (px||[]).forEach(p=>{ pqty[p.open_trade_id]=(pqty[p.open_trade_id]||0)+(p.quantity||0); });
+  }
+  const fmt=n=>'\u20B9'+Math.abs(n).toLocaleString('en-IN',{maximumFractionDigits:0});
+
+  tbody.innerHTML=cts.map(c=>{
+    const partialQty=pqty[c.origin_open_trade_id]||0;
+    const finalQty=Math.max(0,(c.quantity||0)-partialQty);
+    const pnl=c.realised_pnl||0;
+    const pnlStr=`<span style="color:${pnl>=0?'var(--green)':'var(--red)'}">${pnl>=0?'+':''}${fmt(pnl)}</span>`;
+    const ret=c.return_pct;
+    const retStr=(ret!=null)
+      ? `<span style="color:${ret>=0?'var(--green)':'var(--red)'};font-weight:700">${ret>=0?'+':''}${Number(ret).toFixed(2)}%</span>`
+      : '<span style="color:var(--muted)">\u2014</span>';
+    return `<tr>
+      <td class="mono" style="font-weight:700;color:var(--white)">${_ufeEsc(c.symbol)||'\u2014'}</td>
+      <td style="color:var(--text2)">${_ufeEsc(c.company_name)||'\u2014'}</td>
+      <td><span class="badge" style="background:var(--blue-dim);border:1px solid var(--bdr3);color:var(--blue-lt);font-size:9px">closed</span></td>
+      <td class="mono">${c.exit_date||'\u2014'}</td>
+      <td class="mono">${c.avg_exit_price?'\u20B9'+Number(c.avg_exit_price).toLocaleString('en-IN'):'\u2014'}</td>
+      <td class="mono">${finalQty||'\u2014'}</td>
+      <td>${pnlStr}</td>
+      <td>${retStr}</td>
+      <td class="notes" style="color:var(--muted);font-size:11px">${_ufeEsc(c.exit_reason||c.trade_notes||'')}</td>
+      <td><div style="display:flex;gap:6px;align-items:center;justify-content:center">
+        <button class="mt-btn mt-btn-g mt-btn-sm" onclick="openUfeEdit('${c.id}')">\u270E Edit</button>
+        <button class="mt-btn mt-btn-d mt-btn-sm" onclick="deleteUserFinalExit('${c.id}')">Delete</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+function openUfeEdit(id){
+  const row=(_ufeCache||[]).find(x=>String(x.id)===String(id)); if(!row) return;
+  document.getElementById('mt-fe-edit-id').value     = row.id;
+  document.getElementById('mt-fe-edit-sym').textContent = row.symbol||'\u2014';
+  document.getElementById('mt-fe-edit-date').value   = row.exit_date||'';
+  document.getElementById('mt-fe-edit-price').value  = row.avg_exit_price||'';
+  document.getElementById('mt-fe-edit-reason').value = row.exit_reason||'';
+  document.getElementById('mt-fe-edit-notes').value  = row.trade_notes||'';
+  const w=document.getElementById('mt-fe-edit-wrap'); w.style.display='block';
+  w.scrollIntoView({ behavior:'smooth', block:'center' });
+}
+function cancelUfeEdit(){ const w=document.getElementById('mt-fe-edit-wrap'); if(w) w.style.display='none'; }
+
+async function saveUfeEdit(){
+  const id=document.getElementById('mt-fe-edit-id').value;
+  const row=(_ufeCache||[]).find(x=>String(x.id)===String(id)); if(!row) return;
+  const exitDate=document.getElementById('mt-fe-edit-date').value||null;
+  const avgExit=parseFloat(document.getElementById('mt-fe-edit-price').value);
+  const reason=document.getElementById('mt-fe-edit-reason').value.trim()||null;
+  const notes=document.getElementById('mt-fe-edit-notes').value.trim()||null;
+  const ax=isNaN(avgExit)?(row.avg_exit_price||0):avgExit;
+  const avgEntry=row.avg_entry_price||0;
+
+  // Recompute realised P&L + return: final leg (new avg exit) + stored partial P&L
+  const { data: px } = await sb.from('partial_exits')
+    .select('quantity,realised_pnl').eq('open_trade_id', row.origin_open_trade_id);
+  const partialQty=(px||[]).reduce((s,p)=>s+(p.quantity||0),0);
+  const partialPnl=(px||[]).reduce((s,p)=>s+(p.realised_pnl||0),0);
+  const finalQty=Math.max(0,(row.quantity||0)-partialQty);
+  const realised=(ax-avgEntry)*finalQty+partialPnl;
+  const retPct=avgEntry>0?(ax-avgEntry)/avgEntry*100:0;
+
+  const { error } = await sb.from('closed_trades').update({
+    exit_date:exitDate, avg_exit_price:ax, exit_reason:reason, trade_notes:notes,
+    realised_pnl:Math.round(realised*100)/100, return_pct:Math.round(retPct*100)/100,
+  }).eq('id', id);
+  if(error){ _ufeAlert('Error: '+error.message,'err'); return; }
+  cancelUfeEdit();
+  await loadUserFinalExits();
+  if(typeof renderUserClosed==='function' && document.getElementById('uct-container')) renderUserClosed();
+  _ufeAlert('\u2713 Final exit updated — P&L recalculated','ok');
+}
+
+async function deleteUserFinalExit(id){
+  const row=(_ufeCache||[]).find(x=>String(x.id)===String(id)); if(!row) return;
+  if(!confirm(`Delete the closed trade record for ${row.symbol} entirely? This removes it from Closed Trades and cannot be undone. (Its pyramid / partial-exit leg records are left intact.)`)) return;
+  const { error } = await sb.from('closed_trades').delete().eq('id', id);
+  if(error){ _ufeAlert('Error: '+error.message,'err'); return; }
+  await loadUserFinalExits();
+  if(typeof renderUserClosed==='function' && document.getElementById('uct-container')) renderUserClosed();
+  _ufeAlert('Closed trade record deleted','ok');
+}
 
 /* ══ SECTORAL BREADTH CONTROLLER ══ */
 const SB=(()=>{
