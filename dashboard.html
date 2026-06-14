@@ -2669,17 +2669,76 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
 .hk-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 2px;border-bottom:1px solid var(--bdr)}
 .hk-row:last-child{border-bottom:none}
 .hk-sym{font-family:var(--fm);font-weight:700;color:var(--white);font-size:12px}
+/* ── Stage-2 bar actions + dashboard menu ── */
+.hawk-actions{margin-left:auto;display:flex;align-items:center;gap:8px;position:relative}
+.hawk-btn{display:inline-flex;align-items:center;gap:6px;background:var(--card2);border:1px solid var(--bdr2);color:var(--text2);font-family:var(--f);font-size:11.5px;font-weight:600;padding:7px 12px;border-radius:9px;cursor:pointer}
+.hawk-btn:hover{border-color:var(--blue);color:var(--blue-lt)}
+.hawk-ic{padding:7px 10px;font-size:15px;line-height:1}
+.hawk-menu{position:absolute;top:calc(100% + 6px);right:0;min-width:174px;background:var(--card);border:1px solid var(--bdr2);border-radius:11px;box-shadow:0 12px 30px rgba(0,0,0,.45);padding:5px;z-index:70;display:none}
+.hawk-menu.show{display:block}
+.hawk-menu>div{padding:9px 12px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--text2);cursor:pointer}
+.hawk-menu>div:hover{background:var(--card2);color:var(--white)}
+.hawk-menu>div.danger{color:var(--red)}
+.hawk-menu>div.danger:hover{background:var(--red-dim)}
+/* dropdown sections + new dashboard */
+.hpd-sec{font-size:8.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800;padding:8px 11px 3px}
+.hpd-new{display:flex;align-items:center;gap:7px;padding:9px 11px;margin-top:4px;border-top:1px solid var(--bdr);color:var(--blue-lt);font-size:12.5px;font-weight:700;cursor:pointer;border-radius:8px}
+.hpd-new:hover{background:var(--blue-dim)}
+/* ── custom liquid canvas (full-bleed, scrolls vertically) ── */
+.hawk-canvas.hawk-custom{display:block;padding:0;overflow:visible;height:auto!important;min-height:60vh}
+.hawk-canvas.hawk-custom .grid-stack{background:transparent}
+.hawk-canvas.hawk-custom .grid-stack-item-content{inset:0;overflow:visible;background:transparent;border:none;padding:0}
+.hawk-canvas.hawk-custom .hawk-tile{height:100%}
+.hawk-emptyhint{padding:44px 24px;text-align:center;color:var(--muted);font-size:13px;line-height:1.6}
+.ht-hd{display:flex;align-items:center;gap:8px}
+.ht-x{display:none;cursor:pointer;color:var(--muted);font-size:16px;line-height:1;padding:0 4px;border-radius:5px;margin-left:auto}
+.ht-x:hover{color:var(--red)}
+.hawk-canvas.hawk-custom.editing .ht-x{display:inline-block}
+.hawk-canvas.hawk-custom.editing .grid-stack-item-content{outline:1px dashed var(--bdr3);outline-offset:-1px;border-radius:14px}
+.hawk-canvas.hawk-custom.editing .hawk-tile .ht-hd{cursor:move}
+.hawk-canvas.hawk-custom .grid-stack-item>.ui-resizable-handle{opacity:0}
+.hawk-canvas.hawk-custom.editing .grid-stack-item>.ui-resizable-handle{opacity:.85}
+/* ── Add Apps drawer ── */
+.hawk-drawer-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;opacity:0;pointer-events:none;transition:opacity .2s}
+.hawk-drawer-bg.open{opacity:1;pointer-events:auto}
+.hawk-drawer{position:fixed;top:0;right:0;height:100vh;width:300px;max-width:86vw;background:var(--card);border-left:1px solid var(--bdr2);box-shadow:-12px 0 40px rgba(0,0,0,.4);z-index:301;transform:translateX(100%);transition:transform .22s ease;display:flex;flex-direction:column}
+.hawk-drawer.open{transform:translateX(0)}
+.hd-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 8px;font-family:var(--f);font-size:15px;font-weight:800;color:var(--white)}
+.hd-close{background:none;border:none;color:var(--muted);font-size:22px;line-height:1;cursor:pointer}
+.hd-close:hover{color:var(--white)}
+.hd-sub{padding:0 18px 12px;font-size:11px;color:var(--muted);line-height:1.5;border-bottom:1px solid var(--bdr)}
+.hd-list{flex:1;overflow-y:auto;padding:8px 12px 24px}
+.hd-group{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800;padding:12px 6px 5px}
+.hd-app{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid var(--bdr);border-radius:9px;margin-bottom:6px;cursor:pointer;background:var(--card2);transition:all .15s}
+.hd-app:hover{border-color:var(--blue);background:var(--blue-dim)}
+.hd-app-t{font-size:12.5px;font-weight:600;color:var(--white)}
+.hd-app-add{font-size:10.5px;font-weight:700;color:var(--blue-lt)}
 @media(max-width:880px){
-  .hawk-canvas{height:auto!important;overflow:visible;grid-template-columns:1fr!important;grid-template-rows:none!important}
-  .hawk-tile{grid-column:auto!important;grid-row:auto!important;min-height:200px}
+  .hawk-canvas:not(.hawk-custom){height:auto!important;overflow:visible;grid-template-columns:1fr!important;grid-template-rows:none!important}
+  .hawk-canvas:not(.hawk-custom) .hawk-tile{grid-column:auto!important;grid-row:auto!important;min-height:200px}
 }
 </style>
 <div class="pane" id="pane-hawk">
   <div class="hawk-bar">
     <div class="hawk-title" id="hawk-title"></div>
-    <button class="hawk-refresh" onclick="HAWK.refresh()" title="Refresh data"><svg viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Refresh</button>
+    <div class="hawk-actions">
+      <button class="hawk-btn" id="hawk-addbtn" onclick="HAWK.openAddApps()" style="display:none"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>Add Apps</button>
+      <button class="hawk-btn" id="hawk-editbtn" onclick="HAWK.toggleEdit()" style="display:none">Edit</button>
+      <button class="hawk-btn hawk-ic" id="hawk-menubtn" onclick="HAWK.toggleMenu(event)" style="display:none" title="Dashboard options">&#8943;</button>
+      <button class="hawk-refresh" onclick="HAWK.refresh()" title="Refresh data"><svg viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Refresh</button>
+      <div class="hawk-menu" id="hawk-menu">
+        <div onclick="HAWK.renameDashboard()">Rename</div>
+        <div class="danger" onclick="HAWK.deleteDashboard()">Delete dashboard</div>
+      </div>
+    </div>
   </div>
   <div class="hawk-canvas" id="hawk-canvas"></div>
+  <div class="hawk-drawer-bg" id="hawk-drawer-bg" onclick="HAWK.closeAddApps()"></div>
+  <aside class="hawk-drawer" id="hawk-drawer">
+    <div class="hd-head"><span>Add Apps</span><button class="hd-close" onclick="HAWK.closeAddApps()">&times;</button></div>
+    <div class="hd-sub">Tap an app to drop it on your canvas. Drag &amp; resize in Edit mode.</div>
+    <div class="hd-list"></div>
+  </aside>
 </div>
 
 <!-- ══════════════════════════════════════
@@ -8571,6 +8630,43 @@ const HAWK = (() => {
   let cache = {};            // data cache for this session
   let active = null;
 
+  /* ── Stage-2: custom "liquid canvas" dashboards ── */
+  let custom = [];           // user's saved dashboards [{id,name,layout,...}]
+  let curCustom = null;      // active custom dashboard (null when viewing a built-in)
+  let grid = null;           // GridStack instance
+  let editMode = false;
+  let saveTimer = null;
+  let gridLoaded = false;
+
+  // App catalog — every tile is addable as an "app". Sizes are on a 12-col grid.
+  const APPS = [
+    { group:'Market', items:[
+      {k:'brief',     t:'Daily Market Brief', w:4,h:4, mw:3,mh:3},
+      {k:'score',     t:'Market Score',       w:3,h:3, mw:2,mh:3},
+      {k:'breadth',   t:'Market Breadth',     w:3,h:4, mw:2,mh:3},
+      {k:'indices',   t:'Key Indices',        w:3,h:3, mw:2,mh:2},
+      {k:'sectors',   t:'Sector Rotation',    w:3,h:4, mw:2,mh:3},
+      {k:'sectorGrid',t:'Sector Heatmap',     w:6,h:3, mw:3,mh:2},
+      {k:'fii',       t:'FII / DII Flows',    w:3,h:3, mw:2,mh:2},
+    ]},
+    { group:'Portfolio', items:[
+      {k:'pstats',      t:'Portfolio Snapshot', w:4,h:3, mw:3,mh:2},
+      {k:'equity',      t:'Equity Curve',       w:4,h:3, mw:3,mh:3},
+      {k:'positions',   t:'Open Positions',     w:4,h:4, mw:2,mh:3},
+      {k:'exposure',    t:'Exposure & Risk',    w:3,h:3, mw:2,mh:3},
+      {k:'perf',        t:'Performance',        w:4,h:3, mw:3,mh:2},
+      {k:'recentClosed',t:'Recent Closed',      w:3,h:4, mw:2,mh:3},
+      {k:'streak',      t:'Streaks & Extremes', w:4,h:2, mw:3,mh:2},
+      {k:'drawdown',    t:'Drawdown',           w:4,h:3, mw:3,mh:3},
+      {k:'monthly',     t:'Monthly Returns',    w:6,h:2, mw:3,mh:2},
+      {k:'discipline',  t:'Discipline Signals', w:4,h:3, mw:3,mh:2},
+    ]},
+    { group:'Watchlist', items:[
+      {k:'watchlist', t:'My Watchlist', w:3,h:4, mw:2,mh:3},
+    ]},
+  ];
+  const APP_META = {}; APPS.forEach(g=>g.items.forEach(a=>APP_META[a.k]=a));
+
   /* ── data fetchers (cached) ── */
   async function market(){ if(cache.market) return cache.market;
     const { data } = await sb.from('market_breadth').select('*').order('snapshot_date',{ascending:false}).limit(1).maybeSingle();
@@ -8854,60 +8950,181 @@ const HAWK = (() => {
 
   function presetKeys(){ return Object.keys(PRESETS); }
 
-  /* ── "Saved Presets" dropdown that lives in the sub-nav bar ── */
+  /* ── "Saved Presets" dropdown: built-in quick-views + the user's own dashboards ── */
+  function curLabel(){ if(curCustom) return curCustom.name; const p=PRESETS[active]; return p?p.label:(PRESETS[presetKeys()[0]].label); }
   function subnav(){
-    const items=presetKeys().map(k=>{ const p=PRESETS[k];
-      return `<div class="hpd-item${k===active?' active':''}" onclick="HAWK.pick('${k}')"><span class="hpd-il">${esc(p.label)}</span><span class="hpd-is">${esc(p.sub)}</span></div>`;
+    const builtins=presetKeys().map(k=>{ const p=PRESETS[k];
+      return `<div class="hpd-item${(!curCustom&&k===active)?' active':''}" onclick="HAWK.pick('${k}')"><span class="hpd-il">${esc(p.label)}</span><span class="hpd-is">${esc(p.sub)}</span></div>`;
     }).join('');
-    const cur=PRESETS[active]||PRESETS[presetKeys()[0]];
+    const customs=custom.map(d=>
+      `<div class="hpd-item${(curCustom&&curCustom.id===d.id)?' active':''}" onclick="HAWK.pickCustom(${d.id})"><span class="hpd-il">${esc(d.name)}</span><span class="hpd-is">Custom</span></div>`
+    ).join('');
     return `<div class="hpd" id="hawk-dd">
         <button class="hpd-btn" onclick="HAWK.toggleDD(event)">
-          <span class="hpd-txt"><span class="hpd-eyebrow">Saved Presets</span><span class="hpd-cur" id="hpd-cur">${esc(cur?cur.label:'')}</span></span>
+          <span class="hpd-txt"><span class="hpd-eyebrow">Saved Presets</span><span class="hpd-cur" id="hpd-cur">${esc(curLabel())}</span></span>
           <svg class="hpd-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
         </button>
-        <div class="hpd-menu" id="hpd-menu">${items}</div>
+        <div class="hpd-menu" id="hpd-menu">
+          <div class="hpd-sec">Quick Views</div>${builtins}
+          ${customs?`<div class="hpd-sec">My Dashboards</div>${customs}`:''}
+          <div class="hpd-new" onclick="HAWK.createDashboard()"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>New Dashboard</div>
+        </div>
       </div>`;
   }
   function renderSubnav(){ const host=document.getElementById('nav-subs'); if(host) host.innerHTML=subnav(); }
   function toggleDD(e){ if(e) e.stopPropagation(); const m=document.getElementById('hpd-menu'); const d=document.getElementById('hawk-dd'); if(m){ const open=m.classList.toggle('show'); if(d) d.classList.toggle('open',open); } }
   function closeDD(){ const m=document.getElementById('hpd-menu'); const d=document.getElementById('hawk-dd'); if(m) m.classList.remove('show'); if(d) d.classList.remove('open'); }
   function pick(k){ closeDD(); show(k); }
-  document.addEventListener('click', e=>{ const d=document.getElementById('hawk-dd'); if(d && !d.contains(e.target)) closeDD(); });
+  function pickCustom(id){ closeDD(); showCustom(id); }
+  document.addEventListener('click', e=>{ const d=document.getElementById('hawk-dd'); if(d && !d.contains(e.target)) closeDD(); const mb=document.getElementById('hawk-menu'); if(mb && mb.classList.contains('show') && !e.target.closest('#hawk-menubtn') && !e.target.closest('#hawk-menu')) mb.classList.remove('show'); });
 
+  /* ── top-bar title + which controls are visible ── */
   function setBar(p){
     const cur=document.getElementById('hpd-cur'); if(cur) cur.textContent=p.label;
-    document.querySelectorAll('#hpd-menu .hpd-item').forEach(el=>el.classList.remove('active'));
     const t=document.getElementById('hawk-title'); if(t) t.innerHTML=`<span class="hkt-l">${esc(p.label)}</span><span class="hkt-s">${esc(p.sub)}</span>`;
+    customControls(false);
   }
+  function setBarCustom(d){
+    const cur=document.getElementById('hpd-cur'); if(cur) cur.textContent=d.name;
+    const t=document.getElementById('hawk-title'); if(t) t.innerHTML=`<span class="hkt-l">${esc(d.name)}</span><span class="hkt-s">Custom dashboard</span>`;
+    customControls(true);
+  }
+  function customControls(on){
+    ['hawk-addbtn','hawk-editbtn','hawk-menubtn'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display=on?'inline-flex':'none'; });
+    const ab=document.getElementById('hawk-addbtn'); if(ab) ab.style.display=(on&&editMode)?'inline-flex':'none';
+    const eb=document.getElementById('hawk-editbtn'); if(eb) eb.textContent=editMode?'Done':'Edit';
+  }
+  function toggleMenu(e){ if(e) e.stopPropagation(); const m=document.getElementById('hawk-menu'); if(m) m.classList.toggle('show'); }
 
+  /* ════════ built-in presets (fixed canvas) ════════ */
   function layout(){
     const cv=document.getElementById('hawk-canvas'); if(!cv) return;
     const top=cv.getBoundingClientRect().top;
     cv.style.height=Math.max(360,(window.innerHeight-top-18))+'px';
   }
-
+  function teardownGrid(){ if(grid){ try{grid.destroy(false);}catch(e){} grid=null; } editMode=false; }
   async function show(key){
     if(!presetKeys().includes(key)) key=presetKeys()[0];
-    active=key;
+    teardownGrid(); curCustom=null; active=key;
     const p=PRESETS[key], cv=document.getElementById('hawk-canvas'); if(!cv) return;
+    cv.classList.remove('hawk-custom','editing');
     renderSubnav(); setBar(p);
     cv.style.gridTemplateColumns=p.cols; cv.style.gridTemplateRows=p.rows;
     cv.innerHTML=p.tiles.map(t=>`<div class="hawk-tile${t.glow?' glow':''}" style="grid-column:${t.gc};grid-row:${t.gr}"><div class="ht-hd"><span class="ht-ttl">${esc(t.t)}</span></div><div class="ht-body" id="ht-${t.k}"><div class="hk-empty">Loading…</div></div></div>`).join('');
     layout();
-    // render tiles (each isolated so one failure can't blank the page)
     p.tiles.forEach(async t=>{ const el=document.getElementById('ht-'+t.k); if(!el)return;
       try{ el.innerHTML=await TILE[t.k](); }catch(e){ el.innerHTML=`<div class="hk-empty">Couldn't load.</div>`; }
     });
   }
 
-  function refresh(){ cache={}; show(active||presetKeys()[0]); }
-  function open(){ cache={}; show(presetKeys()[0]); }
+  /* ════════ custom "liquid canvas" dashboards (GridStack) ════════ */
+  function loadGrid(){
+    if(gridLoaded) return Promise.resolve();
+    const css='https://cdn.jsdelivr.net/npm/gridstack@10.3.1/dist/gridstack.min.css';
+    if(!document.querySelector(`link[href="${css}"]`)){ const l=document.createElement('link'); l.rel='stylesheet'; l.href=css; document.head.appendChild(l); }
+    return loadScriptOnce('https://cdn.jsdelivr.net/npm/gridstack@10.3.1/dist/gridstack-all.js').then(()=>{
+      gridLoaded=true;
+      try{ GridStack.renderCB=(el,w)=>{ el.innerHTML=(w&&w.content)||''; }; }catch(e){}
+    });
+  }
+  async function loadCustom(){
+    try{ const { data } = await sb.from('hawk_dashboards').select('id,name,layout,sort_order').order('sort_order',{ascending:true}).order('id',{ascending:true}); custom=data||[]; }
+    catch(e){ custom=[]; }
+    return custom;
+  }
+  function tileHTML(k){ const a=APP_META[k]||{t:k};
+    return `<div class="hawk-tile" data-k="${k}"><div class="ht-hd"><span class="ht-ttl">${esc(a.t)}</span><span class="ht-x" onclick="HAWK.removeTile(this)" title="Remove">&times;</span></div><div class="ht-body"><div class="hk-empty">Loading…</div></div></div>`;
+  }
+  async function renderTileInto(k, el){ if(!el) return; try{ el.innerHTML=await TILE[k](); }catch(e){ el.innerHTML='<div class="hk-empty">Couldn\'t load.</div>'; } }
 
-  window.addEventListener('resize', ()=>{ if(document.getElementById('pane-hawk')?.classList.contains('active')) layout(); });
+  async function showCustom(id){
+    const d=custom.find(x=>x.id===id); if(!d){ show(presetKeys()[0]); return; }
+    await renderCustom(d);
+  }
+  async function renderCustom(dash){
+    teardownGrid(); curCustom=dash; active='cust:'+dash.id; editMode=false;
+    const cv=document.getElementById('hawk-canvas'); if(!cv) return;
+    renderSubnav(); setBarCustom(dash);
+    cv.classList.add('hawk-custom'); cv.classList.remove('editing');
+    cv.style.gridTemplateColumns=''; cv.style.gridTemplateRows=''; cv.style.height='';
+    cv.innerHTML='<div class="grid-stack"></div><div class="hawk-emptyhint" id="hawk-emptyhint" style="display:none">This dashboard is empty. Tap <b>Edit</b> → <b>Add Apps</b> to drop indicators here.</div>';
+    await loadGrid();
+    const gsEl=cv.querySelector('.grid-stack');
+    grid=GridStack.init({ column:12, cellHeight:72, margin:6, float:false, handle:'.ht-hd', staticGrid:true }, gsEl);
+    const lay=Array.isArray(dash.layout)?dash.layout:[];
+    lay.forEach(n=>{ if(!APP_META[n.k]) return;
+      const m=APP_META[n.k];
+      const item=grid.addWidget({ x:n.x, y:n.y, w:n.w, h:n.h, minW:m.mw, minH:m.mh, content:tileHTML(n.k) });
+      renderTileInto(n.k, item.querySelector('.ht-body'));
+    });
+    grid.on('change', ()=>scheduleSave());
+    grid.on('added', ()=>scheduleSave());
+    grid.on('removed', ()=>scheduleSave());
+    const hint=document.getElementById('hawk-emptyhint'); if(hint) hint.style.display=lay.length?'none':'block';
+  }
+  function serialize(){ if(!grid) return [];
+    return grid.engine.nodes.map(n=>{ const tile=n.el&&n.el.querySelector('.hawk-tile'); const k=tile?tile.getAttribute('data-k'):null;
+      return k?{k, x:n.x, y:n.y, w:n.w, h:n.h}:null; }).filter(Boolean);
+  }
+  function scheduleSave(){ if(saveTimer) clearTimeout(saveTimer); saveTimer=setTimeout(saveLayout,700); }
+  async function saveLayout(){ if(!curCustom) return; const layout=serialize(); curCustom.layout=layout;
+    const c=custom.find(d=>d.id===curCustom.id); if(c) c.layout=layout;
+    try{ await sb.from('hawk_dashboards').update({layout}).eq('id',curCustom.id); }catch(e){}
+  }
+  function addApp(k){ const a=APP_META[k]; if(!a||!grid) return;
+    const item=grid.addWidget({ w:a.w, h:a.h, minW:a.mw, minH:a.mh, autoPosition:true, content:tileHTML(k) });
+    renderTileInto(k, item.querySelector('.ht-body'));
+    const hint=document.getElementById('hawk-emptyhint'); if(hint) hint.style.display='none';
+  }
+  function removeTile(xEl){ const item=xEl.closest('.grid-stack-item'); if(item&&grid) grid.removeWidget(item); }
+  function toggleEdit(){ if(!curCustom) return; editMode=!editMode; applyEditUI(); }
+  function applyEditUI(){
+    const cv=document.getElementById('hawk-canvas'); if(cv) cv.classList.toggle('editing', editMode);
+    if(grid){ try{ grid.setStatic(!editMode); }catch(e){} }
+    customControls(true);
+    if(!editMode) closeAddApps();
+  }
+  async function createDashboard(){
+    closeDD();
+    const name=(window.prompt('Name your dashboard','My Dashboard')||'').trim()||'My Dashboard';
+    try{ const { data } = await sb.from('hawk_dashboards').insert({ name, layout:[], sort_order:custom.length }).select().single();
+      if(data){ custom.push(data); await renderCustom(data); editMode=true; applyEditUI(); openAddApps(); }
+    }catch(e){ window.alert('Could not create dashboard: '+(e.message||e)); }
+  }
+  async function renameDashboard(){
+    const m=document.getElementById('hawk-menu'); if(m) m.classList.remove('show');
+    if(!curCustom) return;
+    const name=(window.prompt('Rename dashboard',curCustom.name)||'').trim(); if(!name) return;
+    curCustom.name=name; const c=custom.find(d=>d.id===curCustom.id); if(c) c.name=name;
+    try{ await sb.from('hawk_dashboards').update({name}).eq('id',curCustom.id); }catch(e){}
+    renderSubnav(); setBarCustom(curCustom);
+  }
+  async function deleteDashboard(){
+    const m=document.getElementById('hawk-menu'); if(m) m.classList.remove('show');
+    if(!curCustom) return;
+    if(!window.confirm('Delete “'+curCustom.name+'”? This cannot be undone.')) return;
+    const id=curCustom.id;
+    try{ await sb.from('hawk_dashboards').delete().eq('id',id); }catch(e){}
+    custom=custom.filter(d=>d.id!==id);
+    show(presetKeys()[0]);
+  }
+  function openAddApps(){ const d=document.getElementById('hawk-drawer'); if(d){ d.querySelector('.hd-list').innerHTML=drawerHTML(); d.classList.add('open'); } const bg=document.getElementById('hawk-drawer-bg'); if(bg) bg.classList.add('open'); }
+  function closeAddApps(){ const d=document.getElementById('hawk-drawer'); if(d) d.classList.remove('open'); const bg=document.getElementById('hawk-drawer-bg'); if(bg) bg.classList.remove('open'); }
+  function drawerHTML(){
+    return APPS.map(g=>`<div class="hd-group">${esc(g.group)}</div>`+g.items.map(a=>
+      `<div class="hd-app" onclick="HAWK.addApp('${a.k}')"><span class="hd-app-t">${esc(a.t)}</span><span class="hd-app-add">+ Add</span></div>`
+    ).join('')).join('');
+  }
 
-  return { show, pick, toggleDD, subnav, refresh, open, layout };
+  function refresh(){ cache={}; if(curCustom) showCustom(curCustom.id); else show(active||presetKeys()[0]); }
+  async function open(){ cache={}; await loadCustom(); show(presetKeys()[0]); }
+
+  window.addEventListener('resize', ()=>{ const p=document.getElementById('pane-hawk'); if(p&&p.classList.contains('active')&&!curCustom) layout(); });
+
+  return { show, pick, pickCustom, toggleDD, subnav, refresh, open, layout,
+           toggleEdit, addApp, removeTile, openAddApps, closeAddApps,
+           createDashboard, renameDashboard, deleteDashboard, toggleMenu };
 })();
-
 </script>
 <script>
 /* ══════════════════════════════════════════════════════════
