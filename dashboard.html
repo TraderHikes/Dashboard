@@ -2622,12 +2622,26 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
 <style>
 #pane-hawk{padding:0}
 .hawk-bar{display:flex;align-items:center;gap:10px;padding:11px 18px;border-bottom:1px solid var(--bdr);flex-wrap:wrap}
-.hawk-pills{display:flex;gap:7px;flex-wrap:wrap}
-.hawk-pill{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 14px;border-radius:11px;cursor:pointer;border:1px solid var(--bdr2);background:var(--card2);transition:all .18s;font-family:var(--f);font-size:12.5px;font-weight:700;color:var(--text2);line-height:1.25}
-.hawk-pill .hp-sub{font-size:9px;color:var(--muted);font-weight:600;letter-spacing:.02em;text-transform:uppercase}
-.hawk-pill:hover{border-color:var(--bdr3)}
-.hawk-pill.active{border-color:transparent;background:linear-gradient(135deg,#5c6ffb,#3a4bd6);color:#fff;box-shadow:0 4px 16px rgba(92,111,251,.32)}
-.hawk-pill.active .hp-sub{color:rgba(255,255,255,.82)}
+.hawk-title{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.hkt-l{font-family:var(--f);font-size:15px;font-weight:800;color:var(--white)}
+.hkt-s{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+/* Saved Presets dropdown (lives in the sub-nav bar) */
+.hpd{position:relative;display:inline-block}
+.hpd-btn{display:flex;align-items:center;gap:9px;background:var(--card2);border:1px solid var(--bdr2);border-radius:10px;padding:5px 12px;cursor:pointer;font-family:var(--f);color:var(--white)}
+.hpd-btn:hover{border-color:var(--bdr3)}
+.hpd.open .hpd-btn{border-color:var(--blue)}
+.hpd-txt{display:flex;flex-direction:column;align-items:flex-start;line-height:1.18}
+.hpd-eyebrow{font-size:8.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+.hpd-cur{font-size:13px;font-weight:800}
+.hpd-chev{color:var(--muted);transition:transform .18s;flex:0 0 auto}
+.hpd.open .hpd-chev{transform:rotate(180deg)}
+.hpd-menu{position:absolute;top:calc(100% + 6px);left:0;min-width:236px;background:var(--card);border:1px solid var(--bdr2);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.45);padding:5px;z-index:60;display:none}
+.hpd-menu.show{display:block}
+.hpd-item{display:flex;flex-direction:column;gap:1px;padding:8px 11px;border-radius:8px;cursor:pointer}
+.hpd-item:hover{background:var(--card2)}
+.hpd-item.active{background:var(--blue-dim)}
+.hpd-il{font-size:12.5px;font-weight:700;color:var(--white)}
+.hpd-is{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
 .hawk-refresh{margin-left:auto;display:inline-flex;align-items:center;gap:6px;background:var(--card2);border:1px solid var(--bdr2);color:var(--text2);font-size:11px;font-weight:600;padding:7px 12px;border-radius:9px;cursor:pointer;font-family:var(--f)}
 .hawk-refresh:hover{border-color:var(--blue);color:var(--blue-lt)}
 .hawk-refresh svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2}
@@ -2662,7 +2676,7 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
 </style>
 <div class="pane" id="pane-hawk">
   <div class="hawk-bar">
-    <div class="hawk-pills" id="hawk-presets"></div>
+    <div class="hawk-title" id="hawk-title"></div>
     <button class="hawk-refresh" onclick="HAWK.refresh()" title="Refresh data"><svg viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Refresh</button>
   </div>
   <div class="hawk-canvas" id="hawk-canvas"></div>
@@ -3468,7 +3482,7 @@ const NAV=[
    lock:{kind:'upgrade', title:'Hawk Eye — your command center',
          body:'One locked, single-page view of the whole market and your book — pre-market pulse, internals, your desk and edge review, switchable in a tap.',
          cta:'Unlock Full Access', url:MSTP_URL},
-   subs:[{id:'hawk',label:'Hawk Eye'}]},
+   subs:[{id:'hawk',label:'Saved Presets'}]},
   {key:'model',    label:'Model Portfolio', roles:['admin','paid','free'], lockFor:['free','paid'],
    lock:{kind:'course', title:'Learn live from the Model Swing Trader Portfolio',
          body:'This is the real book behind the Master Swing Trader Program — followed hands-on inside the course.',
@@ -3511,7 +3525,10 @@ const NAVUI=(()=>{
     curGroup=key; window._curGroup=key; if(window.applyHeader) applyHeader();
     document.querySelectorAll('.ng-btn').forEach(b=>b.classList.toggle('active', b.dataset.g===key));
     const g=NAV.find(x=>x.key===key);
-    document.getElementById('nav-subs').innerHTML = g.subs.map(sx=>`<div class="ns-btn" data-s="${sx.id}" onclick="NAVUI.go('${sx.id}')">${esc(sx.label)}</div>`).join('');
+    const locked = g.lockFor.includes(role);
+    document.getElementById('nav-subs').innerHTML = (key==='hawk' && !locked && typeof HAWK!=='undefined')
+      ? HAWK.subnav()
+      : g.subs.map(sx=>`<div class="ns-btn" data-s="${sx.id}" onclick="NAVUI.go('${sx.id}')">${esc(sx.label)}</div>`).join('');
     go(g.subs[0].id);
   }
   function go(subId){
@@ -8577,15 +8594,12 @@ const HAWK = (() => {
       sb.from('portfolio_config').select('total_capital').eq('user_id',uid).maybeSingle(),
     ]);
     return (cache.book={ open:op.data||[], closed:cl.data||[], snaps:sn.data||[], capital:(cf.data&&cf.data.total_capital)?Number(cf.data.total_capital):0, isModel }); }
-  async function modelBook(){ if(cache.model) return cache.model;
-    const [op,cl]=await Promise.all([
-      sb.from('open_trades').select('*').eq('is_model',true),
-      sb.from('closed_trades').select('*').eq('is_model',true),
-    ]);
-    return (cache.model={ open:op.data||[], closed:cl.data||[] }); }
   async function fiiData(){ if('fii' in cache) return cache.fii;
     const { data } = await sb.from('fii_dii_activity').select('*').order('period_key',{ascending:false}).limit(1);
     return (cache.fii=(data&&data[0])||null); }
+  async function indicesData(){ if(cache.idx) return cache.idx;
+    const { data } = await sb.from('index_levels').select('*').order('snapshot_date',{ascending:false}).limit(1).maybeSingle();
+    return (cache.idx=data||null); }
   async function wlData(){ if(cache.wl) return cache.wl;
     const admin=(window.USER_ROLE==='admin'); const tbl=admin?'watchlist':'user_watchlist';
     const [mine,enr]=await Promise.all([
@@ -8596,9 +8610,6 @@ const HAWK = (() => {
     const rows=(mine.data||[]).map(r=>{ const s=(r.symbol||'').toUpperCase(), e=em[s]||{}; return {symbol:s,company_name:r.company_name||e.company_name||null,pct21:e.pct_from_21ema!=null?e.pct_from_21ema:null}; });
     rows.sort((a,b)=>a.symbol<b.symbol?-1:1);   // alphabetical — no signal-implying ranking
     return (cache.wl=rows); }
-  async function messages(){
-    const { data } = await sb.from('messages').select('*').eq('user_id',window._uid).order('created_at',{ascending:true}).limit(50);
-    return data||[]; }
 
   /* ── derived metrics ── */
   function portMetrics(book){
@@ -8755,75 +8766,118 @@ const HAWK = (() => {
         ${cell('Win Rate', p.wr+'%', p.wr>=50?'var(--green)':'var(--text2)')}
       </div><div style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.5">Discipline signals shape your MSTP coaching focus — stops, holding period and consistency.</div>`;
     },
-    async mPositions(){ const b=await modelBook();
-      if(!b.open.length) return `<div class="hk-empty">No open model positions.</div>`;
-      return b.open.map(t=>{ const ae=t.avg_entry_price||t.entry_price, rq=t.remaining_qty||t.quantity, plp=ae?((t.cmp||ae)-ae)/ae*100:0;
-        return `<div class="hk-row"><span class="hk-sym">${esc(t.symbol)}</span><span style="color:${pnlCol(plp)};font-weight:700">${sgn(plp)}%</span></div>`;
+    async indices(){ const d=await indicesData();
+      if(!d) return `<div class="hk-empty">Index levels not in yet.</div>`;
+      const IDX=[['nifty50','Nifty 50'],['sensex','Sensex'],['nifty500','Nifty 500'],['nifty_midcap100','Midcap 100'],['nifty_smallcap100','Smallcap 100']];
+      const rows=IDX.map(([k,name])=>{ const cur=d[k], prev=d[k+'_prev']; if(cur==null) return '';
+        const pct=(prev!=null&&prev)?(cur-prev)/prev*100:null;
+        return `<div class="hk-row"><span class="hk-sym" style="font-weight:600">${name}</span>
+          <span style="text-align:right;white-space:nowrap"><span style="font-family:var(--fm);color:var(--text2);font-size:11px">${Number(cur).toLocaleString('en-IN',{maximumFractionDigits:0})}</span>${pct!=null?` <span style="color:${pnlCol(pct)};font-weight:700;margin-left:6px">${sgn(pct)}%</span>`:''}</span></div>`;
+      }).filter(Boolean).join('');
+      return rows || `<div class="hk-empty">Index levels not in yet.</div>`;
+    },
+    async exposure(){ const b=await book(); const m=portMetrics(b);
+      const bar=(lbl,pct,col)=>`<div class="hk-bar"><div class="hk-bar-top"><span style="color:var(--text2)">${lbl}</span><span style="font-weight:700;color:${col}">${(Number(pct)||0).toFixed(1)}%</span></div><div class="hk-bar-track"><div class="hk-bar-fill" style="width:${Math.min(Number(pct)||0,100)}%;background:${col}"></div></div></div>`;
+      const cashPct=m.cap>0?Math.max(0,100-m.depPct):0;
+      return `${bar('Deployed', m.depPct, 'var(--blue)')}
+        ${bar('Cash / Margin', cashPct, 'var(--green)')}
+        ${bar('Open Risk', m.riskPct, 'var(--red)')}
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:10px"><span>Open Positions</span><span style="color:var(--text2);font-weight:700">${b.open.length}</span></div>
+        ${m.cap<=0?'<div style="font-size:10px;color:var(--amber);margin-top:6px">Set your capital in My Trading Desk for % figures.</div>':''}`;
+    },
+    async recentClosed(){ const b=await book();
+      if(!b.closed.length) return `<div class="hk-empty">No closed trades yet.</div>`;
+      const rows=b.closed.slice().sort((a,b)=>(b.exit_date||'').localeCompare(a.exit_date||'')).slice(0,8);
+      return rows.map(t=>{ const rp=Number(t.return_pct)||0;
+        return `<div class="hk-row"><span class="hk-sym">${esc(t.symbol)}</span>
+          <span style="text-align:right;white-space:nowrap"><span style="color:${pnlCol(rp)};font-weight:700">${sgn(rp)}%</span><span style="color:var(--muted);font-size:9px;margin-left:7px">${t.exit_date?new Date(t.exit_date).toLocaleDateString('en-IN',{day:'2-digit',month:'short'}):''}</span></span></div>`;
       }).join('');
     },
-    async mStats(){ const p=perfMetrics((await modelBook()).closed);
-      if(!p) return `<div class="hk-empty">No model trade history yet.</div>`;
-      const cell=(k,v,col)=>`<div class="hk-stat"><div class="k">${k}</div><div class="v" style="font-size:17px;color:${col||'var(--white)'}">${v}</div></div>`;
+    async streak(){ const b=await book(); const p=perfMetrics(b.closed);
+      if(!p) return `<div class="hk-empty">No closed trades yet.</div>`;
+      const sorted=b.closed.slice().sort((a,b)=>(b.exit_date||'').localeCompare(a.exit_date||''));
+      let streak=0, dir=null;
+      for(const t of sorted){ const w=(t.realised_pnl||0)>0; if(dir===null){dir=w;streak=1;} else if(w===dir){streak++;} else break; }
+      const best=Math.max(0,...b.closed.map(t=>Number(t.return_pct)||0));
+      const worst=Math.min(0,...b.closed.map(t=>Number(t.return_pct)||0));
+      const cell=(k,v,col)=>`<div class="hk-stat"><div class="k">${k}</div><div class="v" style="font-size:16px;color:${col||'var(--white)'}">${v}</div></div>`;
       return `<div class="hk-stats">
-        ${cell('Win Rate', p.wr+'%', 'var(--green)')}
-        ${cell('Profit Factor', (p.pf===Infinity?'∞':p.pf.toFixed(2))+'×', 'var(--green)')}
-        ${cell('Expectancy', sgn(p.exp)+'%', pnlCol(p.exp))}
-        ${cell('Total Trades', p.n)}
+        ${cell('Current Streak', streak?streak+(dir?'W':'L'):'—', dir?'var(--green)':'var(--red)')}
+        ${cell('Avg Win', '+'+p.avgW.toFixed(1)+'%','var(--green)')}
+        ${cell('Best Trade', '+'+best.toFixed(1)+'%','var(--green)')}
+        ${cell('Worst Trade', worst.toFixed(1)+'%','var(--red)')}
       </div>`;
     },
-    async mentorMsg(){ const msgs=await messages();
-      const list=msgs.slice(-6).map(m=>{ const me=m.sender==='user'; return `<div style="display:flex;margin:4px 0;justify-content:${me?'flex-end':'flex-start'}"><div style="max-width:82%;padding:7px 11px;border-radius:11px;font-size:12px;background:${me?'var(--blue)':'var(--card3)'};color:${me?'#fff':'var(--white)'}">${esc(m.body)}</div></div>`; }).join('') || `<div class="hk-empty">Message your mentor 👋</div>`;
-      return `<div style="display:flex;flex-direction:column;height:100%">
-        <div style="flex:1;overflow-y:auto;min-height:0">${list}</div>
-        <div style="display:flex;gap:6px;margin-top:8px"><input id="hawk-msg-in" placeholder="Message your mentor…" onkeydown="if(event.key==='Enter')HAWK.sendMentor()" style="flex:1;background:var(--card3);border:1px solid var(--bdr);color:var(--white);font-size:12px;padding:8px 11px;border-radius:9px;outline:none;font-family:var(--f)"><button onclick="HAWK.sendMentor()" style="background:var(--blue);border:none;color:#fff;font-weight:700;font-size:12px;padding:0 14px;border-radius:9px;cursor:pointer">Send</button></div>
-      </div>`;
+    async sectorGrid(){ const rows=await sectors();
+      if(!rows.length) return `<div class="hk-empty">No sector data yet.</div>`;
+      const sorted=rows.slice().sort((a,b)=>(b.regime_score||0)-(a.regime_score||0));
+      const heatC=s=>{ s=s||0; return s>=70?'rgba(30,201,147,.92)':s>=55?'rgba(30,201,147,.5)':s>=45?'rgba(245,180,80,.5)':s>=30?'rgba(240,82,114,.5)':'rgba(240,82,114,.88)'; };
+      return `<div style="display:flex;flex-wrap:wrap;gap:6px">${sorted.map(s=>`<div style="flex:1 1 84px;min-width:78px;background:${heatC(s.regime_score)};border-radius:8px;padding:7px 9px"><div style="font-size:9px;font-weight:700;color:#fff;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.sector_name||s.sector_key)}</div><div style="font-size:15px;font-weight:800;color:#fff;line-height:1.1">${Math.round(s.regime_score||0)}</div></div>`).join('')}</div>`;
     },
   };
 
   /* ── preset definitions: grid + tiles ── */
   const PRESETS = {
     pulse:    { label:'Pre-Market Pulse', sub:'Plan the day',
-                cols:'minmax(0,1.5fr) minmax(0,1.1fr) minmax(0,1.1fr)', rows:'1fr 1fr',
+                cols:'minmax(0,1.5fr) 1fr 1fr 1fr', rows:'1fr 1fr',
                 tiles:[ {k:'brief',    t:'Daily Market Brief', gc:'1', gr:'1 / 3', glow:1},
                         {k:'score',    t:'Market Score',       gc:'2', gr:'1'},
-                        {k:'breadth',  t:'Market Breadth',     gc:'2', gr:'2'},
-                        {k:'sectors',  t:'Sector Rotation',    gc:'3', gr:'1'},
-                        {k:'watchlist',t:'My Watchlist',       gc:'3', gr:'2'} ] },
-    desk:     { label:'My Trading Desk', sub:'Manage the book',
-                cols:'1fr 1fr', rows:'1fr 1fr',
-                tiles:[ {k:'pstats',   t:'Portfolio Snapshot', gc:'1', gr:'1'},
-                        {k:'equity',   t:'Equity Curve',       gc:'2', gr:'1'},
-                        {k:'positions',t:'Open Positions',     gc:'1', gr:'2'},
-                        {k:'perf',     t:'Performance',         gc:'2', gr:'2'} ] },
-    internals:{ label:'Market Internals', sub:'Read the market',
-                cols:'minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr)', rows:'1fr 1fr',
-                tiles:[ {k:'breadth', t:'Market Breadth',    gc:'1', gr:'1 / 3', glow:1},
-                        {k:'score',   t:'Market Score',      gc:'2', gr:'1'},
-                        {k:'fii',     t:'FII / DII Flows',   gc:'2', gr:'2'},
-                        {k:'sectors', t:'Sector Rotation',   gc:'3', gr:'1 / 3'} ] },
-    edge:     { label:'Edge Review', sub:'Review the edge',
-                cols:'1fr 1fr', rows:'1fr 1fr',
-                tiles:[ {k:'perf',      t:'Performance Metrics', gc:'1', gr:'1'},
-                        {k:'monthly',   t:'Monthly Returns',     gc:'2', gr:'1'},
-                        {k:'drawdown',  t:'Drawdown',            gc:'1', gr:'2'},
-                        {k:'discipline',t:'Discipline Signals',  gc:'2', gr:'2'} ] },
-    mentor:   { label:'Mentor Live', sub:'Course only', course:true,
-                cols:'1fr 1fr', rows:'1fr 1fr',
-                tiles:[ {k:'mPositions',t:'Model Portfolio — Open', gc:'1', gr:'1 / 3', glow:1},
-                        {k:'mStats',    t:'Model Performance',      gc:'2', gr:'1'},
-                        {k:'mentorMsg', t:'Message Your Mentor',    gc:'2', gr:'2'} ] },
+                        {k:'breadth',  t:'Market Breadth',     gc:'3', gr:'1'},
+                        {k:'indices',  t:'Key Indices',        gc:'4', gr:'1'},
+                        {k:'sectors',  t:'Sector Rotation',    gc:'2', gr:'2'},
+                        {k:'watchlist',t:'My Watchlist',       gc:'3 / 5', gr:'2'} ] },
+    desk:     { label:'Portfolio Vision', sub:'Manage the book',
+                cols:'1fr 1fr 1fr', rows:'1fr 1fr',
+                tiles:[ {k:'pstats',     t:'Portfolio Snapshot', gc:'1', gr:'1'},
+                        {k:'equity',     t:'Equity Curve',       gc:'2', gr:'1'},
+                        {k:'perf',       t:'Performance',        gc:'3', gr:'1'},
+                        {k:'positions',  t:'Open Positions',     gc:'1', gr:'2'},
+                        {k:'exposure',   t:'Exposure & Risk',    gc:'2', gr:'2'},
+                        {k:'recentClosed',t:'Recent Closed',     gc:'3', gr:'2'} ] },
+    internals:{ label:'Post-Market Beat', sub:'How it closed',
+                cols:'minmax(0,1.3fr) 1fr 1fr 1fr', rows:'1fr 1fr',
+                tiles:[ {k:'breadth',   t:'Market Breadth',   gc:'1', gr:'1 / 3', glow:1},
+                        {k:'indices',   t:'Key Indices',      gc:'2', gr:'1'},
+                        {k:'score',     t:'Market Score',     gc:'3', gr:'1'},
+                        {k:'fii',       t:'FII / DII Flows',  gc:'4', gr:'1'},
+                        {k:'sectors',   t:'Sector Rotation',  gc:'2', gr:'2'},
+                        {k:'sectorGrid',t:'Sector Heatmap',   gc:'3 / 5', gr:'2'} ] },
+    edge:     { label:'Weekly Review', sub:'Review the edge',
+                cols:'1fr 1fr 1fr 1fr', rows:'1fr 1fr',
+                tiles:[ {k:'perf',       t:'Performance Metrics', gc:'1', gr:'1'},
+                        {k:'streak',     t:'Streaks & Extremes',  gc:'2', gr:'1'},
+                        {k:'drawdown',   t:'Drawdown',            gc:'3', gr:'1'},
+                        {k:'discipline', t:'Discipline Signals',  gc:'4', gr:'1'},
+                        {k:'monthly',    t:'Monthly Returns',     gc:'1 / 4', gr:'2'},
+                        {k:'recentClosed',t:'Trade Journal',      gc:'4', gr:'2'} ] },
   };
 
-  function presetKeys(){
-    const course = (window.USER_TIER==='course' || window.USER_ROLE==='admin');
-    return Object.keys(PRESETS).filter(k=>!PRESETS[k].course || course);
-  }
+  function presetKeys(){ return Object.keys(PRESETS); }
 
-  function renderPills(){
-    const wrap=document.getElementById('hawk-presets'); if(!wrap) return;
-    wrap.innerHTML = presetKeys().map(k=>{ const p=PRESETS[k];
-      return `<button class="hawk-pill${k===active?' active':''}" onclick="HAWK.show('${k}')">${esc(p.label)}<span class="hp-sub">${esc(p.sub)}</span></button>`;
+  /* ── "Saved Presets" dropdown that lives in the sub-nav bar ── */
+  function subnav(){
+    const items=presetKeys().map(k=>{ const p=PRESETS[k];
+      return `<div class="hpd-item${k===active?' active':''}" onclick="HAWK.pick('${k}')"><span class="hpd-il">${esc(p.label)}</span><span class="hpd-is">${esc(p.sub)}</span></div>`;
     }).join('');
+    const cur=PRESETS[active]||PRESETS[presetKeys()[0]];
+    return `<div class="hpd" id="hawk-dd">
+        <button class="hpd-btn" onclick="HAWK.toggleDD(event)">
+          <span class="hpd-txt"><span class="hpd-eyebrow">Saved Presets</span><span class="hpd-cur" id="hpd-cur">${esc(cur?cur.label:'')}</span></span>
+          <svg class="hpd-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="hpd-menu" id="hpd-menu">${items}</div>
+      </div>`;
+  }
+  function renderSubnav(){ const host=document.getElementById('nav-subs'); if(host) host.innerHTML=subnav(); }
+  function toggleDD(e){ if(e) e.stopPropagation(); const m=document.getElementById('hpd-menu'); const d=document.getElementById('hawk-dd'); if(m){ const open=m.classList.toggle('show'); if(d) d.classList.toggle('open',open); } }
+  function closeDD(){ const m=document.getElementById('hpd-menu'); const d=document.getElementById('hawk-dd'); if(m) m.classList.remove('show'); if(d) d.classList.remove('open'); }
+  function pick(k){ closeDD(); show(k); }
+  document.addEventListener('click', e=>{ const d=document.getElementById('hawk-dd'); if(d && !d.contains(e.target)) closeDD(); });
+
+  function setBar(p){
+    const cur=document.getElementById('hpd-cur'); if(cur) cur.textContent=p.label;
+    document.querySelectorAll('#hpd-menu .hpd-item').forEach(el=>el.classList.remove('active'));
+    const t=document.getElementById('hawk-title'); if(t) t.innerHTML=`<span class="hkt-l">${esc(p.label)}</span><span class="hkt-s">${esc(p.sub)}</span>`;
   }
 
   function layout(){
@@ -8834,8 +8888,9 @@ const HAWK = (() => {
 
   async function show(key){
     if(!presetKeys().includes(key)) key=presetKeys()[0];
-    active=key; renderPills();
+    active=key;
     const p=PRESETS[key], cv=document.getElementById('hawk-canvas'); if(!cv) return;
+    renderSubnav(); setBar(p);
     cv.style.gridTemplateColumns=p.cols; cv.style.gridTemplateRows=p.rows;
     cv.innerHTML=p.tiles.map(t=>`<div class="hawk-tile${t.glow?' glow':''}" style="grid-column:${t.gc};grid-row:${t.gr}"><div class="ht-hd"><span class="ht-ttl">${esc(t.t)}</span></div><div class="ht-body" id="ht-${t.k}"><div class="hk-empty">Loading…</div></div></div>`).join('');
     layout();
@@ -8845,265 +8900,14 @@ const HAWK = (() => {
     });
   }
 
-  async function sendMentor(){
-    const inp=document.getElementById('hawk-msg-in'); if(!inp) return;
-    const txt=(inp.value||'').trim(); if(!txt) return; inp.value='';
-    try{ await sb.from('messages').insert({user_id:window._uid,sender:'user',body:txt}); }catch(e){ inp.value=txt; return; }
-    const el=document.getElementById('ht-mentorMsg'); if(el) el.innerHTML=await TILE.mentorMsg();
-  }
-
   function refresh(){ cache={}; show(active||presetKeys()[0]); }
   function open(){ cache={}; show(presetKeys()[0]); }
 
   window.addEventListener('resize', ()=>{ if(document.getElementById('pane-hawk')?.classList.contains('active')) layout(); });
 
-  return { show, refresh, open, sendMentor, layout };
+  return { show, pick, toggleDD, subnav, refresh, open, layout };
 })();
 
-</script>
-</script>
-<script>
-/* ══════════════════════════════════════════════════════════
-   MY WATCHLIST (UW) — user-owned watchlist, free + paid.
-   Symbols live in user_watchlist (RLS-scoped to the user).
-   The list shows ONLY what the user adds — no rule-based filtering
-   or "focused/buy-range" subset (that is taught in the MSTP course,
-   not served as a signal here). EMA columns + the chart's
-   Fundamental/Technical tables are paid-only.
-   ══════════════════════════════════════════════════════════ */
-let _uwData = [];
-let _uwSort = { key:'symbol', dir:1 };
-
-const UW = (()=>{
-  const esc = s => (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-  const validSym = s => /^[A-Z0-9&._-]{1,20}$/.test(s);
-  const isPaid = () => (window.USER_ROLE==='paid' || window.USER_ROLE==='admin');
-
-  function msg(text, kind){
-    const el = document.getElementById('uw-msg'); if(!el) return;
-    if(!text){ el.style.display='none'; el.textContent=''; el.className='wl-msg'; return; }
-    el.textContent = text; el.className = 'wl-msg ' + (kind||'ok'); el.style.display='block';
-    if(kind==='ok'){ clearTimeout(el._t); el._t=setTimeout(()=>{ el.style.display='none'; }, 4000); }
-  }
-
-  async function load(){
-    const tb = document.getElementById('uw-tbody');
-    if(tb) tb.innerHTML = '<tr><td colspan="6" class="sf-empty">Loading…</td></tr>';
-    try{
-      const paid = isPaid();
-      const queries = [ sb.from('user_watchlist').select('symbol,company_name') ]; // RLS → only my rows
-      if(paid) queries.push(sb.from('watchlist_enriched').select('symbol,company_name,pct_from_21ema,pct_from_10wema,pct_from_200ema'));
-      const res = await Promise.all(queries);
-      const mineRes = res[0];
-      const enrRes  = paid ? res[1] : { data:[] };
-      const enr = {}; (enrRes.data||[]).forEach(r => enr[(r.symbol||'').toUpperCase()] = r);
-      _uwData = (mineRes.data||[]).map(r => {
-        const sym = (r.symbol||'').toUpperCase();
-        const e = enr[sym] || {};
-        return {
-          symbol: sym,
-          company_name: r.company_name || e.company_name || null,
-          pct_from_21ema:  e.pct_from_21ema  != null ? e.pct_from_21ema  : null,
-          pct_from_10wema: e.pct_from_10wema != null ? e.pct_from_10wema : null,
-          pct_from_200ema: e.pct_from_200ema != null ? e.pct_from_200ema : null,
-        };
-      });
-      applySort();
-      render();
-    }catch(e){
-      const t = document.getElementById('uw-tbody');
-      if(t) t.innerHTML = '<tr><td colspan="6" class="sf-empty">Could not load watchlist.<br>'+esc(e.message||e)+'</td></tr>';
-    }
-  }
-
-  function applySort(){
-    const { key, dir } = _uwSort;
-    _uwData.sort((a,b)=>{
-      let av=a[key], bv=b[key];
-      if(key==='symbol'||key==='company_name'){ av=(av||'').toString().toLowerCase(); bv=(bv||'').toString().toLowerCase(); return av<bv?-dir:av>bv?dir:0; }
-      av = av==null?-1e9:av; bv = bv==null?-1e9:bv; return (av-bv)*dir;
-    });
-  }
-
-  function cell(v){
-    if(v==null) return '<td style="color:var(--muted)">—</td>';
-    const c = v>=0 ? 'var(--green)' : 'var(--red)';
-    return '<td style="color:'+c+';font-weight:600">'+(v>=0?'+':'')+v.toFixed(1)+'%</td>';
-  }
-
-  function rowHtml(s, paid){
-    const safe = s.symbol.replace(/'/g,"\\'");
-    return '<tr>'+
-      '<td style="color:var(--white);font-weight:700">'+esc(s.symbol)+'</td>'+
-      '<td>'+esc(s.company_name||'—')+'</td>'+
-      (paid ? cell(s.pct_from_21ema)+cell(s.pct_from_10wema)+cell(s.pct_from_200ema) : '')+
-      '<td style="text-align:right"><span class="wl-rm" title="Remove" onclick="UW.remove(\''+safe+'\')">&times;</span></td>'+
-      '</tr>';
-  }
-
-  function theadHtml(paid){
-    return '<tr>'+
-      '<th onclick="UW.sort(\'symbol\')">Symbol</th>'+
-      '<th onclick="UW.sort(\'company_name\')">Company</th>'+
-      (paid ? '<th onclick="UW.sort(\'pct_from_21ema\')">vs 21 EMA ↕</th>'+
-              '<th onclick="UW.sort(\'pct_from_10wema\')">vs 10W EMA ↕</th>'+
-              '<th onclick="UW.sort(\'pct_from_200ema\')">vs 200 EMA ↕</th>' : '')+
-      '<th></th>'+
-      '</tr>';
-  }
-
-  function render(){
-    const paid  = isPaid();
-    const cols  = paid ? 6 : 3;
-    const thead = document.getElementById('uw-thead');
-    const tb    = document.getElementById('uw-tbody');
-    const ac    = document.getElementById('uw-count');
-    if(ac)    ac.textContent = _uwData.length;
-    if(thead) thead.innerHTML = theadHtml(paid);
-    if(tb)    tb.innerHTML = _uwData.length
-      ? _uwData.map(s => rowHtml(s, paid)).join('')
-      : '<tr><td colspan="'+cols+'" class="sf-empty">Your watchlist is empty. Add a symbol or upload a CSV above.</td></tr>';
-  }
-
-  function sort(key){
-    if(_uwSort.key===key){ _uwSort.dir *= -1; } else { _uwSort = { key, dir: (key==='symbol'||key==='company_name')?1:-1 }; }
-    applySort(); render();
-  }
-
-  async function addSymbol(rawSym, name){
-    const sym = (rawSym||'').trim().toUpperCase();
-    if(!sym) return;
-    if(!validSym(sym)){ msg('“'+sym+'” doesn’t look like a valid NSE symbol.', 'err'); return; }
-    if(_uwData.some(s=>s.symbol===sym)){ msg(sym+' is already in your watchlist.', 'err'); return; }
-    try{
-      const { error } = await sb.from('user_watchlist').insert({ symbol: sym, company_name: (name||'').trim()||null });
-      if(error){ msg(/duplicate|unique/i.test(error.message)? sym+' is already in your watchlist.' : ('Could not add: '+error.message), 'err'); return; }
-      msg('Added '+sym+'. Technicals appear after the next end-of-day update.', 'ok');
-      await load();
-    }catch(e){ msg('Could not add: '+(e.message||e), 'err'); }
-  }
-
-  // ── Stock type-ahead — same source as Trade Manager (search_stocks RPC) ──
-  let _acTimer=null, _acItems=[], _acActive=-1, _acBound=false;
-  function acHide(){ const ac=document.getElementById('uw-ac'); if(ac) ac.classList.remove('show'); _acActive=-1; }
-  function acRender(){
-    const ac=document.getElementById('uw-ac'); if(!ac) return;
-    if(!_acItems.length){ ac.innerHTML='<div class="mt-ac-item" style="cursor:default;color:var(--muted)">No matches</div>'; ac.classList.add('show'); return; }
-    ac.innerHTML=_acItems.map((r,i)=>'<div class="mt-ac-item'+(i===_acActive?' active':'')+'" data-i="'+i+'">'+
-      '<span class="mt-ac-sym">'+esc(r.symbol)+'</span>'+
-      '<span class="mt-ac-co">'+esc(r.company_name||'')+'</span>'+
-      (r.board?'<span class="mt-ac-bd">'+esc(r.board)+'</span>':'')+
-      '</div>').join('');
-    ac.classList.add('show');
-    ac.querySelectorAll('.mt-ac-item[data-i]').forEach(el=>{
-      el.addEventListener('mousedown', ev=>{ ev.preventDefault(); acPick(parseInt(el.dataset.i,10)); });
-    });
-  }
-  async function acSearch(q){
-    try{
-      const { data, error } = await sb.rpc('search_stocks', { q, lim: 8 });
-      _acItems = (error || !data) ? [] : data;
-    }catch(e){ _acItems = []; }
-    _acActive = _acItems.length ? 0 : -1;
-    acRender();
-  }
-  function acPick(i){
-    const r=_acItems[i]; if(!r) return;
-    const box=document.getElementById('uw-search'); if(box) box.value='';
-    acHide();
-    addSymbol(r.symbol, r.company_name);
-    if(box) box.focus();
-  }
-  function bindSearch(){
-    if(_acBound) return; _acBound=true;
-    const box=document.getElementById('uw-search'); if(!box) return;
-    box.addEventListener('input', ()=>{
-      const q=box.value.trim();
-      if(_acTimer) clearTimeout(_acTimer);
-      if(q.length<1){ acHide(); return; }
-      _acTimer=setTimeout(()=>acSearch(q), 180);
-    });
-    box.addEventListener('keydown', e=>{
-      const ac=document.getElementById('uw-ac');
-      const open = ac && ac.classList.contains('show') && _acItems.length;
-      if(e.key==='ArrowDown'){ if(open){ e.preventDefault(); _acActive=Math.min(_acActive+1,_acItems.length-1); acRender(); } }
-      else if(e.key==='ArrowUp'){ if(open){ e.preventDefault(); _acActive=Math.max(_acActive-1,0); acRender(); } }
-      else if(e.key==='Enter'){ if(open && _acActive>=0){ e.preventDefault(); acPick(_acActive); } }
-      else if(e.key==='Escape'){ acHide(); }
-    });
-    document.addEventListener('click', e=>{
-      const ac=document.getElementById('uw-ac');
-      if(ac && !box.contains(e.target) && !ac.contains(e.target)) ac.classList.remove('show');
-    });
-  }
-
-  async function remove(sym){
-    try{
-      const { error } = await sb.from('user_watchlist').delete().eq('symbol', sym);
-      if(error){ msg('Could not remove: '+error.message, 'err'); return; }
-      await load();
-    }catch(e){ msg('Could not remove: '+(e.message||e), 'err'); }
-  }
-
-  function parseCSV(text){
-    const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-    const out = []; const seen = new Set();
-    lines.forEach((line, i)=>{
-      const parts = line.split(',').map(c=>c.trim().replace(/^"|"$/g,''));
-      const raw = (parts[0]||'');
-      if(i===0 && /^(symbol|ticker|scrip|stock)$/i.test(raw)) return; // header
-      const sym = raw.toUpperCase();
-      if(!sym || !validSym(sym) || seen.has(sym)) return;
-      seen.add(sym);
-      out.push({ symbol: sym, company_name: (parts[1]||'').trim() || null });
-    });
-    return out;
-  }
-
-  async function upload(input){
-    const file = input.files && input.files[0]; if(!file) return;
-    input.value = '';
-    const CAP = 100;
-    try{
-      const text = await file.text();
-      let rows = parseCSV(text);
-      if(!rows.length){ msg('No valid symbols found. Use format: symbol,company_name', 'err'); return; }
-      const existing = new Set(_uwData.map(s=>s.symbol));
-      rows = rows.filter(r=>!existing.has(r.symbol));
-      if(!rows.length){ msg('All symbols in that file are already in your watchlist.', 'err'); return; }
-      let capped = false;
-      if(rows.length > CAP){ rows = rows.slice(0, CAP); capped = true; }
-      const { error } = await sb.from('user_watchlist').insert(rows);
-      if(error){ msg('Upload failed: '+error.message, 'err'); return; }
-      msg('Added '+rows.length+' symbol'+(rows.length===1?'':'s')+(capped?(' (capped at '+CAP+')'):'')+'. Technicals appear after the next end-of-day update.', 'ok');
-      await load();
-    }catch(e){ msg('Could not read file: '+(e.message||e), 'err'); }
-  }
-
-  function maybeDisclaimer(){
-    try{ if(sessionStorage.getItem('uw_disc_seen')==='1') return; }catch(e){}
-    if(document.getElementById('uw-disc-modal')) return;
-    const bg = document.createElement('div');
-    bg.className = 'wl-modal-bg'; bg.id = 'uw-disc-modal';
-    bg.innerHTML =
-      '<div class="wl-modal">'+
-        '<div class="wl-modal-ic"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div>'+
-        '<h3>A quick note on the data</h3>'+
-        '<p>Market data displayed on this platform is delayed. It is strictly intended for post-market journaling, backtesting, learning, and end-of-day analysis. Do not use this data for real-time order execution.</p>'+
-        '<button class="wl-modal-ok" onclick="UW.closeDisclaimer()">I understand</button>'+
-      '</div>';
-    document.body.appendChild(bg);
-    bg.addEventListener('click', e=>{ if(e.target===bg) UW.closeDisclaimer(); });
-  }
-  function closeDisclaimer(){
-    try{ sessionStorage.setItem('uw_disc_seen','1'); }catch(e){}
-    const m = document.getElementById('uw-disc-modal'); if(m) m.remove();
-  }
-
-  function init(){ maybeDisclaimer(); bindSearch(); load(); }
-
-  return { init, load, sort, remove, upload, maybeDisclaimer, closeDisclaimer };
-})();
 </script>
 <script>
 /* ══════════════════════════════════════════════════════════
