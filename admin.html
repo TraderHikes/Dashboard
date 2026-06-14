@@ -423,6 +423,7 @@
     <button class="tab-btn" onclick="openTab('tab-snapshot',this)">Portfolio Snapshot</button>
     <button class="tab-btn" onclick="openTab('tab-watchlist',this);loadWatchlistAdmin()">Watchlist</button>
     <button class="tab-btn" onclick="openTab('tab-students',this)">Students</button>
+    <button class="tab-btn" onclick="openTab('tab-perf-stats',this);loadPerformanceStats()">Performance Stats</button>
   </div>
 
   <!-- ════ TAB 1: ADD / VIEW OPEN TRADES ════ -->
@@ -1015,6 +1016,59 @@
       </div>
       <div id="students-list">
         <div style="padding:20px;text-align:center;color:var(--muted)">Loading...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ PERFORMANCE STATS (per-user aggregates from user_stats) ════ -->
+  <div class="tab-pane" id="tab-perf-stats">
+    <div class="card">
+      <div class="card-hdr">
+        <span class="card-title">User Performance Stats</span>
+        <button class="btn btn-ghost btn-sm" onclick="loadPerformanceStats()">↻ Refresh</button>
+      </div>
+      <div class="card-body" style="padding-bottom:6px">
+        <p style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6">
+          Aggregated performance for every user's <strong style="color:var(--text2)">private</strong> book — computed by the daily
+          pipeline. Raw trades stay private to each user; only these summaries are visible here, to help target MSTP coaching.
+        </p>
+        <div id="ps-summary" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+          <input id="ps-search" oninput="renderPerfStats()" placeholder="Search email or name…"
+            style="flex:1;min-width:200px;background:var(--card3);border:1px solid var(--bdr);color:var(--white);font-size:12px;padding:8px 12px;border-radius:8px;outline:none">
+          <select id="ps-tier" onchange="renderPerfStats()" style="background:var(--card3);border:1px solid var(--bdr);color:var(--white);font-size:12px;padding:8px 12px;border-radius:8px">
+            <option value="">All tiers</option>
+            <option value="course">Course</option>
+            <option value="dashboard">Dashboard</option>
+            <option value="free">Free</option>
+          </select>
+          <select id="ps-sort" onchange="renderPerfStats()" style="background:var(--card3);border:1px solid var(--bdr);color:var(--white);font-size:12px;padding:8px 12px;border-radius:8px">
+            <option value="last_trade_date">Sort: Last active</option>
+            <option value="total_closed_trades">Sort: Total trades</option>
+            <option value="trades_last_30d">Sort: Trades (30d)</option>
+            <option value="win_rate">Sort: Win rate</option>
+            <option value="profit_factor">Sort: Profit factor</option>
+            <option value="total_realised_pnl">Sort: Realised P&L</option>
+            <option value="max_profit">Sort: Max profit</option>
+            <option value="max_loss">Sort: Max loss</option>
+            <option value="pct_trades_with_sl">Sort: % with SL</option>
+            <option value="max_drawdown_pct">Sort: Max drawdown</option>
+            <option value="total_capital">Sort: Capital</option>
+          </select>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="data-table" id="perf-stats-table">
+          <thead><tr>
+            <th>User</th><th>Tier</th><th>Open</th><th>Closed</th><th>30d</th>
+            <th>Win&nbsp;%</th><th>Profit&nbsp;Factor</th><th>Expectancy</th>
+            <th>Max&nbsp;Profit</th><th>Max&nbsp;Loss</th><th>Realised&nbsp;P&L</th>
+            <th>%&nbsp;w/SL</th><th>Avg&nbsp;Hold</th><th>Max&nbsp;DD</th><th>Capital</th><th>Exposure</th><th>Last&nbsp;Active</th>
+          </tr></thead>
+          <tbody id="perf-stats-body">
+            <tr><td colspan="17" style="padding:20px;text-align:center;color:var(--muted)">Loading...</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -2057,6 +2111,70 @@ async function loadStudents() {
   _pending = pend || [];
   renderUserFilter();
   renderUsers();
+}
+
+/* ════ PERFORMANCE STATS — per-user aggregates (admin reads user_stats only) ════ */
+let _perfStats = [];
+async function loadPerformanceStats(){
+  const body=document.getElementById('perf-stats-body');
+  if(body) body.innerHTML='<tr><td colspan="17" style="padding:20px;text-align:center;color:var(--muted)">Loading...</td></tr>';
+  const { data, error } = await sb.from('user_stats').select('*');
+  if(error){ if(body) body.innerHTML=`<tr><td colspan="17" style="padding:20px;text-align:center;color:var(--red)">${error.message}</td></tr>`; return; }
+  _perfStats = data || [];
+  renderPerfStats();
+}
+
+function renderPerfStats(){
+  const body=document.getElementById('perf-stats-body'); if(!body) return;
+  const fmt=n=>'₹'+Math.abs(Number(n)||0).toLocaleString('en-IN',{maximumFractionDigits:0});
+  const fmtSigned=n=>{ n=Number(n)||0; return (n>=0?'+':'−')+'₹'+Math.abs(n).toLocaleString('en-IN',{maximumFractionDigits:0}); };
+  const q=(document.getElementById('ps-search')?.value||'').toLowerCase().trim();
+  const tier=document.getElementById('ps-tier')?.value||'';
+  const sortKey=document.getElementById('ps-sort')?.value||'last_trade_date';
+  let rows=_perfStats.slice();
+  if(q) rows=rows.filter(r=>((r.email||'')+' '+(r.full_name||'')).toLowerCase().includes(q));
+  if(tier) rows=rows.filter(r=>(r.tier||'free')===tier);
+  rows.sort((a,b)=>{
+    let av=a[sortKey], bv=b[sortKey];
+    if(String(sortKey).endsWith('_date')){ av=av?new Date(av).getTime():0; bv=bv?new Date(bv).getTime():0; }
+    else { av=Number(av)||0; bv=Number(bv)||0; }
+    return bv-av;
+  });
+  const sum=document.getElementById('ps-summary');
+  if(sum){
+    const n=_perfStats.length;
+    const active30=_perfStats.filter(r=>(r.trades_last_30d||0)>0).length;
+    const withCap=_perfStats.filter(r=>(r.total_capital||0)>0).length;
+    const chip=(l,v)=>`<div style="background:var(--card3);border:1px solid var(--bdr);border-radius:9px;padding:8px 14px"><div style="font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:700">${l}</div><div style="font-size:16px;font-weight:800;color:var(--white)">${v}</div></div>`;
+    sum.innerHTML=chip('Users',n)+chip('Active (30d)',active30)+chip('Capital set',withCap);
+  }
+  if(rows.length===0){ body.innerHTML='<tr><td colspan="17" style="padding:20px;text-align:center;color:var(--muted)">No user stats yet — they appear after the daily pipeline runs and users begin trading.</td></tr>'; return; }
+  const winCol=v=>{ v=Number(v)||0; return `<span style="color:${v>=50?'var(--green)':'var(--text2)'}">${v.toFixed(1)}%</span>`; };
+  const tierBadge=t=>{ t=t||'free'; const c=t==='course'?'var(--green)':t==='dashboard'?'var(--blue)':'var(--muted)'; return `<span style="font-size:10px;font-weight:700;color:${c};text-transform:capitalize">${t}</span>`; };
+  body.innerHTML=rows.map(r=>{
+    const pnl=Number(r.total_realised_pnl)||0, mp=Number(r.max_profit)||0, ml=Number(r.max_loss)||0;
+    const ex=Number(r.expectancy_pct)||0;
+    const la=r.last_trade_date?new Date(r.last_trade_date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'2-digit'}):'—';
+    return `<tr>
+      <td><div style="font-weight:600;color:var(--white)">${r.full_name||(r.email||'').split('@')[0]||'—'}</div><div style="font-size:10px;color:var(--muted)">${r.email||''}</div></td>
+      <td>${tierBadge(r.tier)}</td>
+      <td class="mono">${r.open_positions||0}</td>
+      <td class="mono">${r.total_closed_trades||0}</td>
+      <td class="mono">${r.trades_last_30d||0}</td>
+      <td class="mono">${winCol(r.win_rate)}</td>
+      <td class="mono">${(Number(r.profit_factor)||0).toFixed(2)}×</td>
+      <td class="mono" style="color:${ex>=0?'var(--green)':'var(--red)'}">${ex>=0?'+':''}${ex.toFixed(1)}%</td>
+      <td class="mono" style="color:var(--green)">${fmt(mp)}</td>
+      <td class="mono" style="color:var(--red)">${ml<0?'−':''}${fmt(ml)}</td>
+      <td class="mono" style="color:${pnl>=0?'var(--green)':'var(--red)'}">${fmtSigned(pnl)}</td>
+      <td class="mono">${(Number(r.pct_trades_with_sl)||0).toFixed(0)}%</td>
+      <td class="mono">${(Number(r.avg_holding_days)||0).toFixed(0)}d</td>
+      <td class="mono" style="color:var(--red)">${(Number(r.max_drawdown_pct)||0).toFixed(1)}%</td>
+      <td class="mono">${fmt(r.total_capital)}</td>
+      <td class="mono">${(Number(r.exposure_pct)||0).toFixed(0)}%</td>
+      <td style="font-size:11px;color:var(--text2)">${la}</td>
+    </tr>`;
+  }).join('');
 }
 
 function tierMeta(tier, until) {
