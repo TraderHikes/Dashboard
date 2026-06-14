@@ -2617,6 +2617,58 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
 </div>
 
 <!-- ══════════════════════════════════════
+     HAWK EYE — single-page fixed-canvas presets
+══════════════════════════════════════ -->
+<style>
+#pane-hawk{padding:0}
+.hawk-bar{display:flex;align-items:center;gap:10px;padding:11px 18px;border-bottom:1px solid var(--bdr);flex-wrap:wrap}
+.hawk-pills{display:flex;gap:7px;flex-wrap:wrap}
+.hawk-pill{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:6px 14px;border-radius:11px;cursor:pointer;border:1px solid var(--bdr2);background:var(--card2);transition:all .18s;font-family:var(--f);font-size:12.5px;font-weight:700;color:var(--text2);line-height:1.25}
+.hawk-pill .hp-sub{font-size:9px;color:var(--muted);font-weight:600;letter-spacing:.02em;text-transform:uppercase}
+.hawk-pill:hover{border-color:var(--bdr3)}
+.hawk-pill.active{border-color:transparent;background:linear-gradient(135deg,#5c6ffb,#3a4bd6);color:#fff;box-shadow:0 4px 16px rgba(92,111,251,.32)}
+.hawk-pill.active .hp-sub{color:rgba(255,255,255,.82)}
+.hawk-refresh{margin-left:auto;display:inline-flex;align-items:center;gap:6px;background:var(--card2);border:1px solid var(--bdr2);color:var(--text2);font-size:11px;font-weight:600;padding:7px 12px;border-radius:9px;cursor:pointer;font-family:var(--f)}
+.hawk-refresh:hover{border-color:var(--blue);color:var(--blue-lt)}
+.hawk-refresh svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2}
+.hawk-canvas{display:grid;gap:12px;padding:14px 18px;overflow:hidden}      /* fixed canvas — never scrolls */
+.hawk-tile{background:var(--card);border:1px solid var(--bdr2);border-radius:14px;display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden}
+.hawk-tile.glow{border-color:rgba(92,111,251,.5);box-shadow:0 0 24px rgba(92,111,251,.14)}
+.ht-hd{padding:10px 14px 8px;border-bottom:1px solid var(--bdr);flex:0 0 auto}
+.ht-ttl{font-family:var(--f);font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--white)}
+.ht-body{padding:12px 14px;overflow-y:auto;min-height:0;flex:1 1 auto}    /* only indicators scroll */
+/* compact indicator styles — scoped to Hawk Eye (hk- / ht- prefixes are Hawk-only) */
+.hk-empty{color:var(--muted);font-size:12px;text-align:center;padding:18px 6px;line-height:1.5}
+.hk-score{text-align:center}
+.hk-score .num{font-family:var(--fm);font-size:38px;font-weight:800;line-height:1}
+.hk-score .lbl{font-size:12.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;margin-top:3px}
+.hk-score .sub{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.4}
+.hk-stats{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.hk-stat{background:var(--card2);border:1px solid var(--bdr);border-radius:9px;padding:9px 11px}
+.hk-stat .k{font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700}
+.hk-stat .v{font-size:18px;font-weight:800;color:var(--white);font-family:var(--fm);margin-top:2px;line-height:1.1}
+.hk-stat .s{font-size:9.5px;color:var(--muted);margin-top:2px}
+.hk-bar{margin:7px 0}
+.hk-bar-top{display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px}
+.hk-bar-track{height:6px;background:var(--card3);border-radius:100px;overflow:hidden}
+.hk-bar-fill{height:100%;border-radius:100px}
+.hk-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 2px;border-bottom:1px solid var(--bdr)}
+.hk-row:last-child{border-bottom:none}
+.hk-sym{font-family:var(--fm);font-weight:700;color:var(--white);font-size:12px}
+@media(max-width:880px){
+  .hawk-canvas{height:auto!important;overflow:visible;grid-template-columns:1fr!important;grid-template-rows:none!important}
+  .hawk-tile{grid-column:auto!important;grid-row:auto!important;min-height:200px}
+}
+</style>
+<div class="pane" id="pane-hawk">
+  <div class="hawk-bar">
+    <div class="hawk-pills" id="hawk-presets"></div>
+    <button class="hawk-refresh" onclick="HAWK.refresh()" title="Refresh data"><svg viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Refresh</button>
+  </div>
+  <div class="hawk-canvas" id="hawk-canvas"></div>
+</div>
+
+<!-- ══════════════════════════════════════
      MY WATCHLIST (user-owned, free + paid)
 ══════════════════════════════════════ -->
 <style>
@@ -3394,6 +3446,7 @@ function sw(id){
   document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
   const pane=document.getElementById('pane-'+id); if(pane) pane.classList.add('active');
   if(id==='portfolio'){setTimeout(drawPortfolioCharts,80);}
+  if(id==='hawk'){HAWK.open();}
   if(id==='marketbrief'){loadMarketBrief();}
   if(id==='breadth'){loadMarketBreadth();}
   if(id==='filter'){window._WL_MODE='model';loadStockFilter();}
@@ -3411,6 +3464,11 @@ function sw(id){
 /* ── TWO-LEVEL NAV (role-aware) ── */
 const MSTP_URL='https://www.traderhikes.com';   // ← set exact MSTP enrolment link later
 const NAV=[
+  {key:'hawk',     label:'Hawk Eye', roles:['admin','paid','free'], lockFor:['free'],
+   lock:{kind:'upgrade', title:'Hawk Eye — your command center',
+         body:'One locked, single-page view of the whole market and your book — pre-market pulse, internals, your desk and edge review, switchable in a tap.',
+         cta:'Unlock Full Access', url:MSTP_URL},
+   subs:[{id:'hawk',label:'Hawk Eye'}]},
   {key:'model',    label:'Model Portfolio', roles:['admin','paid','free'], lockFor:['free','paid'],
    lock:{kind:'course', title:'Learn live from the Model Swing Trader Portfolio',
          body:'This is the real book behind the Master Swing Trader Program — followed hands-on inside the course.',
@@ -3429,6 +3487,7 @@ const NAV=[
    subs:[{id:'mtoverview',label:'360° Overview'},{id:'mtmanager',label:'Trade Manager'},{id:'mtportfolio',label:'Portfolio'},{id:'mtclosed',label:'Trade Journal'}]},
 ];
 const NAV_ICONS={
+  hawk:'<svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>',
   model:'<svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 12h18"/></svg>',
   market:'<svg viewBox="0 0 24 24"><path d="M3 12h3l3-8 4 16 3-8h5"/></svg>',
   screener:'<svg viewBox="0 0 24 24"><path d="M3 17l5-5 4 4 8-9"/><path d="M16 7h5v5"/></svg>',
@@ -3446,7 +3505,7 @@ const NAVUI=(()=>{
       const locked=g.lockFor.includes(role);
       return `<div class="ng-btn${locked?' locked':''}" data-g="${g.key}" onclick="NAVUI.selectGroup('${g.key}')" title="${esc(g.label)}"><span class="ng-ic">${NAV_ICONS[g.key]||''}</span><span class="ng-lbl">${esc(g.label)}</span></div>`;
     }).join('');
-    selectGroup(role==='admin' ? 'model' : role==='paid' ? 'market' : 'desk');
+    selectGroup(role==='admin' ? 'hawk' : role==='paid' ? 'hawk' : 'desk');
   }
   function selectGroup(key){
     curGroup=key; window._curGroup=key; if(window.applyHeader) applyHeader();
@@ -3466,6 +3525,11 @@ const NAVUI=(()=>{
   function fauxFor(key){
     const card='<div class="lb-card"><div class="lb-k"></div><div class="lb-v"></div><div class="lb-s"></div></div>';
     const tile='<div class="lb-tile"><div class="lb-k"></div><div class="lb-v"></div></div>';
+    if(key==='hawk'){
+      const t='<div class="lb-card" style="min-height:0;height:100%"><div class="lb-k"></div><div class="lb-v"></div><div class="lb-s"></div></div>';
+      return `<div style="display:grid;grid-template-columns:1.5fr 1.1fr 1.1fr;grid-template-rows:1fr 1fr;gap:12px;height:340px">
+        <div style="grid-row:1 / 3">${t}</div>${t}${t}${t}${t}</div>`;
+    }
     if(key==='market'){
       const cols=['var(--red)','var(--amber)','var(--green)','var(--green)','var(--amber)','var(--red)','var(--green)','var(--amber)'];
       const ws=[34,47,79,59,41,28,94,66];
@@ -8472,6 +8536,331 @@ document.querySelectorAll('.sf-filter-chip').forEach(btn => {
   });
 });
 
+</script>
+<script>
+/* ════════════════════════════════════════════════════════════
+   HAWK EYE — single-page, fixed-canvas preset dashboards (paid + admin)
+   Purpose-built compact tiles reading the same Supabase data as the full
+   tabs. Canvas is locked (no page scroll); each tile scrolls internally.
+   ════════════════════════════════════════════════════════════ */
+const HAWK = (() => {
+  const esc = s => (s==null?'':String(s)).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  const inr  = n => '₹'+Math.abs(Number(n)||0).toLocaleString('en-IN',{maximumFractionDigits:0});
+  const inrL = n => { const a=Math.abs(Number(n)||0); n=Number(n)||0; if(a>=1e7) return '₹'+(n/1e7).toFixed(2)+'Cr'; if(a>=1e5) return '₹'+(n/1e5).toFixed(2)+'L'; return '₹'+Math.round(n).toLocaleString('en-IN'); };
+  const sgn  = n => (Number(n)>=0?'+':'')+(Number(n)||0).toFixed(1);
+  const scoreCol = s => s>=55?'var(--green)':s>=45?'var(--amber)':'var(--red)';
+  const pnlCol   = n => (Number(n)>=0?'var(--green)':'var(--red)');
+
+  let cache = {};            // data cache for this session
+  let active = null;
+
+  /* ── data fetchers (cached) ── */
+  async function market(){ if(cache.market) return cache.market;
+    const { data } = await sb.from('market_breadth').select('*').order('snapshot_date',{ascending:false}).limit(1).maybeSingle();
+    return (cache.market = data || {}); }
+  async function brief(){ if(cache.brief) return cache.brief;
+    const { data } = await sb.from('market_brief').select('*').order('brief_date',{ascending:false}).limit(1).maybeSingle();
+    return (cache.brief = data || null); }
+  async function sectors(){ if(cache.sectors) return cache.sectors;
+    const { data } = await sb.from('sector_breadth').select('sector_key,sector_name,regime_score,date').order('date',{ascending:false}).limit(120);
+    // keep one (latest) row per sector
+    const seen={}, out=[]; (data||[]).forEach(r=>{ if(!seen[r.sector_key]){ seen[r.sector_key]=1; out.push(r); } });
+    return (cache.sectors = out); }
+  async function book(){ if(cache.book) return cache.book;
+    const admin = (window.USER_ROLE==='admin');
+    const isModel = admin;                     // admin's "desk" = the Model book; users see their own
+    const uid=window._uid;
+    const [op,cl,sn,cf]=await Promise.all([
+      sb.from('open_trades').select('*').eq('is_model',isModel),
+      sb.from('closed_trades').select('*').eq('is_model',isModel),
+      sb.from('portfolio_snapshots').select('portfolio_value,nifty500_level,snapshot_date').eq('is_model',isModel).order('snapshot_date',{ascending:true}),
+      sb.from('portfolio_config').select('total_capital').eq('user_id',uid).maybeSingle(),
+    ]);
+    return (cache.book={ open:op.data||[], closed:cl.data||[], snaps:sn.data||[], capital:(cf.data&&cf.data.total_capital)?Number(cf.data.total_capital):0, isModel }); }
+  async function modelBook(){ if(cache.model) return cache.model;
+    const [op,cl]=await Promise.all([
+      sb.from('open_trades').select('*').eq('is_model',true),
+      sb.from('closed_trades').select('*').eq('is_model',true),
+    ]);
+    return (cache.model={ open:op.data||[], closed:cl.data||[] }); }
+  async function fiiData(){ if('fii' in cache) return cache.fii;
+    const { data } = await sb.from('fii_dii_activity').select('*').order('period_key',{ascending:false}).limit(1);
+    return (cache.fii=(data&&data[0])||null); }
+  async function wlData(){ if(cache.wl) return cache.wl;
+    const admin=(window.USER_ROLE==='admin'); const tbl=admin?'watchlist':'user_watchlist';
+    const [mine,enr]=await Promise.all([
+      sb.from(tbl).select('symbol,company_name'),
+      sb.from('watchlist_enriched').select('symbol,company_name,pct_from_21ema'),
+    ]);
+    const em={}; (enr.data||[]).forEach(r=>em[(r.symbol||'').toUpperCase()]=r);
+    const rows=(mine.data||[]).map(r=>{ const s=(r.symbol||'').toUpperCase(), e=em[s]||{}; return {symbol:s,company_name:r.company_name||e.company_name||null,pct21:e.pct_from_21ema!=null?e.pct_from_21ema:null}; });
+    rows.sort((a,b)=>a.symbol<b.symbol?-1:1);   // alphabetical — no signal-implying ranking
+    return (cache.wl=rows); }
+  async function messages(){
+    const { data } = await sb.from('messages').select('*').eq('user_id',window._uid).order('created_at',{ascending:true}).limit(50);
+    return data||[]; }
+
+  /* ── derived metrics ── */
+  function portMetrics(book){
+    let dep=0,pnl=0,risk=0;
+    book.open.forEach(t=>{ const ae=t.avg_entry_price||t.entry_price, rq=t.remaining_qty||t.quantity; dep+=ae*rq; if(t.cmp) pnl+=(t.cmp-ae)*rq; risk+=Math.max(0,(ae-t.sl_price)*rq); });
+    const cap=book.capital||0, cash=Math.max(0,cap-dep);
+    let realised=0; book.closed.forEach(t=>realised+=(t.realised_pnl||0));
+    return {dep,pnl,risk,cap,cash,realised,depPct:cap>0?dep/cap*100:0,riskPct:cap>0?risk/cap*100:0,pnlPct:dep>0?pnl/dep*100:0};
+  }
+  function perfMetrics(closed){
+    if(!closed.length) return null;
+    const wins=closed.filter(t=>(t.realised_pnl||0)>0), losses=closed.filter(t=>(t.realised_pnl||0)<=0);
+    const gw=wins.reduce((s,t)=>s+(t.realised_pnl||0),0), gl=Math.abs(losses.reduce((s,t)=>s+(t.realised_pnl||0),0));
+    const wr=Math.round(wins.length/closed.length*100);
+    const avgW=wins.length?wins.reduce((s,t)=>s+(t.return_pct||0),0)/wins.length:0;
+    const avgL=losses.length?losses.reduce((s,t)=>s+(t.return_pct||0),0)/losses.length:0;
+    const withSl=closed.filter(t=>t.sl_price).length;
+    const holds=closed.filter(t=>t.holding_days!=null).map(t=>+t.holding_days);
+    return { n:closed.length, wr, pf:gl>0?(gw/gl):gw, exp:(wr/100)*avgW+((100-wr)/100)*avgL, avgW, avgL,
+      realised:closed.reduce((s,t)=>s+(t.realised_pnl||0),0),
+      pctSl:Math.round(withSl/closed.length*100), avgHold:holds.length?Math.round(holds.reduce((a,b)=>a+b,0)/holds.length):0 };
+  }
+
+  /* ── tiny inline sparkline ── */
+  function spark(vals,col){
+    if(!vals||vals.length<2) return '';
+    const w=240,h=46,mn=Math.min(...vals),mx=Math.max(...vals),rng=(mx-mn)||1;
+    const pts=vals.map((v,i)=>`${(i/(vals.length-1)*w).toFixed(1)},${(h-((v-mn)/rng)*h).toFixed(1)}`).join(' ');
+    return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="width:100%;height:46px"><polyline points="${pts}" fill="none" stroke="${col}" stroke-width="2"/></svg>`;
+  }
+
+  /* ── tile renderers (return inner HTML) ── */
+  const TILE = {
+    async brief(){ const d=await brief();
+      if(!d) return `<div class="hk-empty">Today's brief publishes pre-market.</div>`;
+      const dt=d.brief_date?new Date(d.brief_date).toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short'}):'';
+      const summary=(d.summary||'').split(/\n\s*\n/).map(p=>p.trim()).filter(Boolean).map(p=>`<p style="margin:0 0 9px">${esc(p)}</p>`).join('');
+      let themes=[]; try{ themes=Array.isArray(d.themes)?d.themes:JSON.parse(d.themes||'[]'); }catch(e){}
+      const th=themes.map(t=>{const s=(t.sentiment||'neutral').toLowerCase();return `<div class="mbrief-theme"><span class="mbrief-tag sent-${s}">${esc(s)}</span><span class="mbrief-theme-txt">${esc(t.text)}</span></div>`;}).join('');
+      return `<div style="font-size:13px;line-height:1.65;color:var(--text2)">${summary}</div>${th?`<div style="height:1px;background:var(--bdr);margin:10px 0"></div>${th}`:''}`;
+    },
+    async score(){ const d=await market(); const s=Number(d.regime_score)||0;
+      if(!d.regime_score && d.regime_score!==0) return `<div class="hk-empty">No market score yet.</div>`;
+      return `<div class="hk-score"><div class="num" style="color:${scoreCol(s)}">${Math.round(s)}<span style="font-size:18px;color:var(--muted)">/100</span></div>
+        <div class="lbl" style="color:${scoreCol(s)}">${esc(d.regime||'—')}</div>
+        <div class="sub">${esc(d.market_signal||'')}</div></div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <div class="hk-stat" style="flex:1;text-align:center"><div class="k">Composite</div><div class="v" style="font-size:15px">${d.composite_smoothed!=null?Math.round(d.composite_smoothed):'—'}</div></div>
+          <div class="hk-stat" style="flex:1;text-align:center"><div class="k">Tactical</div><div class="v" style="font-size:15px">${d.tactical_score!=null?Math.round(d.tactical_score):'—'}</div></div>
+        </div>`;
+    },
+    async breadth(){ const d=await market();
+      const bar=(lbl,pct,col)=>`<div class="hk-bar"><div class="hk-bar-top"><span style="color:var(--text2)">${lbl}</span><span style="font-weight:700;color:${col}">${(Number(pct)||0).toFixed(0)}%</span></div><div class="hk-bar-track"><div class="hk-bar-fill" style="width:${Math.min(Number(pct)||0,100)}%;background:${col}"></div></div></div>`;
+      const adv=Number(d.advancing)||0, dec=Number(d.declining)||0, tot=(adv+dec)||1;
+      return `<div class="hk-stats" style="margin-bottom:10px">
+          <div class="hk-stat"><div class="k">Advancing</div><div class="v" style="color:var(--green);font-size:16px">${adv}</div></div>
+          <div class="hk-stat"><div class="k">Declining</div><div class="v" style="color:var(--red);font-size:16px">${dec}</div></div>
+          <div class="hk-stat"><div class="k">52w Highs</div><div class="v" style="color:var(--green);font-size:16px">${Number(d.new_52w_highs)||0}</div></div>
+          <div class="hk-stat"><div class="k">52w Lows</div><div class="v" style="color:var(--red);font-size:16px">${Number(d.new_52w_lows)||0}</div></div>
+        </div>
+        ${bar('Advance / Decline', adv/tot*100, scoreCol(adv/tot*100))}
+        ${bar('% above 21 EMA', d.pct_above_21ema, scoreCol(d.pct_above_21ema))}
+        ${bar('% above 50 EMA', d.pct_above_50ema, scoreCol(d.pct_above_50ema))}
+        ${bar('% above 200 EMA', d.pct_above_200ema, scoreCol(d.pct_above_200ema))}
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:8px"><span>India VIX</span><span style="color:var(--text2);font-weight:700">${d.india_vix!=null?Number(d.india_vix).toFixed(2):'—'}</span></div>`;
+    },
+    async sectors(){ const rows=await sectors();
+      if(!rows.length) return `<div class="hk-empty">No sector data yet.</div>`;
+      const sorted=rows.slice().sort((a,b)=>(b.regime_score||0)-(a.regime_score||0));
+      const lead=sorted.slice(0,5), lag=sorted.slice(-5).reverse();
+      const row=r=>`<div class="hk-row"><span class="hk-sym" style="font-weight:600">${esc(r.sector_name||r.sector_key)}</span><span style="font-weight:800;color:${scoreCol(r.regime_score||0)}">${Math.round(r.regime_score||0)}</span></div>`;
+      return `<div style="font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--green);font-weight:800;margin-bottom:2px">Leaders</div>${lead.map(row).join('')}
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--red);font-weight:800;margin:10px 0 2px">Laggards</div>${lag.map(row).join('')}`;
+    },
+    async fii(){ const d=await fiiData();
+      if(!d) return `<div class="hk-empty">FII/DII data not in yet.</div>`;
+      const fii=Number(d.fii_cash_net)||0, dii=Number(d.dii_cash_net)||0, net=fii+dii;
+      const crc=n=>(n>=0?'+':'−')+'₹'+Math.abs(n).toLocaleString('en-IN',{maximumFractionDigits:0})+' Cr';
+      const cell=(k,v,col)=>`<div class="hk-stat"><div class="k">${k}</div><div class="v" style="font-size:16px;color:${col}">${v}</div></div>`;
+      return `<div class="hk-stats">
+          ${cell('FII Cash', crc(fii), pnlCol(fii))}
+          ${cell('DII Cash', crc(dii), pnlCol(dii))}
+        </div>
+        <div class="hk-bar" style="margin-top:12px"><div class="hk-bar-top"><span style="color:var(--text2)">Net Institutional Flow</span><span style="font-weight:800;color:${pnlCol(net)}">${crc(net)}</span></div></div>
+        <div style="font-size:10px;color:var(--muted);margin-top:7px">${esc(d.period_label||d.period_key||'')}</div>`;
+    },
+    async watchlist(){ const rows=await wlData(); const admin=(window.USER_ROLE==='admin');
+      if(!rows.length) return `<div class="hk-empty">${admin?'Model watchlist is empty.':'Your watchlist is empty — add stocks in My&nbsp;Watchlist.'}</div>`;
+      return rows.map(r=>`<div class="hk-row"><span class="hk-sym">${esc(r.symbol)}</span>${r.pct21!=null
+          ? `<span style="color:${pnlCol(r.pct21)};font-weight:700">${sgn(r.pct21)}%<span style="color:var(--muted);font-size:9px;font-weight:600"> vs 21EMA</span></span>`
+          : `<span style="color:var(--muted);font-size:10px">pending</span>`}</div>`).join('');
+    },
+    async pstats(){ const m=portMetrics(await book());
+      const cell=(k,v,s,col)=>`<div class="hk-stat"><div class="k">${k}</div><div class="v" style="color:${col||'var(--white)'}">${v}</div><div class="s">${s}</div></div>`;
+      return `<div class="hk-stats">
+        ${cell('Invested', inrL(m.dep), m.depPct.toFixed(1)+'% of capital')}
+        ${cell('Open P&amp;L', (m.pnl>=0?'+':'')+inr(m.pnl), sgn(m.pnlPct)+'% on deployed', pnlCol(m.pnl))}
+        ${cell('Cash Margin', inrL(m.cash), m.cap>0?(100-m.depPct).toFixed(1)+'% free':'set capital')}
+        ${cell('Open Risk', inr(m.risk), m.riskPct.toFixed(1)+'% of capital', 'var(--red)')}
+      </div>`;
+    },
+    async positions(){ const b=await book();
+      if(!b.open.length) return `<div class="hk-empty">No open positions.</div>`;
+      return b.open.map(t=>{ const ae=t.avg_entry_price||t.entry_price, rq=t.remaining_qty||t.quantity, pl=t.cmp?(t.cmp-ae)*rq:0, plp=ae?((t.cmp||ae)-ae)/ae*100:0;
+        return `<div class="hk-row"><span class="hk-sym">${esc(t.symbol)}</span><span style="text-align:right"><span style="color:${pnlCol(pl)};font-weight:700">${sgn(plp)}%</span> <span style="color:var(--muted);font-size:10px">${inrL(ae*rq)}</span></span></div>`;
+      }).join('');
+    },
+    async equity(){ const b=await book(); const m=portMetrics(b);
+      const pv=m.cap+m.pnl, ret=m.cap>0?(pv/m.cap-1)*100:0;
+      const vals=b.snaps.map(s=>s.portfolio_value).filter(v=>v!=null);
+      return `<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+          <div><div class="k" style="font-size:9px;text-transform:uppercase;color:var(--muted);font-weight:700">Portfolio Value</div><div style="font-size:20px;font-weight:800;color:var(--white)">${inrL(pv)}</div></div>
+          <div style="text-align:right"><div class="k" style="font-size:9px;text-transform:uppercase;color:var(--muted);font-weight:700">Return</div><div style="font-size:20px;font-weight:800;color:${pnlCol(ret)}">${sgn(ret)}%</div></div>
+        </div>${spark(vals.length?vals:[m.cap,pv], pnlCol(ret))}
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:8px"><span>Realised P&amp;L</span><span style="color:${pnlCol(m.realised)};font-weight:700">${(m.realised>=0?'+':'')+inr(m.realised)}</span></div>`;
+    },
+    async perf(){ const p=perfMetrics((await book()).closed);
+      if(!p) return `<div class="hk-empty">No closed trades yet.</div>`;
+      const cell=(k,v,col)=>`<div class="hk-stat"><div class="k">${k}</div><div class="v" style="font-size:17px;color:${col||'var(--white)'}">${v}</div></div>`;
+      return `<div class="hk-stats">
+        ${cell('Win Rate', p.wr+'%', p.wr>=50?'var(--green)':'var(--text2)')}
+        ${cell('Profit Factor', (p.pf===Infinity?'∞':p.pf.toFixed(2))+'×', p.pf>=1.5?'var(--green)':'var(--text2)')}
+        ${cell('Expectancy', sgn(p.exp)+'%', pnlCol(p.exp))}
+        ${cell('Avg Win', '+'+p.avgW.toFixed(1)+'%', 'var(--green)')}
+        ${cell('Avg Loss', p.avgL.toFixed(1)+'%', 'var(--red)')}
+        ${cell('Realised', (p.realised>=0?'+':'')+inrL(p.realised), pnlCol(p.realised))}
+      </div>`;
+    },
+    async monthly(){ const b=await book();
+      if(b.snaps.length<2) return `<div class="hk-empty">Monthly returns build as snapshots accumulate.</div>`;
+      const months={}; b.snaps.forEach(s=>{ const d=new Date(s.snapshot_date),k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; (months[k]=months[k]||[]).push(s.portfolio_value); });
+      const keys=Object.keys(months).sort();
+      const cells=keys.map(k=>{ const v=months[k],r=v.length>=2?(v[v.length-1]-v[0])/v[0]*100:0; const c=r>3?'var(--green)':r>0?'rgba(30,201,147,.5)':r>-3?'rgba(240,82,114,.5)':'var(--red)';
+        const mn=new Date(k+'-01').toLocaleDateString('en-IN',{month:'short'});
+        return `<div style="flex:1;min-width:48px;text-align:center;background:${c};border-radius:7px;padding:8px 4px"><div style="font-size:9px;color:#fff;opacity:.8">${mn}</div><div style="font-size:12px;font-weight:800;color:#fff">${sgn(r)}%</div></div>`;
+      }).join('');
+      return `<div style="display:flex;gap:6px;flex-wrap:wrap">${cells}</div>`;
+    },
+    async drawdown(){ const b=await book();
+      if(b.snaps.length<2) return `<div class="hk-empty">Drawdown builds as snapshots accumulate.</div>`;
+      const vals=b.snaps.map(s=>s.portfolio_value); let peak=vals[0],maxDD=0,cur=0;
+      vals.forEach(v=>{ if(v>peak)peak=v; const dd=peak>0?(v-peak)/peak*100:0; if(dd<maxDD)maxDD=dd; cur=dd; });
+      return `<div class="hk-stats"><div class="hk-stat"><div class="k">Max Drawdown</div><div class="v" style="color:var(--red)">${maxDD.toFixed(1)}%</div></div>
+        <div class="hk-stat"><div class="k">Current</div><div class="v" style="color:${cur<0?'var(--red)':'var(--green)'}">${cur.toFixed(1)}%</div></div></div>
+        <div style="margin-top:10px">${spark(vals.map((v,i)=>{let p=Math.max(...vals.slice(0,i+1));return p>0?(v-p)/p*100:0;}),'var(--red)')}</div>`;
+    },
+    async discipline(){ const p=perfMetrics((await book()).closed);
+      if(!p) return `<div class="hk-empty">No closed trades yet.</div>`;
+      const cell=(k,v,col)=>`<div class="hk-stat"><div class="k">${k}</div><div class="v" style="font-size:17px;color:${col||'var(--white)'}">${v}</div></div>`;
+      return `<div class="hk-stats">
+        ${cell('Trades w/ SL', p.pctSl+'%', p.pctSl>=80?'var(--green)':p.pctSl>=50?'var(--amber)':'var(--red)')}
+        ${cell('Avg Hold', p.avgHold+'d')}
+        ${cell('Total Trades', p.n)}
+        ${cell('Win Rate', p.wr+'%', p.wr>=50?'var(--green)':'var(--text2)')}
+      </div><div style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.5">Discipline signals shape your MSTP coaching focus — stops, holding period and consistency.</div>`;
+    },
+    async mPositions(){ const b=await modelBook();
+      if(!b.open.length) return `<div class="hk-empty">No open model positions.</div>`;
+      return b.open.map(t=>{ const ae=t.avg_entry_price||t.entry_price, rq=t.remaining_qty||t.quantity, plp=ae?((t.cmp||ae)-ae)/ae*100:0;
+        return `<div class="hk-row"><span class="hk-sym">${esc(t.symbol)}</span><span style="color:${pnlCol(plp)};font-weight:700">${sgn(plp)}%</span></div>`;
+      }).join('');
+    },
+    async mStats(){ const p=perfMetrics((await modelBook()).closed);
+      if(!p) return `<div class="hk-empty">No model trade history yet.</div>`;
+      const cell=(k,v,col)=>`<div class="hk-stat"><div class="k">${k}</div><div class="v" style="font-size:17px;color:${col||'var(--white)'}">${v}</div></div>`;
+      return `<div class="hk-stats">
+        ${cell('Win Rate', p.wr+'%', 'var(--green)')}
+        ${cell('Profit Factor', (p.pf===Infinity?'∞':p.pf.toFixed(2))+'×', 'var(--green)')}
+        ${cell('Expectancy', sgn(p.exp)+'%', pnlCol(p.exp))}
+        ${cell('Total Trades', p.n)}
+      </div>`;
+    },
+    async mentorMsg(){ const msgs=await messages();
+      const list=msgs.slice(-6).map(m=>{ const me=m.sender==='user'; return `<div style="display:flex;margin:4px 0;justify-content:${me?'flex-end':'flex-start'}"><div style="max-width:82%;padding:7px 11px;border-radius:11px;font-size:12px;background:${me?'var(--blue)':'var(--card3)'};color:${me?'#fff':'var(--white)'}">${esc(m.body)}</div></div>`; }).join('') || `<div class="hk-empty">Message your mentor 👋</div>`;
+      return `<div style="display:flex;flex-direction:column;height:100%">
+        <div style="flex:1;overflow-y:auto;min-height:0">${list}</div>
+        <div style="display:flex;gap:6px;margin-top:8px"><input id="hawk-msg-in" placeholder="Message your mentor…" onkeydown="if(event.key==='Enter')HAWK.sendMentor()" style="flex:1;background:var(--card3);border:1px solid var(--bdr);color:var(--white);font-size:12px;padding:8px 11px;border-radius:9px;outline:none;font-family:var(--f)"><button onclick="HAWK.sendMentor()" style="background:var(--blue);border:none;color:#fff;font-weight:700;font-size:12px;padding:0 14px;border-radius:9px;cursor:pointer">Send</button></div>
+      </div>`;
+    },
+  };
+
+  /* ── preset definitions: grid + tiles ── */
+  const PRESETS = {
+    pulse:    { label:'Pre-Market Pulse', sub:'Plan the day',
+                cols:'minmax(0,1.5fr) minmax(0,1.1fr) minmax(0,1.1fr)', rows:'1fr 1fr',
+                tiles:[ {k:'brief',    t:'Daily Market Brief', gc:'1', gr:'1 / 3', glow:1},
+                        {k:'score',    t:'Market Score',       gc:'2', gr:'1'},
+                        {k:'breadth',  t:'Market Breadth',     gc:'2', gr:'2'},
+                        {k:'sectors',  t:'Sector Rotation',    gc:'3', gr:'1'},
+                        {k:'watchlist',t:'My Watchlist',       gc:'3', gr:'2'} ] },
+    desk:     { label:'My Trading Desk', sub:'Manage the book',
+                cols:'1fr 1fr', rows:'1fr 1fr',
+                tiles:[ {k:'pstats',   t:'Portfolio Snapshot', gc:'1', gr:'1'},
+                        {k:'equity',   t:'Equity Curve',       gc:'2', gr:'1'},
+                        {k:'positions',t:'Open Positions',     gc:'1', gr:'2'},
+                        {k:'perf',     t:'Performance',         gc:'2', gr:'2'} ] },
+    internals:{ label:'Market Internals', sub:'Read the market',
+                cols:'minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr)', rows:'1fr 1fr',
+                tiles:[ {k:'breadth', t:'Market Breadth',    gc:'1', gr:'1 / 3', glow:1},
+                        {k:'score',   t:'Market Score',      gc:'2', gr:'1'},
+                        {k:'fii',     t:'FII / DII Flows',   gc:'2', gr:'2'},
+                        {k:'sectors', t:'Sector Rotation',   gc:'3', gr:'1 / 3'} ] },
+    edge:     { label:'Edge Review', sub:'Review the edge',
+                cols:'1fr 1fr', rows:'1fr 1fr',
+                tiles:[ {k:'perf',      t:'Performance Metrics', gc:'1', gr:'1'},
+                        {k:'monthly',   t:'Monthly Returns',     gc:'2', gr:'1'},
+                        {k:'drawdown',  t:'Drawdown',            gc:'1', gr:'2'},
+                        {k:'discipline',t:'Discipline Signals',  gc:'2', gr:'2'} ] },
+    mentor:   { label:'Mentor Live', sub:'Course only', course:true,
+                cols:'1fr 1fr', rows:'1fr 1fr',
+                tiles:[ {k:'mPositions',t:'Model Portfolio — Open', gc:'1', gr:'1 / 3', glow:1},
+                        {k:'mStats',    t:'Model Performance',      gc:'2', gr:'1'},
+                        {k:'mentorMsg', t:'Message Your Mentor',    gc:'2', gr:'2'} ] },
+  };
+
+  function presetKeys(){
+    const course = (window.USER_TIER==='course' || window.USER_ROLE==='admin');
+    return Object.keys(PRESETS).filter(k=>!PRESETS[k].course || course);
+  }
+
+  function renderPills(){
+    const wrap=document.getElementById('hawk-presets'); if(!wrap) return;
+    wrap.innerHTML = presetKeys().map(k=>{ const p=PRESETS[k];
+      return `<button class="hawk-pill${k===active?' active':''}" onclick="HAWK.show('${k}')">${esc(p.label)}<span class="hp-sub">${esc(p.sub)}</span></button>`;
+    }).join('');
+  }
+
+  function layout(){
+    const cv=document.getElementById('hawk-canvas'); if(!cv) return;
+    const top=cv.getBoundingClientRect().top;
+    cv.style.height=Math.max(360,(window.innerHeight-top-18))+'px';
+  }
+
+  async function show(key){
+    if(!presetKeys().includes(key)) key=presetKeys()[0];
+    active=key; renderPills();
+    const p=PRESETS[key], cv=document.getElementById('hawk-canvas'); if(!cv) return;
+    cv.style.gridTemplateColumns=p.cols; cv.style.gridTemplateRows=p.rows;
+    cv.innerHTML=p.tiles.map(t=>`<div class="hawk-tile${t.glow?' glow':''}" style="grid-column:${t.gc};grid-row:${t.gr}"><div class="ht-hd"><span class="ht-ttl">${esc(t.t)}</span></div><div class="ht-body" id="ht-${t.k}"><div class="hk-empty">Loading…</div></div></div>`).join('');
+    layout();
+    // render tiles (each isolated so one failure can't blank the page)
+    p.tiles.forEach(async t=>{ const el=document.getElementById('ht-'+t.k); if(!el)return;
+      try{ el.innerHTML=await TILE[t.k](); }catch(e){ el.innerHTML=`<div class="hk-empty">Couldn't load.</div>`; }
+    });
+  }
+
+  async function sendMentor(){
+    const inp=document.getElementById('hawk-msg-in'); if(!inp) return;
+    const txt=(inp.value||'').trim(); if(!txt) return; inp.value='';
+    try{ await sb.from('messages').insert({user_id:window._uid,sender:'user',body:txt}); }catch(e){ inp.value=txt; return; }
+    const el=document.getElementById('ht-mentorMsg'); if(el) el.innerHTML=await TILE.mentorMsg();
+  }
+
+  function refresh(){ cache={}; show(active||presetKeys()[0]); }
+  function open(){ cache={}; show(presetKeys()[0]); }
+
+  window.addEventListener('resize', ()=>{ if(document.getElementById('pane-hawk')?.classList.contains('active')) layout(); });
+
+  return { show, refresh, open, sendMentor, layout };
+})();
+
+</script>
 </script>
 <script>
 /* ══════════════════════════════════════════════════════════
