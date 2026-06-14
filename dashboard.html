@@ -842,7 +842,17 @@ canvas.tc{display:block;width:100%;height:100%}
 .ch-navbtn:disabled{opacity:.3;cursor:not-allowed}
 .ch-navbtn:disabled:hover{background:var(--card2);border-color:var(--bdr);color:var(--text2)}
 .ch-navpos{font-family:var(--fm);font-size:11px;color:var(--muted);min-width:48px;text-align:center}
-.ch-tables{display:flex;gap:14px;padding:14px 18px 4px;flex-wrap:wrap}
+.ch-tables{display:flex;gap:14px;padding:14px 18px 4px;flex-wrap:wrap;position:relative}
+.ch-tables.ch-locked{overflow:hidden}
+.ch-tables.ch-locked .ch-tbl{filter:blur(5px);pointer-events:none;user-select:none;opacity:.9}
+.ch-lock-ov{display:none}
+.ch-tables.ch-locked .ch-lock-ov{display:flex;position:absolute;inset:14px 18px 4px;align-items:center;justify-content:center;z-index:4;background:radial-gradient(ellipse at center, rgba(13,16,28,.55), rgba(13,16,28,.78))}
+.ch-lock-card{text-align:center;max-width:330px;padding:18px 22px 20px;background:var(--card);border:1px solid var(--bdr2);border-radius:14px;box-shadow:0 16px 44px rgba(0,0,0,.5)}
+.ch-lock-card .ch-lock-ic{width:38px;height:38px;border-radius:10px;background:var(--blue-dim);border:1px solid var(--bdr3);display:flex;align-items:center;justify-content:center;margin:0 auto 11px;color:var(--blue-lt)}
+.ch-lock-t{font-family:var(--f);font-size:14px;font-weight:800;color:var(--white);margin-bottom:6px}
+.ch-lock-s{font-size:11.5px;line-height:1.55;color:var(--muted);margin-bottom:13px}
+.ch-lock-btn{display:inline-block;background:var(--blue);color:#fff;font-family:var(--f);font-size:12px;font-weight:700;padding:9px 16px;border-radius:9px;text-decoration:none;transition:filter .15s}
+.ch-lock-btn:hover{filter:brightness(1.08)}
 .ch-tbl{flex:1;min-width:240px;background:var(--card2);border:1px solid var(--bdr);border-radius:10px;overflow:hidden}
 .ch-tbl-h{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);padding:9px 13px;border-bottom:1px solid var(--bdr);background:rgba(255,255,255,.02)}
 .ch-tbl table{width:100%;border-collapse:collapse}
@@ -2611,14 +2621,13 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
 ══════════════════════════════════════ -->
 <style>
 .wl-tools{display:flex;flex-wrap:wrap;align-items:center;gap:14px 22px;padding:4px 0 12px;border-bottom:1px solid var(--bdr);margin-bottom:12px}
-.wl-add{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.wl-add{position:relative;flex:1 1 340px;max-width:460px}
 .wl-in{background:var(--card2);border:1px solid var(--bdr2);color:var(--text);font-family:var(--fm);font-size:12px;padding:7px 11px;border-radius:8px;outline:none;width:175px}
 .wl-in:focus{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue-dim)}
 .wl-in-name{width:205px}
+.wl-in-search{width:100%}
 .wl-btn{background:var(--card2);border:1px solid var(--bdr2);color:var(--text2);font-family:var(--f);font-size:12px;font-weight:600;padding:7px 14px;border-radius:8px;cursor:pointer;transition:all .15s}
 .wl-btn:hover{border-color:var(--blue);color:var(--blue-lt)}
-.wl-btn-add{background:var(--blue-dim);border-color:var(--bdr3);color:var(--blue-lt)}
-.wl-btn-add:hover{background:var(--blue);color:#fff;border-color:var(--blue)}
 .wl-upload{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .wl-hint{font-size:10.5px;color:var(--muted)}
 .wl-hint code{font-family:var(--fm);background:var(--card3);border:1px solid var(--bdr2);border-radius:4px;padding:1px 6px;color:var(--text2)}
@@ -2645,14 +2654,13 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
     <!-- Add / Upload toolbar -->
     <div class="wl-tools">
       <div class="wl-add">
-        <input id="uw-sym"  class="wl-in" placeholder="Symbol (e.g. RELIANCE)" maxlength="20" autocomplete="off" onkeydown="if(event.key==='Enter')UW.add()">
-        <input id="uw-name" class="wl-in wl-in-name" placeholder="Company name (optional)" maxlength="80" autocomplete="off" onkeydown="if(event.key==='Enter')UW.add()">
-        <button class="wl-btn wl-btn-add" onclick="UW.add()">+ Add</button>
+        <input id="uw-search" class="wl-in wl-in-search" placeholder="Search symbol or company, e.g. RELIANCE or Adani…" autocomplete="off">
+        <div class="mt-ac" id="uw-ac"></div>
       </div>
       <div class="wl-upload">
         <button class="wl-btn" onclick="document.getElementById('uw-file').click()">⬆ Upload CSV</button>
         <input type="file" id="uw-file" accept=".csv,text/csv" style="display:none" onchange="UW.upload(this)">
-        <span class="wl-hint">CSV: <code>symbol,company_name</code> · one stock per row · header optional</span>
+        <span class="wl-hint">or bulk-add via CSV: <code>symbol,company_name</code> · one per row</span>
       </div>
     </div>
     <div id="uw-msg" class="wl-msg" style="display:none"></div>
@@ -2986,6 +2994,14 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
       </div>
       <div class="ch-tv" id="ch-tv"></div>
       <div class="ch-tables">
+        <div class="ch-lock-ov">
+          <div class="ch-lock-card">
+            <div class="ch-lock-ic"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
+            <div class="ch-lock-t">Unlock Technicals &amp; Fundamentals</div>
+            <div class="ch-lock-s">EMA distances, valuation &amp; quality metrics — plus recent quarterly performance and key announcements — are part of the Master Swing Trader Program.</div>
+            <a class="ch-lock-btn" href="https://www.traderhikes.com" target="_blank" rel="noopener">Explore the MSTP Course →</a>
+          </div>
+        </div>
         <div class="ch-tbl" id="ch-fund">
           <div class="ch-tbl-h">Fundamentals</div>
           <table id="ch-fund-tbl"><tbody></tbody></table>
@@ -8565,20 +8581,71 @@ const UW = (()=>{
     applySort(); render();
   }
 
-  async function add(){
-    const si = document.getElementById('uw-sym'); const ni = document.getElementById('uw-name');
-    const sym = (si.value||'').trim().toUpperCase();
-    const name = (ni.value||'').trim() || null;
-    if(!sym){ msg('Enter a symbol first.', 'err'); return; }
+  async function addSymbol(rawSym, name){
+    const sym = (rawSym||'').trim().toUpperCase();
+    if(!sym) return;
     if(!validSym(sym)){ msg('“'+sym+'” doesn’t look like a valid NSE symbol.', 'err'); return; }
     if(_uwData.some(s=>s.symbol===sym)){ msg(sym+' is already in your watchlist.', 'err'); return; }
     try{
-      const { error } = await sb.from('user_watchlist').insert({ symbol: sym, company_name: name });
+      const { error } = await sb.from('user_watchlist').insert({ symbol: sym, company_name: (name||'').trim()||null });
       if(error){ msg(/duplicate|unique/i.test(error.message)? sym+' is already in your watchlist.' : ('Could not add: '+error.message), 'err'); return; }
-      si.value=''; ni.value=''; si.focus();
       msg('Added '+sym+'. Technicals appear after the next end-of-day update.', 'ok');
       await load();
     }catch(e){ msg('Could not add: '+(e.message||e), 'err'); }
+  }
+
+  // ── Stock type-ahead — same source as Trade Manager (search_stocks RPC) ──
+  let _acTimer=null, _acItems=[], _acActive=-1, _acBound=false;
+  function acHide(){ const ac=document.getElementById('uw-ac'); if(ac) ac.classList.remove('show'); _acActive=-1; }
+  function acRender(){
+    const ac=document.getElementById('uw-ac'); if(!ac) return;
+    if(!_acItems.length){ ac.innerHTML='<div class="mt-ac-item" style="cursor:default;color:var(--muted)">No matches</div>'; ac.classList.add('show'); return; }
+    ac.innerHTML=_acItems.map((r,i)=>'<div class="mt-ac-item'+(i===_acActive?' active':'')+'" data-i="'+i+'">'+
+      '<span class="mt-ac-sym">'+esc(r.symbol)+'</span>'+
+      '<span class="mt-ac-co">'+esc(r.company_name||'')+'</span>'+
+      (r.board?'<span class="mt-ac-bd">'+esc(r.board)+'</span>':'')+
+      '</div>').join('');
+    ac.classList.add('show');
+    ac.querySelectorAll('.mt-ac-item[data-i]').forEach(el=>{
+      el.addEventListener('mousedown', ev=>{ ev.preventDefault(); acPick(parseInt(el.dataset.i,10)); });
+    });
+  }
+  async function acSearch(q){
+    try{
+      const { data, error } = await sb.rpc('search_stocks', { q, lim: 8 });
+      _acItems = (error || !data) ? [] : data;
+    }catch(e){ _acItems = []; }
+    _acActive = _acItems.length ? 0 : -1;
+    acRender();
+  }
+  function acPick(i){
+    const r=_acItems[i]; if(!r) return;
+    const box=document.getElementById('uw-search'); if(box) box.value='';
+    acHide();
+    addSymbol(r.symbol, r.company_name);
+    if(box) box.focus();
+  }
+  function bindSearch(){
+    if(_acBound) return; _acBound=true;
+    const box=document.getElementById('uw-search'); if(!box) return;
+    box.addEventListener('input', ()=>{
+      const q=box.value.trim();
+      if(_acTimer) clearTimeout(_acTimer);
+      if(q.length<1){ acHide(); return; }
+      _acTimer=setTimeout(()=>acSearch(q), 180);
+    });
+    box.addEventListener('keydown', e=>{
+      const ac=document.getElementById('uw-ac');
+      const open = ac && ac.classList.contains('show') && _acItems.length;
+      if(e.key==='ArrowDown'){ if(open){ e.preventDefault(); _acActive=Math.min(_acActive+1,_acItems.length-1); acRender(); } }
+      else if(e.key==='ArrowUp'){ if(open){ e.preventDefault(); _acActive=Math.max(_acActive-1,0); acRender(); } }
+      else if(e.key==='Enter'){ if(open && _acActive>=0){ e.preventDefault(); acPick(_acActive); } }
+      else if(e.key==='Escape'){ acHide(); }
+    });
+    document.addEventListener('click', e=>{
+      const ac=document.getElementById('uw-ac');
+      if(ac && !box.contains(e.target) && !ac.contains(e.target)) ac.classList.remove('show');
+    });
   }
 
   async function remove(sym){
@@ -8644,9 +8711,9 @@ const UW = (()=>{
     const m = document.getElementById('uw-disc-modal'); if(m) m.remove();
   }
 
-  function init(){ maybeDisclaimer(); load(); }
+  function init(){ maybeDisclaimer(); bindSearch(); load(); }
 
-  return { init, load, sort, add, remove, upload, maybeDisclaimer, closeDisclaimer };
+  return { init, load, sort, remove, upload, maybeDisclaimer, closeDisclaimer };
 })();
 </script>
 <script>
@@ -8780,7 +8847,10 @@ async function loadCharts(){
   if(_chMode) _chMode.style.display = _um ? 'none' : '';
   if(_um) _watchMode = 'full';
   const _chTbls = document.querySelector('#pane-charts .ch-tables');
-  if(_chTbls) _chTbls.style.display = (_um && !_umPaid) ? 'none' : '';
+  if(_chTbls){
+    _chTbls.style.display = '';                              // tables always present
+    _chTbls.classList.toggle('ch-locked', _um && !_umPaid); // free users → blurred upsell
+  }
   const listEl = document.getElementById('ch-list');
   listEl.innerHTML = '<div class="ch-empty">Loading watchlist…</div>';
   try{
