@@ -927,7 +927,8 @@ def generate_market_brief():
     except Exception:
         pass
 
-    model = os.environ.get("ANTHROPIC_BRIEF_MODEL", "claude-sonnet-4-6")
+    # NOTE: `or` (not get-default) so an empty env value falls back too.
+    model = os.environ.get("ANTHROPIC_BRIEF_MODEL") or "claude-sonnet-4-6"
     prompt = (
         "You are the market desk for an Indian swing-trading platform. Use web search to find the "
         "most important and LATEST market-moving news as of this morning (India time), then write a "
@@ -948,19 +949,22 @@ def generate_market_brief():
         '  "sources": [ {"title": "short name", "url": "https://..."} ]  // up to 5\n'
         "}"
     )
+    r = None
     try:
         r = requests.post(
             "https://api.anthropic.com/v1/messages",
             headers={"x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
             json={
                 "model": model, "max_tokens": 2200,
-                "tools": [{"type": "web_search_20250305", "name": "web_search", "max_uses": 6,
-                           "user_location": {"type": "approximate", "country": "IN", "timezone": "Asia/Kolkata"}}],
+                "tools": [{"type": "web_search_20250305", "name": "web_search", "max_uses": 6}],
                 "messages": [{"role": "user", "content": prompt}],
             },
             timeout=150,
         )
-        r.raise_for_status()
+        if r.status_code >= 400:
+            # surface the API's actual error message instead of a bare status code
+            print(f"   ⚠️  Market brief API {r.status_code}: {r.text[:600]}\n")
+            return
         j = r.json()
         txt = "".join(blk.get("text", "") for blk in j.get("content", [])
                       if blk.get("type") == "text").strip()
