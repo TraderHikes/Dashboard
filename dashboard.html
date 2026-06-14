@@ -1270,22 +1270,6 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
     <div class="sb" id="uport-date">Loading...</div>
   </div>
 
-  <!-- Capital Settings (personal book) -->
-  <div class="card" id="ucapital-card" style="margin-bottom:14px">
-    <div class="ch"><span class="ct">Capital Settings</span><span class="chip" id="ucap-mode">—</span></div>
-    <div style="padding:16px 20px;display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap">
-      <div style="flex:1;min-width:220px">
-        <div class="pcl" style="margin-bottom:6px">Total Capital (₹)</div>
-        <input id="ucap-input" type="number" step="1000" placeholder="e.g. 5000000"
-          style="width:100%;background:var(--card3);border:1px solid var(--bdr);color:var(--white);font-family:var(--fm);font-size:15px;font-weight:700;padding:10px 14px;border-radius:10px;outline:none">
-        <div class="pcs" style="margin-top:6px">Cash margin is derived as Total Capital − Deployed.</div>
-      </div>
-      <button id="ucap-save" class="mt-btn mt-btn-p" onclick="saveUserCapital()" style="padding:10px 20px">Save Capital</button>
-      <div id="ucap-alert" class="mt-alert" style="flex-basis:100%"></div>
-    </div>
-  </div>
-
-
   <!-- 4 Big Stat Cards -->
   <div class="port-stats">
     <div class="pstat ps-blue">
@@ -1485,6 +1469,20 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
 <!-- ══ MY TRADING DESK · Trade Manager ══ -->
 <div class="pane" id="pane-mtmanager">
   <div class="sh"><div class="st">Trade Manager</div><div class="sb">Add a trade, pyramid in, book partials, or close</div></div>
+
+  <!-- Capital Settings — one-line field (personal book) -->
+  <div class="mt-card" id="ucapital-card" style="margin-bottom:14px">
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:2px">
+      <div style="font-size:13px;font-weight:700;color:var(--white);white-space:nowrap">Total Capital (₹)</div>
+      <input id="ucap-input" type="number" step="1000" placeholder="e.g. 5000000"
+        style="flex:1;min-width:200px;background:var(--card3);border:1px solid var(--bdr);color:var(--white);font-family:var(--fm);font-size:14px;font-weight:700;padding:9px 14px;border-radius:9px;outline:none">
+      <button id="ucap-save" class="mt-btn mt-btn-p" onclick="saveUserCapital()" style="padding:9px 24px;white-space:nowrap">Update</button>
+      <span class="chip" id="ucap-mode" style="white-space:nowrap">—</span>
+      <span style="font-size:11px;color:var(--muted);flex-basis:100%">Cash margin is derived as Total Capital − Deployed. Drives the 360° Overview metrics.</span>
+    </div>
+    <div id="ucap-alert" class="mt-alert"></div>
+  </div>
+
   <div class="mt-card">
     <div class="mt-card-h">New Trade</div>
     <div class="mt-alert" id="mt-new-alert"></div>
@@ -2856,6 +2854,7 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
     }
   }
   window.USER_ROLE = role;
+  window._uid = session.user.id;
 
   const displayName = session.user.user_metadata?.full_name
     || session.user.user_metadata?.name || email.split('@')[0];
@@ -3021,7 +3020,7 @@ function sw(id){
   if(id==='heatmap'){loadHeatmap();}
   if(id==='charts'){loadCharts();}
   if(id==='mtoverview'){MT.init();renderUserPortfolio();}
-  if(id==='mtmanager'){MT.init();MT.loadOpen();MT.loadClosed();loadUserFinalExits();}
+  if(id==='mtmanager'){MT.init();MT.loadOpen();MT.loadClosed();loadUserFinalExits();loadCapitalBox();}
   if(id==='mtportfolio'){MT.init();renderUserOpen();}
   if(id==='mtclosed'){MT.init();renderUserClosed();}
 }
@@ -5106,24 +5105,33 @@ function drawUserPortfolioCharts(){
 /* ══ USER · 360° OVERVIEW data + capital (personal book, is_model=false) ══ */
 async function loadUserCapital(){
   try{
-    const { data } = await sb.from('portfolio_config').select('total_capital').eq('book','personal').maybeSingle();
-    window._personalCapital = (data && data.total_capital) ? Number(data.total_capital) : (window._personalCapital||0);
+    const { data } = await sb.from('portfolio_config').select('total_capital').eq('user_id', window._uid).maybeSingle();
+    window._personalCapital = (data && data.total_capital) ? Number(data.total_capital) : 0;
   }catch(e){ window._personalCapital = window._personalCapital||0; }
   return window._personalCapital;
+}
+
+async function loadCapitalBox(){
+  await loadUserCapital();
+  // Every signed-in user manages their OWN private book's capital.
+  const capInput=document.getElementById('ucap-input'), capSave=document.getElementById('ucap-save'), capMode=document.getElementById('ucap-mode');
+  if(capInput){ if(document.activeElement!==capInput) capInput.value=window._personalCapital||''; capInput.disabled=false; capInput.style.opacity='1'; }
+  if(capSave) capSave.style.display='inline-flex';
+  if(capMode) capMode.textContent='Your book';
 }
 
 async function saveUserCapital(){
   const al=document.getElementById('ucap-alert');
   const setAlert=(m,k)=>{ if(al){ al.textContent=m; al.className='mt-alert '+(k||'ok'); if(k==='ok') setTimeout(()=>{al.className='mt-alert';},4000);} };
-  if(window.USER_ROLE!=='admin'){ setAlert('Only the admin can edit capital for the personal book.','err'); return; }
   const v=parseFloat(document.getElementById('ucap-input').value);
   if(!(v>0)){ setAlert('Enter a total capital amount greater than zero.','err'); return; }
   const { error } = await sb.from('portfolio_config')
-    .upsert({ book:'personal', total_capital:Math.round(v), updated_at:new Date().toISOString() }, { onConflict:'book' });
+    .upsert({ user_id:window._uid, total_capital:Math.round(v), updated_at:new Date().toISOString() }, { onConflict:'user_id' });
   if(error){ setAlert('Error: '+error.message,'err'); return; }
   window._personalCapital=Math.round(v);
-  setAlert('✓ Capital saved — metrics recalculated','ok');
-  renderUserPortfolio();
+  setAlert('✓ Capital updated — metrics recalculated','ok');
+  // Refresh the 360° Overview if it has been rendered
+  if(typeof renderUserPortfolio==='function' && document.getElementById('uport-invested')) renderUserPortfolio();
 }
 
 function buildUserMonthlyHeatmap(snaps,ytdReturn){
@@ -5155,13 +5163,6 @@ async function renderUserPortfolio(){
   const fmtL=n=>{ const a=Math.abs(n); if(a>=1e7) return '₹'+(n/1e7).toFixed(2)+' Cr'; if(a>=1e5) return '₹'+(n/1e5).toFixed(2)+' L'; return '₹'+Math.round(n).toLocaleString('en-IN'); };
 
   await loadUserCapital();
-
-  // Capital Settings card state (admin editable; read-only for members)
-  const isAdmin=(window.USER_ROLE==='admin');
-  const capInput=document.getElementById('ucap-input'), capSave=document.getElementById('ucap-save'), capMode=document.getElementById('ucap-mode');
-  if(capInput){ if(document.activeElement!==capInput) capInput.value=window._personalCapital||''; capInput.disabled=!isAdmin; }
-  if(capSave) capSave.style.display=isAdmin?'inline-flex':'none';
-  if(capMode) capMode.textContent=isAdmin?'Editable':'Read-only';
 
   // 1. Open trades (personal book)
   const { data: openTrades } = await sb.from('open_trades').select('*').eq('is_model', false);
