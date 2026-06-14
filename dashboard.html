@@ -1359,18 +1359,6 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
     <div class="sb" id="uport-date">Loading...</div>
   </div>
 
-  <!-- Daily Market Brief (paid + admin only) -->
-  <div class="mbrief" id="market-brief" style="display:none">
-    <div class="mbrief-hd">
-      <div class="mbrief-ttl">
-        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"></path><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"></path></svg>
-        Daily Market Brief
-      </div>
-      <div class="mbrief-meta"><span class="mbrief-sent" id="mb-sentiment">—</span><span class="mbrief-date" id="mb-date"></span></div>
-    </div>
-    <div class="mbrief-body" id="mb-body"><div class="mbrief-empty">Loading…</div></div>
-  </div>
-
   <!-- 4 Big Stat Cards -->
   <div class="port-stats">
     <div class="pstat ps-blue">
@@ -1943,6 +1931,27 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
 
 
 </div><!-- /portfolio -->
+
+
+<!-- ══════════════════════════════════════
+     MARKET DATA · DAILY MARKET BRIEF
+══════════════════════════════════════ -->
+<div class="pane" id="pane-marketbrief">
+  <div class="sh">
+    <div class="st">Daily Market Brief</div>
+    <div class="sb">India-first macro: economy, policy, sectors &amp; global cues — updated pre-market</div>
+  </div>
+  <div class="mbrief" id="market-brief">
+    <div class="mbrief-hd">
+      <div class="mbrief-ttl">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"></path><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"></path></svg>
+        Today's Brief
+      </div>
+      <div class="mbrief-meta"><span class="mbrief-sent" id="mb-sentiment">—</span><span class="mbrief-date" id="mb-date"></span></div>
+    </div>
+    <div class="mbrief-body" id="mb-body"><div class="mbrief-empty">Loading…</div></div>
+  </div>
+</div>
 
 
 <!-- ══════════════════════════════════════
@@ -3305,12 +3314,13 @@ function sw(id){
   document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
   const pane=document.getElementById('pane-'+id); if(pane) pane.classList.add('active');
   if(id==='portfolio'){setTimeout(drawPortfolioCharts,80);}
+  if(id==='marketbrief'){loadMarketBrief();}
   if(id==='breadth'){loadMarketBreadth();}
   if(id==='filter'){loadStockFilter();}
   if(id==='sectoral'){SB.init();}
   if(id==='heatmap'){loadHeatmap();}
   if(id==='charts'){loadCharts();}
-  if(id==='mtoverview'){MT.init();renderUserPortfolio();loadMarketBrief();}
+  if(id==='mtoverview'){MT.init();renderUserPortfolio();}
   if(id==='mtmanager'){MT.init();MT.loadOpen();MT.loadClosed();loadUserFinalExits();loadCapitalBox();}
   if(id==='mtportfolio'){MT.init();renderUserOpen();}
   if(id==='mtclosed'){MT.init();renderUserClosed();}
@@ -3328,7 +3338,7 @@ const NAV=[
    lock:{kind:'upgrade', title:'Market Data Tracker',
          body:'Unlock the full multi-indicator market score, breadth across every EMA, and sectoral rotation.',
          cta:'Unlock Full Access', url:MSTP_URL},
-   subs:[{id:'breadth',label:'Market Breadth'},{id:'sectoral',label:'Sectoral Analysis'},{id:'heatmap',label:'Heatmap'}]},
+   subs:[{id:'marketbrief',label:'Market Brief'},{id:'breadth',label:'Market Breadth'},{id:'sectoral',label:'Sectoral Analysis'},{id:'heatmap',label:'Heatmap'}]},
   {key:'screener', label:'Leading Stocks', roles:['admin','paid','free'], lockFor:['free'],
    lock:{kind:'upgrade', title:'Leading Stocks Screener',
          body:'Unlock curated watchlists and chart scans of the market\'s leading stocks.',
