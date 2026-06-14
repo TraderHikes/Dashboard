@@ -1412,14 +1412,71 @@ def fetch_fundamentals(sym_ns):
     return out
 
 
+def _union_watchlist_symbols(max_symbols=400):
+    """Merge the admin `watchlist` with every user's `user_watchlist`.
+
+    Technical data is objective and identical for everyone, so we enrich a
+    single de-duplicated universe (admin curated symbols + all user symbols)
+    into the shared watchlist_enriched / watchlist_candles tables.
+
+    Returns a list of dicts: {symbol, company_name, rs_rating}.
+    rs_rating is only ever set from the admin watchlist (MarketSmith CSV);
+    user-added symbols carry rs_rating=None.
+    """
+    merged = {}  # UPPER(symbol) -> {symbol, company_name, rs_rating}
+
+    # 1) Admin watchlist first (authoritative for company_name + rs_rating)
+    try:
+        wl = sb.table("watchlist").select("symbol,company_name,rs_rating").execute().data or []
+    except Exception as e:
+        print(f"   ⚠️  could not read watchlist: {e}")
+        wl = []
+    for r in wl:
+        sym = (r.get("symbol") or "").strip().upper()
+        if not sym:
+            continue
+        merged[sym] = {
+            "symbol":       sym,
+            "company_name": r.get("company_name"),
+            "rs_rating":    r.get("rs_rating"),
+        }
+
+    # 2) User watchlists — fill in any symbols the admin list doesn't cover
+    try:
+        uw = sb.table("user_watchlist").select("symbol,company_name").execute().data or []
+    except Exception as e:
+        print(f"   ⚠️  could not read user_watchlist: {e}")
+        uw = []
+    for r in uw:
+        sym = (r.get("symbol") or "").strip().upper()
+        if not sym:
+            continue
+        if sym in merged:
+            # keep admin company_name if present, else adopt the user's
+            if not merged[sym].get("company_name") and r.get("company_name"):
+                merged[sym]["company_name"] = r.get("company_name")
+        else:
+            merged[sym] = {
+                "symbol":       sym,
+                "company_name": r.get("company_name"),
+                "rs_rating":    None,
+            }
+
+    rows = sorted(merged.values(), key=lambda d: d["symbol"])
+    if len(rows) > max_symbols:
+        print(f"   ⚠️  {len(rows)} tracked symbols exceeds cap {max_symbols}; "
+              f"enriching first {max_symbols} alphabetically.")
+        rows = rows[:max_symbols]
+    return rows
+
+
 def enrich_watchlist():
     print("📋 Enriching watchlist...")
     try:
-        # Load raw watchlist (uploaded from MarketSmith CSV)
-        resp = sb.table("watchlist").select("*").execute()
-        stocks = resp.data or []
+        # Universe = admin watchlist ∪ every user's watchlist (shared technicals)
+        stocks = _union_watchlist_symbols()
         if not stocks:
-            print("   ⚠️  watchlist table is empty — upload CSV via Admin Panel\n")
+            print("   ⚠️  no symbols tracked yet — admin CSV or user watchlists are empty\n")
             return
 
         # Load sector mapping: symbol → {key, name}
@@ -1572,10 +1629,9 @@ def enrich_watchlist():
 def fetch_candles_for_watchlist():
     print("🕯️  Fetching 24-month candles for watchlist...")
     try:
-        resp = sb.table("watchlist").select("symbol").execute()
-        stocks = resp.data or []
+        stocks = _union_watchlist_symbols()
         if not stocks:
-            print("   ⚠️  watchlist table is empty — nothing to chart\n")
+            print("   ⚠️  no symbols tracked yet — nothing to chart\n")
             return
 
         symbols = sorted({
