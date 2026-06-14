@@ -904,6 +904,105 @@ def build_rationale(score):
 
 
 # ════════════════════════════════════════════════════════════
+# DAILY MARKET BRIEF  (pre-market, ~5:30 IST)
+# ------------------------------------------------------------
+# India-first macro brief via Claude + live web search. One call/day.
+# Upserts public.market_brief. Skips if the admin hand-edited today's brief.
+# Requires ANTHROPIC_API_KEY (web search must be enabled in the Anthropic
+# Console). Model is configurable via ANTHROPIC_BRIEF_MODEL.
+# ════════════════════════════════════════════════════════════
+def generate_market_brief():
+    import json as _json
+    print("📰 Generating Daily Market Brief...")
+    key = os.environ.get("ANTHROPIC_API_KEY")
+    if not key:
+        print("   ℹ️  ANTHROPIC_API_KEY not set — skipping brief.\n"); return
+    brief_date = NOW_IST.date().isoformat()
+
+    # Respect a manual admin edit for today — never overwrite it.
+    try:
+        ex = sb.table("market_brief").select("source").eq("brief_date", brief_date).limit(1).execute().data
+        if ex and ex[0].get("source") == "manual":
+            print("   ℹ️  Today's brief was edited by admin — leaving it.\n"); return
+    except Exception:
+        pass
+
+    model = os.environ.get("ANTHROPIC_BRIEF_MODEL", "claude-sonnet-4-6")
+    prompt = (
+        "You are the market desk for an Indian swing-trading platform. Use web search to find the "
+        "most important and LATEST market-moving news as of this morning (India time), then write a "
+        "concise PRE-MARKET brief for retail swing traders.\n\n"
+        "Coverage priority:\n"
+        "1) INDIA FIRST: Nifty/Sensex direction and key levels, RBI / monetary policy, Indian macro "
+        "(inflation, GDP, IIP, rupee), government policy / budget / regulation, notable Indian sectors "
+        "and large-cap movers, FII/DII flows.\n"
+        "2) Lightly cover global cues that affect India: US markets / Fed, crude oil, USDINR, major "
+        "geopolitics (only as it impacts Indian markets).\n\n"
+        "Be BRIEF and factual. No buy/sell advice, no price targets, no emojis. Do not invent anything; "
+        "base everything on what you find in search.\n\n"
+        "Return ONLY a JSON object (no markdown fences, no text around it) with EXACTLY this shape:\n"
+        "{\n"
+        '  "overall_sentiment": "bullish" | "neutral" | "bearish",\n'
+        '  "summary": "2-3 short paragraphs, separated by a blank line",\n'
+        '  "themes": [ {"text": "one concise line", "sentiment": "bullish|neutral|bearish"} ],  // 6-9 items\n'
+        '  "sources": [ {"title": "short name", "url": "https://..."} ]  // up to 5\n'
+        "}"
+    )
+    try:
+        r = requests.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={"x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
+            json={
+                "model": model, "max_tokens": 2200,
+                "tools": [{"type": "web_search_20250305", "name": "web_search", "max_uses": 6,
+                           "user_location": {"type": "approximate", "country": "IN", "timezone": "Asia/Kolkata"}}],
+                "messages": [{"role": "user", "content": prompt}],
+            },
+            timeout=150,
+        )
+        r.raise_for_status()
+        j = r.json()
+        txt = "".join(blk.get("text", "") for blk in j.get("content", [])
+                      if blk.get("type") == "text").strip()
+        # tolerate code fences / surrounding prose — extract the JSON object
+        if "```" in txt:
+            seg = txt.split("```")
+            txt = seg[1] if len(seg) > 1 else txt
+            if txt.lstrip()[:4].lower() == "json":
+                txt = txt.lstrip()[4:]
+        a, z = txt.find("{"), txt.rfind("}")
+        if a != -1 and z != -1:
+            txt = txt[a:z + 1]
+        data = _json.loads(txt)
+
+        sentiment = str(data.get("overall_sentiment", "neutral")).lower()
+        if sentiment not in ("bullish", "neutral", "bearish"):
+            sentiment = "neutral"
+        themes = []
+        for t in (data.get("themes") or []):
+            if isinstance(t, dict) and t.get("text"):
+                s = str(t.get("sentiment", "neutral")).lower()
+                themes.append({"text": str(t["text"]),
+                               "sentiment": s if s in ("bullish", "neutral", "bearish") else "neutral"})
+        sources = [{"title": str(s.get("title", "")), "url": str(s.get("url"))}
+                   for s in (data.get("sources") or [])
+                   if isinstance(s, dict) and s.get("url")][:5]
+
+        sb.table("market_brief").upsert({
+            "brief_date": brief_date,
+            "overall_sentiment": sentiment,
+            "summary": str(data.get("summary", "")),
+            "themes": themes,
+            "sources": sources,
+            "source": "auto",
+            "updated_at": datetime.now(IST).isoformat(),
+        }, on_conflict="brief_date").execute()
+        print(f"   ✓ Market brief published ({sentiment}, {len(themes)} themes)\n")
+    except Exception as e:
+        print(f"   ⚠️  Market brief failed: {e}\n")
+
+
+# ════════════════════════════════════════════════════════════
 # MARKET BREADTH
 # ════════════════════════════════════════════════════════════
 def calculate_market_breadth(symbols, nifty50_close=None):
@@ -1578,6 +1677,10 @@ if __name__ == "__main__":
             # FII/DII is now fed MANUALLY via CSV import (daily / monthly /
             # yearly) into fii_dii_activity. The auto-fetch is disabled.
             print("🏦 FII/DII is manual now (CSV-fed) — nothing to do.\n")
+
+        elif RUN_MODE == "premarket":
+            print("🌅 PRE-MARKET BRIEF\n")
+            run_step("market_brief", generate_market_brief)
 
         else:
             print("🌙 FULL EOD\n")
