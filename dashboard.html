@@ -1107,22 +1107,22 @@ canvas.tc{display:block;width:100%;height:100%}
 .msg-row.them .msg-bub{background:var(--card3);color:var(--white);border-bottom-left-radius:4px}
 .msg-meta{font-size:9px;color:var(--muted);margin-top:3px;padding:0 4px}
 /* Daily Market Brief */
-.mbrief{background:var(--card);border:1px solid var(--bdr);border-radius:14px;overflow:hidden;margin-bottom:16px}
+.mbrief{background:var(--card);border:1px solid rgba(92,111,251,.55);box-shadow:0 0 24px rgba(92,111,251,.16),inset 0 0 26px rgba(92,111,251,.04);border-radius:14px;overflow:hidden;margin-bottom:16px;font-family:var(--f)}
 .mbrief-hd{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 18px;background:linear-gradient(135deg,rgba(92,111,251,.12),rgba(92,111,251,.02));border-bottom:1px solid var(--bdr)}
-.mbrief-ttl{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:800;color:var(--white)}
+.mbrief-ttl{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:800;color:var(--white)}
 .mbrief-meta{display:flex;align-items:center;gap:10px}
-.mbrief-date{font-size:11px;color:var(--muted);font-weight:600}
+.mbrief-date{font-size:11px;font-weight:700;color:var(--blue-lt);background:var(--blue-dim);border:1px solid var(--bdr3);padding:4px 12px;border-radius:100px;letter-spacing:.3px}
 .mbrief-sent{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;padding:3px 10px;border-radius:7px}
 .sent-bullish{background:rgba(30,201,147,.16);color:var(--green)}
 .sent-bearish{background:rgba(240,82,114,.16);color:var(--red)}
 .sent-neutral{background:var(--card3);color:var(--text2)}
-.mbrief-body{padding:16px 18px}
-.mbrief-summary{font-size:13px;line-height:1.7;color:var(--text2)}
-.mbrief-summary p{margin:0 0 10px}.mbrief-summary p:last-child{margin:0}
+.mbrief-body{padding:18px 20px}
+.mbrief-summary{font-size:14.5px;line-height:1.78;color:var(--text2)}
+.mbrief-summary p{margin:0 0 12px}.mbrief-summary p:last-child{margin:0}
 .mbrief-div{height:1px;background:var(--bdr);margin:14px 0}
-.mbrief-theme{display:flex;gap:12px;padding:7px 0;align-items:flex-start}
-.mbrief-tag{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;padding:3px 8px;border-radius:6px;flex-shrink:0;margin-top:1px;min-width:60px;text-align:center}
-.mbrief-theme-txt{font-size:12.5px;line-height:1.55;color:var(--text2)}
+.mbrief-theme{display:flex;gap:12px;padding:8px 0;align-items:flex-start}
+.mbrief-tag{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;padding:3px 8px;border-radius:6px;flex-shrink:0;margin-top:2px;min-width:60px;text-align:center}
+.mbrief-theme-txt{font-size:13.5px;line-height:1.6;color:var(--text2)}
 .mbrief-empty{padding:18px;text-align:center;color:var(--muted);font-size:12px}
 .mbrief-src{font-size:11px;color:var(--muted);margin-top:12px;line-height:1.6}
 .mbrief-src a{color:var(--blue-lt);text-decoration:none}
@@ -1939,7 +1939,6 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
 <div class="pane" id="pane-marketbrief">
   <div class="sh">
     <div class="st">Daily Market Brief</div>
-    <div class="sb">India-first macro: economy, policy, sectors &amp; global cues — updated pre-market</div>
   </div>
   <div class="mbrief" id="market-brief">
     <div class="mbrief-hd">
@@ -1947,7 +1946,7 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"></path><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"></path></svg>
         Today's Brief
       </div>
-      <div class="mbrief-meta"><span class="mbrief-sent" id="mb-sentiment">—</span><span class="mbrief-date" id="mb-date"></span></div>
+      <div class="mbrief-meta"><span class="mbrief-date" id="mb-date"></span></div>
     </div>
     <div class="mbrief-body" id="mb-body"><div class="mbrief-empty">Loading…</div></div>
   </div>
@@ -3169,16 +3168,12 @@ async function loadMarketBrief(){
 }
 function renderMarketBrief(d){
   const esc=s=>(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-  const sent=(d.overall_sentiment||'neutral').toLowerCase();
-  const sEl=document.getElementById('mb-sentiment'); if(sEl){ sEl.style.display='inline-block'; sEl.textContent=sent; sEl.className='mbrief-sent sent-'+sent; }
   const dEl=document.getElementById('mb-date'); if(dEl) dEl.textContent=d.brief_date?new Date(d.brief_date).toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short'}):'';
   const summaryHtml=(d.summary||'').split(/\n\s*\n/).map(p=>p.trim()).filter(Boolean).map(p=>`<p>${esc(p)}</p>`).join('');
   let themes=[]; try{ themes=Array.isArray(d.themes)?d.themes:JSON.parse(d.themes||'[]'); }catch(e){ themes=[]; }
   const themesHtml=themes.map(t=>{ const s=(t.sentiment||'neutral').toLowerCase(); return `<div class="mbrief-theme"><span class="mbrief-tag sent-${s}">${esc(s)}</span><span class="mbrief-theme-txt">${esc(t.text)}</span></div>`; }).join('');
-  let srcs=[]; try{ srcs=Array.isArray(d.sources)?d.sources:JSON.parse(d.sources||'[]'); }catch(e){ srcs=[]; }
-  const srcHtml=srcs.length?`<div class="mbrief-src">Sources: ${srcs.map((s,i)=>`<a href="${esc(s.url||'#')}" target="_blank" rel="noopener">${esc(s.title||('['+(i+1)+']'))}</a>`).join(' \u00b7 ')}</div>`:'';
   const body=document.getElementById('mb-body');
-  if(body) body.innerHTML=(summaryHtml?`<div class="mbrief-summary">${summaryHtml}</div>`:'')+(themesHtml?`${summaryHtml?'<div class="mbrief-div"></div>':''}${themesHtml}`:'')+srcHtml || '<div class="mbrief-empty">No brief content.</div>';
+  if(body) body.innerHTML=(summaryHtml?`<div class="mbrief-summary">${summaryHtml}</div>`:'')+(themesHtml?`${summaryHtml?'<div class="mbrief-div"></div>':''}${themesHtml}`:'') || '<div class="mbrief-empty">No brief content.</div>';
 }
 function lockLayout(){ const sb=document.querySelector('.subbar'); if(sb) document.documentElement.style.setProperty('--subh',(sb.offsetHeight||46)+'px'); }
 window.addEventListener('resize', lockLayout);
