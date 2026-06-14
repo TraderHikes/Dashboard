@@ -1106,6 +1106,26 @@ canvas.tc{display:block;width:100%;height:100%}
 .msg-row.me .msg-bub{background:var(--blue);color:#fff;border-bottom-right-radius:4px}
 .msg-row.them .msg-bub{background:var(--card3);color:var(--white);border-bottom-left-radius:4px}
 .msg-meta{font-size:9px;color:var(--muted);margin-top:3px;padding:0 4px}
+/* Daily Market Brief */
+.mbrief{background:var(--card);border:1px solid var(--bdr);border-radius:14px;overflow:hidden;margin-bottom:16px}
+.mbrief-hd{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 18px;background:linear-gradient(135deg,rgba(92,111,251,.12),rgba(92,111,251,.02));border-bottom:1px solid var(--bdr)}
+.mbrief-ttl{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:800;color:var(--white)}
+.mbrief-meta{display:flex;align-items:center;gap:10px}
+.mbrief-date{font-size:11px;color:var(--muted);font-weight:600}
+.mbrief-sent{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;padding:3px 10px;border-radius:7px}
+.sent-bullish{background:rgba(30,201,147,.16);color:var(--green)}
+.sent-bearish{background:rgba(240,82,114,.16);color:var(--red)}
+.sent-neutral{background:var(--card3);color:var(--text2)}
+.mbrief-body{padding:16px 18px}
+.mbrief-summary{font-size:13px;line-height:1.7;color:var(--text2)}
+.mbrief-summary p{margin:0 0 10px}.mbrief-summary p:last-child{margin:0}
+.mbrief-div{height:1px;background:var(--bdr);margin:14px 0}
+.mbrief-theme{display:flex;gap:12px;padding:7px 0;align-items:flex-start}
+.mbrief-tag{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;padding:3px 8px;border-radius:6px;flex-shrink:0;margin-top:1px;min-width:60px;text-align:center}
+.mbrief-theme-txt{font-size:12.5px;line-height:1.55;color:var(--text2)}
+.mbrief-empty{padding:18px;text-align:center;color:var(--muted);font-size:12px}
+.mbrief-src{font-size:11px;color:var(--muted);margin-top:12px;line-height:1.6}
+.mbrief-src a{color:var(--blue-lt);text-decoration:none}
 .side .ng-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:11px 4px;border-radius:13px;color:var(--muted);cursor:pointer;border:1px solid transparent;transition:all .16s;text-align:center;line-height:1.15;background:none;box-shadow:none;white-space:normal}
 .side .ng-btn .ng-ic{width:23px;height:23px;display:flex;align-items:center;justify-content:center}
 .side .ng-btn .ng-ic svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
@@ -1337,6 +1357,18 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
   <div class="sh">
     <div class="st">360° Overview</div>
     <div class="sb" id="uport-date">Loading...</div>
+  </div>
+
+  <!-- Daily Market Brief (paid + admin only) -->
+  <div class="mbrief" id="market-brief" style="display:none">
+    <div class="mbrief-hd">
+      <div class="mbrief-ttl">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"></path><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"></path></svg>
+        Daily Market Brief
+      </div>
+      <div class="mbrief-meta"><span class="mbrief-sent" id="mb-sentiment">—</span><span class="mbrief-date" id="mb-date"></span></div>
+    </div>
+    <div class="mbrief-body" id="mb-body"><div class="mbrief-empty">Loading…</div></div>
   </div>
 
   <!-- 4 Big Stat Cards -->
@@ -3113,6 +3145,32 @@ function updateBellBadge(){
 
 // close bell on outside click
 document.addEventListener('click', e=>{ const p=document.getElementById('bell-pop'); if(p && p.classList.contains('open') && !e.target.closest('.side-bell')) p.classList.remove('open'); });
+
+/* ════ DAILY MARKET BRIEF (paid + admin) ════ */
+async function loadMarketBrief(){
+  const box=document.getElementById('market-brief'); if(!box) return;
+  if(!(window.USER_ROLE==='paid'||window.USER_ROLE==='admin')){ box.style.display='none'; return; }
+  box.style.display='block';
+  const body=document.getElementById('mb-body');
+  try{
+    const { data } = await sb.from('market_brief').select('*').order('brief_date',{ascending:false}).limit(1).maybeSingle();
+    if(!data){ body.innerHTML='<div class="mbrief-empty">Today\u2019s brief will appear here once published.</div>'; const s=document.getElementById('mb-sentiment'); if(s) s.style.display='none'; return; }
+    renderMarketBrief(data);
+  }catch(e){ body.innerHTML='<div class="mbrief-empty">Brief unavailable right now.</div>'; }
+}
+function renderMarketBrief(d){
+  const esc=s=>(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  const sent=(d.overall_sentiment||'neutral').toLowerCase();
+  const sEl=document.getElementById('mb-sentiment'); if(sEl){ sEl.style.display='inline-block'; sEl.textContent=sent; sEl.className='mbrief-sent sent-'+sent; }
+  const dEl=document.getElementById('mb-date'); if(dEl) dEl.textContent=d.brief_date?new Date(d.brief_date).toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short'}):'';
+  const summaryHtml=(d.summary||'').split(/\n\s*\n/).map(p=>p.trim()).filter(Boolean).map(p=>`<p>${esc(p)}</p>`).join('');
+  let themes=[]; try{ themes=Array.isArray(d.themes)?d.themes:JSON.parse(d.themes||'[]'); }catch(e){ themes=[]; }
+  const themesHtml=themes.map(t=>{ const s=(t.sentiment||'neutral').toLowerCase(); return `<div class="mbrief-theme"><span class="mbrief-tag sent-${s}">${esc(s)}</span><span class="mbrief-theme-txt">${esc(t.text)}</span></div>`; }).join('');
+  let srcs=[]; try{ srcs=Array.isArray(d.sources)?d.sources:JSON.parse(d.sources||'[]'); }catch(e){ srcs=[]; }
+  const srcHtml=srcs.length?`<div class="mbrief-src">Sources: ${srcs.map((s,i)=>`<a href="${esc(s.url||'#')}" target="_blank" rel="noopener">${esc(s.title||('['+(i+1)+']'))}</a>`).join(' \u00b7 ')}</div>`:'';
+  const body=document.getElementById('mb-body');
+  if(body) body.innerHTML=(summaryHtml?`<div class="mbrief-summary">${summaryHtml}</div>`:'')+(themesHtml?`${summaryHtml?'<div class="mbrief-div"></div>':''}${themesHtml}`:'')+srcHtml || '<div class="mbrief-empty">No brief content.</div>';
+}
 function lockLayout(){ const sb=document.querySelector('.subbar'); if(sb) document.documentElement.style.setProperty('--subh',(sb.offsetHeight||46)+'px'); }
 window.addEventListener('resize', lockLayout);
 (function initLock(){ const go=()=>{ const sb=document.querySelector('.subbar'); if(sb && window.ResizeObserver) new ResizeObserver(lockLayout).observe(sb); lockLayout(); };
@@ -3252,7 +3310,7 @@ function sw(id){
   if(id==='sectoral'){SB.init();}
   if(id==='heatmap'){loadHeatmap();}
   if(id==='charts'){loadCharts();}
-  if(id==='mtoverview'){MT.init();renderUserPortfolio();}
+  if(id==='mtoverview'){MT.init();renderUserPortfolio();loadMarketBrief();}
   if(id==='mtmanager'){MT.init();MT.loadOpen();MT.loadClosed();loadUserFinalExits();loadCapitalBox();}
   if(id==='mtportfolio'){MT.init();renderUserOpen();}
   if(id==='mtclosed'){MT.init();renderUserClosed();}
