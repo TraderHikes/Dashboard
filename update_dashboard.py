@@ -1641,9 +1641,11 @@ def fetch_candles_for_watchlist():
 
 if __name__ == "__main__":
     # ── Trading-day gate ──────────────────────────────────────
-    # Skip ALL runs (intraday, FII/DII, EOD) on weekends & NSE holidays,
-    # so no indicator records data for a non-trading day.
-    if not is_trading_day():
+    # Skip dated market-data runs (intraday, FII/DII, EOD) on weekends & NSE
+    # holidays, so no indicator records data for a non-trading day.
+    # The pre-market BRIEF is exempt: it's news, not dated market data, and is
+    # useful every day (and must be testable on weekends).
+    if RUN_MODE != "premarket" and not is_trading_day():
         print(f"{'='*56}")
         print(f"  MARKET CLOSED on {TODAY} ({NOW_IST.strftime('%A')}) — "
               f"weekend or NSE holiday.")
