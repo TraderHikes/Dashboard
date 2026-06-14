@@ -495,6 +495,130 @@ def save_portfolio_snapshot(cmp_map, n500_val):
 
 
 # ════════════════════════════════════════════════════════════
+# PER-USER PERFORMANCE STATS  (privacy-preserving aggregates)
+# ------------------------------------------------------------
+# Runs with the service key, so it can read every user's PRIVATE book to
+# compute ONE aggregated row per user in `user_stats`. The admin panel reads
+# only this table — never the raw trades. No micromanagement, just the signals
+# needed to coach users toward the MSTP course.
+# ════════════════════════════════════════════════════════════
+def compute_user_stats(cmp_map):
+    print("📊 Computing per-user performance stats...")
+    cmp_map = cmp_map or {}
+    try:
+        from datetime import datetime as _dt, timedelta as _td
+        # 1. Distinct users who have a personal book (is_model = false).
+        open_rows   = sb.table("open_trades").select("*").eq("is_model", False).execute().data or []
+        closed_rows = sb.table("closed_trades").select("*").eq("is_model", False).execute().data or []
+        cfg_rows    = sb.table("portfolio_config").select("user_id,total_capital").execute().data or []
+        cap_by_user = {r["user_id"]: float(r.get("total_capital") or 0) for r in cfg_rows if r.get("user_id")}
+
+        uids = set()
+        for r in open_rows + closed_rows:
+            if r.get("user_id"): uids.add(r["user_id"])
+        uids |= set(cap_by_user.keys())
+        if not uids:
+            print("   • no user books yet — nothing to compute\n"); return
+
+        today = _dt.utcnow().date()
+        cutoff_30 = today - _td(days=30)
+
+        def _d(s):
+            try: return _dt.fromisoformat(str(s)[:10]).date()
+            except Exception: return None
+
+        written = 0
+        for uid in uids:
+            u_open   = [t for t in open_rows   if t.get("user_id") == uid]
+            u_closed = [t for t in closed_rows if t.get("user_id") == uid]
+
+            # profile (email / name / tier) — defensive select("*")
+            email = full_name = tier = None
+            try:
+                pr = sb.table("profiles").select("*").eq("user_id", uid).limit(1).execute().data
+                if pr:
+                    p = pr[0]
+                    email     = p.get("email")
+                    full_name = p.get("full_name") or p.get("name")
+                    tier      = p.get("tier")
+            except Exception:
+                pass
+
+            # ── activity ──
+            open_positions = len(u_open)
+            total_closed   = len(u_closed)
+            exits = [(_d(t.get("exit_date")), t) for t in u_closed]
+            trades_30d = sum(1 for d, _ in exits if d and d >= cutoff_30)
+            entry_dates = [_d(t.get("entry_date")) for t in (u_open + u_closed) if _d(t.get("entry_date"))]
+            exit_dates  = [d for d, _ in exits if d]
+            first_trade = min(entry_dates) if entry_dates else None
+            last_trade  = max(exit_dates) if exit_dates else (max(entry_dates) if entry_dates else None)
+
+            # ── performance (closed trades) ──
+            wins   = [t for t in u_closed if float(t.get("realised_pnl") or 0) > 0]
+            losses = [t for t in u_closed if float(t.get("realised_pnl") or 0) <= 0]
+            gross_win  = sum(float(t.get("realised_pnl") or 0) for t in wins)
+            gross_loss = abs(sum(float(t.get("realised_pnl") or 0) for t in losses))
+            win_rate      = round(len(wins) / total_closed * 100, 1) if total_closed else 0.0
+            profit_factor = round(gross_win / gross_loss, 2) if gross_loss > 0 else (round(gross_win, 2) if gross_win else 0.0)
+            avg_win_pct   = round(sum(float(t.get("return_pct") or 0) for t in wins)   / len(wins),   2) if wins   else 0.0
+            avg_loss_pct  = round(sum(float(t.get("return_pct") or 0) for t in losses) / len(losses), 2) if losses else 0.0
+            expectancy    = round((win_rate/100)*avg_win_pct + ((100-win_rate)/100)*avg_loss_pct, 2)
+            realised_list = [float(t.get("realised_pnl") or 0) for t in u_closed]
+            max_profit    = round(max(realised_list), 2) if realised_list else 0.0
+            max_loss      = round(min(realised_list), 2) if realised_list else 0.0
+            total_realised= round(sum(realised_list), 2)
+
+            # ── discipline signals ──
+            with_sl = sum(1 for t in u_closed if t.get("sl_price") not in (None, 0, "0"))
+            pct_with_sl = round(with_sl / total_closed * 100, 1) if total_closed else 0.0
+            holds = [float(t.get("holding_days")) for t in u_closed if t.get("holding_days") not in (None, "")]
+            avg_hold = round(sum(holds)/len(holds), 1) if holds else 0.0
+
+            # max drawdown on the cumulative-realised equity curve (exit order)
+            total_capital = cap_by_user.get(uid, 0.0)
+            ordered = sorted([(d, t) for d, t in exits if d], key=lambda x: x[0])
+            eq = total_capital if total_capital else max(1.0, sum(abs(x) for x in realised_list))
+            peak = eq; max_dd = 0.0
+            for _, t in ordered:
+                eq += float(t.get("realised_pnl") or 0)
+                if eq > peak: peak = eq
+                if peak > 0:
+                    dd = (eq - peak) / peak * 100
+                    if dd < max_dd: max_dd = dd
+            max_drawdown_pct = round(max_dd, 2)
+
+            # ── exposure (open book) ──
+            deployed = 0.0
+            for t in u_open:
+                ae = float(t.get("avg_entry_price") or t.get("entry_price") or 0)
+                rq = float(t.get("remaining_qty") or t.get("quantity") or 0)
+                deployed += ae * rq
+            deployed = round(deployed, 2)
+            exposure_pct = round(deployed / total_capital * 100, 1) if total_capital > 0 else 0.0
+
+            sb.table("user_stats").upsert({
+                "user_id": uid, "email": email, "full_name": full_name, "tier": tier,
+                "open_positions": open_positions, "total_closed_trades": total_closed,
+                "trades_last_30d": trades_30d,
+                "first_trade_date": first_trade.isoformat() if first_trade else None,
+                "last_trade_date":  last_trade.isoformat()  if last_trade  else None,
+                "win_rate": win_rate, "profit_factor": profit_factor, "expectancy_pct": expectancy,
+                "avg_win_pct": avg_win_pct, "avg_loss_pct": avg_loss_pct,
+                "max_profit": max_profit, "max_loss": max_loss, "total_realised_pnl": total_realised,
+                "pct_trades_with_sl": pct_with_sl, "avg_holding_days": avg_hold,
+                "max_drawdown_pct": max_drawdown_pct, "total_capital": total_capital,
+                "deployed": deployed, "exposure_pct": exposure_pct,
+                "updated_at": _dt.utcnow().isoformat(),
+            }, on_conflict="user_id").execute()
+            written += 1
+
+        print(f"   ✓ user_stats updated for {written} user(s)\n")
+    except Exception as e:
+        print(f"   ⚠️  user_stats failed: {e}\n")
+
+
+# ════════════════════════════════════════════════════════════
 # PROPRIETARY MARKET SCORE  (9-indicator, two-layer engine)
 # ════════════════════════════════════════════════════════════
 # Private swing-trading exposure model. NOT investment advice — it sizes the
@@ -1468,6 +1592,7 @@ if __name__ == "__main__":
             # Downstream steps — each guarded; they tolerate missing inputs
             # (params are optional / None-safe from earlier hardening).
             run_step("portfolio_snapshot", save_portfolio_snapshot, cmp_map, n500_val)
+            run_step("user_stats",         compute_user_stats, cmp_map)
             run_step("market_breadth",     calculate_market_breadth, symbols, nifty50_val)
             run_step("index_heatmap",      build_index_heatmap, symbols)
             run_step("open_trade_candles", fetch_candles_for_open_trades)
