@@ -424,6 +424,8 @@
     <button class="tab-btn" onclick="openTab('tab-watchlist',this);loadWatchlistAdmin()">Watchlist</button>
     <button class="tab-btn" onclick="openTab('tab-students',this)">Students</button>
     <button class="tab-btn" onclick="openTab('tab-perf-stats',this);loadPerformanceStats()">Performance Stats</button>
+    <button class="tab-btn" onclick="openTab('tab-notify',this);loadNotifyAudience();loadSentNotifs()">Notifications</button>
+    <button class="tab-btn" onclick="openTab('tab-inbox',this);loadInbox()">Inbox</button>
   </div>
 
   <!-- ════ TAB 1: ADD / VIEW OPEN TRADES ════ -->
@@ -1069,6 +1071,96 @@
             <tr><td colspan="17" style="padding:20px;text-align:center;color:var(--muted)">Loading...</td></tr>
           </tbody>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ NOTIFICATIONS (admin → users) ════ -->
+  <div class="tab-pane" id="tab-notify">
+    <div class="card">
+      <div class="card-hdr"><span class="card-title">Send Notification</span></div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.6">
+          Push a notification to users' in-app bell. Send to everyone, a tier, or one user. (Automated rule-based
+          nudges will be added later via the Trade Rulebook.)
+        </p>
+        <div class="alert alert-success" id="notify-success"></div>
+        <div class="alert alert-error"   id="notify-error"></div>
+        <div class="form-grid" style="margin-bottom:14px">
+          <div class="form-group">
+            <label class="form-label">Audience *</label>
+            <select class="form-input" id="notify-audience" onchange="onNotifyAudienceChange()">
+              <option value="all">All users</option>
+              <option value="course">Tier: Course</option>
+              <option value="dashboard">Tier: Dashboard</option>
+              <option value="free">Tier: Free</option>
+              <option value="one">Individual user…</option>
+            </select>
+          </div>
+          <div class="form-group" id="notify-user-wrap" style="display:none">
+            <label class="form-label">User</label>
+            <select class="form-input" id="notify-user"></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Kind</label>
+            <select class="form-input" id="notify-kind">
+              <option value="info">Info</option>
+              <option value="nudge">Nudge</option>
+              <option value="offer">Offer (MSTP)</option>
+              <option value="system">System</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label class="form-label">Title *</label>
+          <input class="form-input" id="notify-title" placeholder="e.g. New MSTP cohort opens Monday">
+        </div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label class="form-label">Message</label>
+          <textarea class="form-input" id="notify-body" rows="3" placeholder="Body text…"></textarea>
+        </div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label class="form-label">Link (optional CTA)</label>
+          <input class="form-input" id="notify-link" placeholder="https://…">
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:12px;color:var(--muted)" id="notify-reach">—</span>
+          <button class="btn btn-primary" id="notify-send-btn" onclick="sendNotification()">Send Notification</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-hdr"><span class="card-title">Recently Sent</span><button class="btn btn-ghost btn-sm" onclick="loadSentNotifs()">↻ Refresh</button></div>
+      <div style="overflow-x:auto">
+        <table class="data-table">
+          <thead><tr><th>Sent</th><th>Kind</th><th>Title</th><th>Recipients</th><th>Read</th><th>Source</th></tr></thead>
+          <tbody id="sent-notifs-body"><tr><td colspan="6" style="padding:18px;text-align:center;color:var(--muted)">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ INBOX (messages with course users) ════ -->
+  <div class="tab-pane" id="tab-inbox">
+    <div class="card">
+      <div class="card-hdr"><span class="card-title">Messages</span><button class="btn btn-ghost btn-sm" onclick="loadInbox()">↻ Refresh</button></div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6">
+          One-to-one conversations with MSTP course members. Pick a thread to read and reply.
+        </p>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:stretch">
+          <div id="inbox-threads" style="flex:0 0 240px;max-height:460px;overflow-y:auto;border:1px solid var(--bdr);border-radius:12px;padding:6px">
+            <div style="padding:18px;text-align:center;color:var(--muted);font-size:12px">Loading…</div>
+          </div>
+          <div style="flex:1;min-width:280px;display:flex;flex-direction:column;border:1px solid var(--bdr);border-radius:12px;overflow:hidden">
+            <div id="inbox-thread-hd" style="padding:12px 14px;border-bottom:1px solid var(--bdr);font-weight:700;color:var(--white);font-size:13px">Select a conversation</div>
+            <div id="inbox-thread" style="flex:1;min-height:300px;max-height:380px;overflow-y:auto;padding:12px;background:var(--card2)"></div>
+            <div id="inbox-compose" style="display:none;gap:8px;padding:10px;border-top:1px solid var(--bdr)">
+              <input id="inbox-input" placeholder="Reply…" onkeydown="if(event.key==='Enter')sendAdminMessage()" style="flex:1;background:var(--card3);border:1px solid var(--bdr);color:var(--white);font-size:13px;padding:10px 12px;border-radius:9px;outline:none">
+              <button class="btn btn-primary" onclick="sendAdminMessage()">Send</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -2175,6 +2267,125 @@ function renderPerfStats(){
       <td style="font-size:11px;color:var(--text2)">${la}</td>
     </tr>`;
   }).join('');
+}
+
+/* ════ NOTIFICATIONS (admin → users) ════ */
+async function loadNotifyAudience(){
+  if(!_users || !_users.length){ try{ await loadStudents(); }catch(e){} }
+  const sel=document.getElementById('notify-user');
+  if(sel) sel.innerHTML=(_users||[]).map(u=>`<option value="${u.user_id}">${(u.full_name||u.email||u.user_id)} (${u.tier||'free'})</option>`).join('');
+  onNotifyAudienceChange();
+}
+function _audienceUsers(aud){
+  const u=_users||[];
+  if(aud==='all') return u;
+  if(aud==='one'){ const id=document.getElementById('notify-user').value; return u.filter(x=>x.user_id===id); }
+  return u.filter(x=>(x.tier||'free')===aud);
+}
+function onNotifyAudienceChange(){
+  const aud=document.getElementById('notify-audience').value;
+  document.getElementById('notify-user-wrap').style.display=(aud==='one')?'block':'none';
+  const n=_audienceUsers(aud).length;
+  document.getElementById('notify-reach').textContent=`Will reach ${n} user${n!==1?'s':''}`;
+}
+async function sendNotification(){
+  const ok=document.getElementById('notify-success'), err=document.getElementById('notify-error');
+  ok.style.display='none'; err.style.display='none';
+  const aud=document.getElementById('notify-audience').value;
+  const title=document.getElementById('notify-title').value.trim();
+  const body=document.getElementById('notify-body').value.trim();
+  const kind=document.getElementById('notify-kind').value;
+  const link=document.getElementById('notify-link').value.trim();
+  if(!title){ err.textContent='Title is required.'; err.style.display='block'; return; }
+  const recips=_audienceUsers(aud).filter(u=>u.user_id);
+  if(!recips.length){ err.textContent='No users in that audience.'; err.style.display='block'; return; }
+  const btn=document.getElementById('notify-send-btn'); btn.disabled=true; btn.textContent='Sending…';
+  const rows=recips.map(u=>({ recipient_user_id:u.user_id, title, body:body||null, kind, link:link||null, source:'manual' }));
+  const { error } = await sb.from('user_notifications').insert(rows);
+  btn.disabled=false; btn.textContent='Send Notification';
+  if(error){ err.textContent='Error: '+error.message; err.style.display='block'; return; }
+  ok.textContent=`✓ Sent to ${rows.length} user${rows.length!==1?'s':''}.`; ok.style.display='block';
+  document.getElementById('notify-title').value=''; document.getElementById('notify-body').value=''; document.getElementById('notify-link').value='';
+  loadSentNotifs();
+}
+async function loadSentNotifs(){
+  const body=document.getElementById('sent-notifs-body'); if(!body) return;
+  const { data, error } = await sb.from('user_notifications').select('*').order('created_at',{ascending:false}).limit(400);
+  if(error){ body.innerHTML=`<tr><td colspan="6" style="padding:18px;text-align:center;color:var(--red)">${error.message}</td></tr>`; return; }
+  const batches={};
+  (data||[]).forEach(n=>{
+    const key=(n.title||'')+'|'+(n.kind||'')+'|'+(n.source||'')+'|'+String(n.created_at).slice(0,19);
+    if(!batches[key]) batches[key]={created_at:n.created_at,kind:n.kind,title:n.title,source:n.source,count:0,read:0};
+    batches[key].count++; if(n.is_read) batches[key].read++;
+  });
+  const list=Object.values(batches).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,60);
+  if(!list.length){ body.innerHTML='<tr><td colspan="6" style="padding:18px;text-align:center;color:var(--muted)">Nothing sent yet.</td></tr>'; return; }
+  body.innerHTML=list.map(b=>`<tr>
+    <td style="font-size:11px;color:var(--text2)">${new Date(b.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</td>
+    <td><span style="text-transform:capitalize">${b.kind||'info'}</span></td>
+    <td style="color:var(--white)">${(b.title||'').replace(/</g,'&lt;')}</td>
+    <td class="mono">${b.count}</td>
+    <td class="mono">${b.read}/${b.count}</td>
+    <td style="font-size:11px;color:var(--muted)">${b.source||'manual'}</td>
+  </tr>`).join('');
+}
+
+/* ════ INBOX (messages with course users) ════ */
+let _inbox=[], _inboxThread=null;
+async function loadInbox(){
+  const wrap=document.getElementById('inbox-threads'); if(!wrap) return;
+  if(!_users || !_users.length){ try{ await loadStudents(); }catch(e){} }
+  const { data, error } = await sb.from('messages').select('*').order('created_at',{ascending:true});
+  if(error){ wrap.innerHTML=`<div style="padding:18px;color:var(--red);font-size:12px">${error.message}</div>`; return; }
+  _inbox=data||[];
+  const threads={};
+  _inbox.forEach(m=>{ if(!threads[m.user_id]) threads[m.user_id]={user_id:m.user_id,msgs:[],unread:0}; threads[m.user_id].msgs.push(m); if(m.sender==='user'&&!m.read_by_admin) threads[m.user_id].unread++; });
+  const arr=Object.values(threads).sort((a,b)=>new Date(b.msgs[b.msgs.length-1].created_at)-new Date(a.msgs[a.msgs.length-1].created_at));
+  const nameOf=uid=>{ const u=(_users||[]).find(x=>x.user_id===uid); return u?(u.full_name||u.email||uid):uid; };
+  if(!arr.length){ wrap.innerHTML='<div style="padding:18px;text-align:center;color:var(--muted);font-size:12px">No messages yet.</div>'; return; }
+  wrap.innerHTML=arr.map(t=>{
+    const last=t.msgs[t.msgs.length-1];
+    const sel=_inboxThread===t.user_id;
+    return `<div onclick="openThread('${t.user_id}')" style="padding:10px 12px;border-radius:9px;cursor:pointer;background:${sel?'rgba(92,111,251,.16)':'transparent'}">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:6px">
+        <span style="font-weight:600;color:var(--white);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nameOf(t.user_id)}</span>
+        ${t.unread?`<span style="background:var(--red);color:#fff;font-size:9px;font-weight:800;border-radius:8px;padding:1px 6px">${t.unread}</span>`:''}
+      </div>
+      <div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">${(last.sender==='admin'?'You: ':'')+(last.body||'').replace(/</g,'&lt;')}</div>
+    </div>`;
+  }).join('');
+  if(_inboxThread) renderThread(_inboxThread);
+}
+async function openThread(uid){
+  _inboxThread=uid;
+  renderThread(uid);
+  const msgs=_inbox.filter(m=>m.user_id===uid);
+  const unread=msgs.filter(m=>m.sender==='user'&&!m.read_by_admin);
+  if(unread.length){ try{ await sb.from('messages').update({read_by_admin:true}).in('id',unread.map(m=>m.id)); unread.forEach(m=>m.read_by_admin=true); loadInbox(); }catch(e){} }
+}
+function renderThread(uid){
+  const nameOf=u=>{ const x=(_users||[]).find(y=>y.user_id===u); return x?(x.full_name||x.email||u):u; };
+  document.getElementById('inbox-thread-hd').textContent=nameOf(uid);
+  document.getElementById('inbox-compose').style.display='flex';
+  const msgs=_inbox.filter(m=>m.user_id===uid);
+  const esc=s=>(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  const box=document.getElementById('inbox-thread');
+  box.innerHTML=msgs.map(m=>{
+    const me=(m.sender==='admin');
+    return `<div style="display:flex;margin:6px 0;justify-content:${me?'flex-end':'flex-start'}">
+      <div><div style="max-width:80%;padding:9px 13px;border-radius:14px;font-size:13px;line-height:1.5;background:${me?'var(--blue)':'var(--card3)'};color:${me?'#fff':'var(--white)'};${me?'border-bottom-right-radius:4px':'border-bottom-left-radius:4px'}">${esc(m.body)}</div>
+      <div style="font-size:9px;color:var(--muted);margin-top:3px;text-align:${me?'right':'left'}">${me?'You':'User'} · ${new Date(m.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</div></div>
+    </div>`;
+  }).join('');
+  box.scrollTop=box.scrollHeight;
+}
+async function sendAdminMessage(){
+  if(!_inboxThread) return;
+  const inp=document.getElementById('inbox-input'); const txt=(inp.value||'').trim(); if(!txt) return;
+  inp.value='';
+  const { error } = await sb.from('messages').insert({ user_id:_inboxThread, sender:'admin', body:txt, read_by_admin:true });
+  if(error){ inp.value=txt; return; }
+  await loadInbox();
 }
 
 function tierMeta(tier, until) {
