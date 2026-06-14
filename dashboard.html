@@ -2605,6 +2605,74 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
     </div><!-- /sf-view-full -->
   </div>
 </div>
+
+<!-- ══════════════════════════════════════
+     MY WATCHLIST (user-owned, free + paid)
+══════════════════════════════════════ -->
+<style>
+.wl-tools{display:flex;flex-wrap:wrap;align-items:center;gap:14px 22px;padding:4px 0 12px;border-bottom:1px solid var(--bdr);margin-bottom:12px}
+.wl-add{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.wl-in{background:var(--card2);border:1px solid var(--bdr2);color:var(--text);font-family:var(--fm);font-size:12px;padding:7px 11px;border-radius:8px;outline:none;width:175px}
+.wl-in:focus{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue-dim)}
+.wl-in-name{width:205px}
+.wl-btn{background:var(--card2);border:1px solid var(--bdr2);color:var(--text2);font-family:var(--f);font-size:12px;font-weight:600;padding:7px 14px;border-radius:8px;cursor:pointer;transition:all .15s}
+.wl-btn:hover{border-color:var(--blue);color:var(--blue-lt)}
+.wl-btn-add{background:var(--blue-dim);border-color:var(--bdr3);color:var(--blue-lt)}
+.wl-btn-add:hover{background:var(--blue);color:#fff;border-color:var(--blue)}
+.wl-upload{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.wl-hint{font-size:10.5px;color:var(--muted)}
+.wl-hint code{font-family:var(--fm);background:var(--card3);border:1px solid var(--bdr2);border-radius:4px;padding:1px 6px;color:var(--text2)}
+.uw-head{display:flex;align-items:baseline;gap:7px;padding:2px 0 12px}
+.uw-head-n{font-family:var(--fm);font-size:18px;font-weight:800;color:var(--white)}
+.uw-head-lbl{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.wl-msg{font-size:11.5px;padding:8px 12px;border-radius:8px;margin-bottom:10px}
+.wl-msg.ok{background:var(--green-dim);border:1px solid var(--green-bd);color:var(--green)}
+.wl-msg.err{background:var(--red-dim);border:1px solid var(--red-bd);color:var(--red)}
+.wl-rm{cursor:pointer;color:var(--muted);font-size:15px;line-height:1;padding:2px 8px;border-radius:5px;transition:all .15s;border:1px solid transparent;display:inline-block}
+.wl-rm:hover{color:var(--red);border-color:var(--red-bd);background:var(--red-dim)}
+.wl-disc{margin-top:14px;padding:11px 14px;background:var(--card2);border:1px solid var(--bdr2);border-left:3px solid var(--amber);border-radius:8px;font-size:11px;line-height:1.55;color:var(--muted)}
+.wl-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.66);backdrop-filter:blur(3px);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px}
+.wl-modal{background:var(--card);border:1px solid var(--bdr2);border-radius:16px;max-width:450px;width:100%;padding:24px 26px;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.wl-modal-ic{width:44px;height:44px;border-radius:12px;background:var(--amber-dim);border:1px solid var(--amber-bd);display:flex;align-items:center;justify-content:center;margin-bottom:14px;color:var(--amber)}
+.wl-modal h3{font-family:var(--f);font-size:16px;font-weight:800;color:var(--white);margin:0 0 10px}
+.wl-modal p{font-size:13px;line-height:1.65;color:var(--text2);margin:0 0 18px}
+.wl-modal-ok{width:100%;background:var(--blue);border:none;color:#fff;font-family:var(--f);font-size:13px;font-weight:700;padding:11px;border-radius:10px;cursor:pointer}
+.wl-modal-ok:hover{filter:brightness(1.08)}
+</style>
+<div class="pane" id="pane-mywatch">
+  <div class="sf-wrap">
+
+    <!-- Add / Upload toolbar -->
+    <div class="wl-tools">
+      <div class="wl-add">
+        <input id="uw-sym"  class="wl-in" placeholder="Symbol (e.g. RELIANCE)" maxlength="20" autocomplete="off" onkeydown="if(event.key==='Enter')UW.add()">
+        <input id="uw-name" class="wl-in wl-in-name" placeholder="Company name (optional)" maxlength="80" autocomplete="off" onkeydown="if(event.key==='Enter')UW.add()">
+        <button class="wl-btn wl-btn-add" onclick="UW.add()">+ Add</button>
+      </div>
+      <div class="wl-upload">
+        <button class="wl-btn" onclick="document.getElementById('uw-file').click()">⬆ Upload CSV</button>
+        <input type="file" id="uw-file" accept=".csv,text/csv" style="display:none" onchange="UW.upload(this)">
+        <span class="wl-hint">CSV: <code>symbol,company_name</code> · one stock per row · header optional</span>
+      </div>
+    </div>
+    <div id="uw-msg" class="wl-msg" style="display:none"></div>
+
+    <!-- Count line -->
+    <div class="uw-head">
+      <span class="uw-head-n" id="uw-count">—</span>
+      <span class="uw-head-lbl">in your watchlist</span>
+    </div>
+
+    <div class="sf-table-wrap sf-scroll">
+      <table class="sf-table" id="uw-table">
+        <thead id="uw-thead"></thead>
+        <tbody id="uw-tbody"><tr><td class="sf-empty">Loading…</td></tr></tbody>
+      </table>
+    </div>
+
+    <div class="wl-disc">Market data displayed on this platform is delayed. It is strictly intended for post-market journaling, backtesting, learning, and end-of-day analysis. Do not use this data for real-time order execution.</div>
+  </div>
+</div>
 <div class="pane" id="pane-sectoral">
 <style>
 .sb-bar{display:flex;align-items:center;gap:10px;padding:14px 24px 12px;border-bottom:1px solid var(--bdr);flex-wrap:wrap}
@@ -2929,6 +2997,7 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
       </div>
     </div>
   </div>
+  <div id="ch-userdisc" class="wl-disc" style="display:none">Market data displayed on this platform is delayed. It is strictly intended for post-market journaling, backtesting, learning, and end-of-day analysis. Do not use this data for real-time order execution.</div>
 </div>
 
 </div><!-- /wrap -->
@@ -3311,10 +3380,12 @@ function sw(id){
   if(id==='portfolio'){setTimeout(drawPortfolioCharts,80);}
   if(id==='marketbrief'){loadMarketBrief();}
   if(id==='breadth'){loadMarketBreadth();}
-  if(id==='filter'){loadStockFilter();}
+  if(id==='filter'){window._WL_MODE='model';loadStockFilter();}
   if(id==='sectoral'){SB.init();}
   if(id==='heatmap'){loadHeatmap();}
-  if(id==='charts'){loadCharts();}
+  if(id==='charts'){window._WL_MODE='model';loadCharts();}
+  if(id==='mywatch'){window._WL_MODE='user';UW.init();}
+  if(id==='mycharts'){window._WL_MODE='user';const cp=document.getElementById('pane-charts');if(cp)cp.classList.add('active');loadCharts();if(window.UW)UW.maybeDisclaimer();}
   if(id==='mtoverview'){MT.init();renderUserPortfolio();}
   if(id==='mtmanager'){MT.init();MT.loadOpen();MT.loadClosed();loadUserFinalExits();loadCapitalBox();}
   if(id==='mtportfolio'){MT.init();renderUserOpen();}
@@ -3334,11 +3405,10 @@ const NAV=[
          body:'Unlock the full multi-indicator market score, breadth across every EMA, and sectoral rotation.',
          cta:'Unlock Full Access', url:MSTP_URL},
    subs:[{id:'marketbrief',label:'Market Brief'},{id:'breadth',label:'Market Breadth'},{id:'sectoral',label:'Sectoral Analysis'},{id:'heatmap',label:'Heatmap'}]},
-  {key:'screener', label:'Leading Stocks', roles:['admin','paid','free'], lockFor:['free'],
-   lock:{kind:'upgrade', title:'Leading Stocks Screener',
-         body:'Unlock curated watchlists and chart scans of the market\'s leading stocks.',
-         cta:'Unlock Full Access', url:MSTP_URL},
-   subs:[{id:'filter',label:'Watchlists'},{id:'charts',label:'Chart Scan'}]},
+  {key:'screener', label:'Model Watchlist', roles:['admin'], lockFor:[],
+   subs:[{id:'filter',label:'Watchlist'},{id:'charts',label:'Chart Scan'}]},
+  {key:'mywl',     label:'My Watchlist', roles:['paid','free'], lockFor:[],
+   subs:[{id:'mywatch',label:'Watchlist'},{id:'mycharts',label:'Chart Scan'}]},
   {key:'desk',     label:'My Trading Desk', roles:['paid','free'], lockFor:[],
    subs:[{id:'mtoverview',label:'360° Overview'},{id:'mtmanager',label:'Trade Manager'},{id:'mtportfolio',label:'Portfolio'},{id:'mtclosed',label:'Trade Journal'}]},
 ];
@@ -3346,6 +3416,7 @@ const NAV_ICONS={
   model:'<svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 12h18"/></svg>',
   market:'<svg viewBox="0 0 24 24"><path d="M3 12h3l3-8 4 16 3-8h5"/></svg>',
   screener:'<svg viewBox="0 0 24 24"><path d="M3 17l5-5 4 4 8-9"/><path d="M16 7h5v5"/></svg>',
+  mywl:'<svg viewBox="0 0 24 24"><path d="M5 3h14a1 1 0 0 1 1 1v17l-8-5-8 5V4a1 1 0 0 1 1-1z"/></svg>',
   desk:'<svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 3v4h6V3"/><path d="M8 12h8M8 16h5"/></svg>'
 };
 const NAVUI=(()=>{
@@ -8243,11 +8314,9 @@ async function loadStockFilter() {
   const enrichedMap = {};
   (enrichedRes.data||[]).forEach(r => enrichedMap[r.symbol] = r);
 
-  // Merge: enriched data takes priority, fill missing fields from raw
-  const allSymbols = new Set([
-    ...Object.keys(rawMap),
-    ...Object.keys(enrichedMap),
-  ]);
+  // watchlist_enriched is a SHARED cache (admin ∪ all users), so restrict the
+  // Model Watchlist to the admin's own symbols only.
+  const allSymbols = new Set(Object.keys(rawMap));
 
   _sfData = [...allSymbols].map(sym => {
     const raw = rawMap[sym] || {};
@@ -8390,6 +8459,198 @@ document.querySelectorAll('.sf-filter-chip').forEach(btn => {
 </script>
 <script>
 /* ══════════════════════════════════════════════════════════
+   MY WATCHLIST (UW) — user-owned watchlist, free + paid.
+   Symbols live in user_watchlist (RLS-scoped to the user).
+   The list shows ONLY what the user adds — no rule-based filtering
+   or "focused/buy-range" subset (that is taught in the MSTP course,
+   not served as a signal here). EMA columns + the chart's
+   Fundamental/Technical tables are paid-only.
+   ══════════════════════════════════════════════════════════ */
+let _uwData = [];
+let _uwSort = { key:'symbol', dir:1 };
+
+const UW = (()=>{
+  const esc = s => (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const validSym = s => /^[A-Z0-9&._-]{1,20}$/.test(s);
+  const isPaid = () => (window.USER_ROLE==='paid' || window.USER_ROLE==='admin');
+
+  function msg(text, kind){
+    const el = document.getElementById('uw-msg'); if(!el) return;
+    if(!text){ el.style.display='none'; el.textContent=''; el.className='wl-msg'; return; }
+    el.textContent = text; el.className = 'wl-msg ' + (kind||'ok'); el.style.display='block';
+    if(kind==='ok'){ clearTimeout(el._t); el._t=setTimeout(()=>{ el.style.display='none'; }, 4000); }
+  }
+
+  async function load(){
+    const tb = document.getElementById('uw-tbody');
+    if(tb) tb.innerHTML = '<tr><td colspan="6" class="sf-empty">Loading…</td></tr>';
+    try{
+      const paid = isPaid();
+      const queries = [ sb.from('user_watchlist').select('symbol,company_name') ]; // RLS → only my rows
+      if(paid) queries.push(sb.from('watchlist_enriched').select('symbol,company_name,pct_from_21ema,pct_from_10wema,pct_from_200ema'));
+      const res = await Promise.all(queries);
+      const mineRes = res[0];
+      const enrRes  = paid ? res[1] : { data:[] };
+      const enr = {}; (enrRes.data||[]).forEach(r => enr[(r.symbol||'').toUpperCase()] = r);
+      _uwData = (mineRes.data||[]).map(r => {
+        const sym = (r.symbol||'').toUpperCase();
+        const e = enr[sym] || {};
+        return {
+          symbol: sym,
+          company_name: r.company_name || e.company_name || null,
+          pct_from_21ema:  e.pct_from_21ema  != null ? e.pct_from_21ema  : null,
+          pct_from_10wema: e.pct_from_10wema != null ? e.pct_from_10wema : null,
+          pct_from_200ema: e.pct_from_200ema != null ? e.pct_from_200ema : null,
+        };
+      });
+      applySort();
+      render();
+    }catch(e){
+      const t = document.getElementById('uw-tbody');
+      if(t) t.innerHTML = '<tr><td colspan="6" class="sf-empty">Could not load watchlist.<br>'+esc(e.message||e)+'</td></tr>';
+    }
+  }
+
+  function applySort(){
+    const { key, dir } = _uwSort;
+    _uwData.sort((a,b)=>{
+      let av=a[key], bv=b[key];
+      if(key==='symbol'||key==='company_name'){ av=(av||'').toString().toLowerCase(); bv=(bv||'').toString().toLowerCase(); return av<bv?-dir:av>bv?dir:0; }
+      av = av==null?-1e9:av; bv = bv==null?-1e9:bv; return (av-bv)*dir;
+    });
+  }
+
+  function cell(v){
+    if(v==null) return '<td style="color:var(--muted)">—</td>';
+    const c = v>=0 ? 'var(--green)' : 'var(--red)';
+    return '<td style="color:'+c+';font-weight:600">'+(v>=0?'+':'')+v.toFixed(1)+'%</td>';
+  }
+
+  function rowHtml(s, paid){
+    const safe = s.symbol.replace(/'/g,"\\'");
+    return '<tr>'+
+      '<td style="color:var(--white);font-weight:700">'+esc(s.symbol)+'</td>'+
+      '<td>'+esc(s.company_name||'—')+'</td>'+
+      (paid ? cell(s.pct_from_21ema)+cell(s.pct_from_10wema)+cell(s.pct_from_200ema) : '')+
+      '<td style="text-align:right"><span class="wl-rm" title="Remove" onclick="UW.remove(\''+safe+'\')">&times;</span></td>'+
+      '</tr>';
+  }
+
+  function theadHtml(paid){
+    return '<tr>'+
+      '<th onclick="UW.sort(\'symbol\')">Symbol</th>'+
+      '<th onclick="UW.sort(\'company_name\')">Company</th>'+
+      (paid ? '<th onclick="UW.sort(\'pct_from_21ema\')">vs 21 EMA ↕</th>'+
+              '<th onclick="UW.sort(\'pct_from_10wema\')">vs 10W EMA ↕</th>'+
+              '<th onclick="UW.sort(\'pct_from_200ema\')">vs 200 EMA ↕</th>' : '')+
+      '<th></th>'+
+      '</tr>';
+  }
+
+  function render(){
+    const paid  = isPaid();
+    const cols  = paid ? 6 : 3;
+    const thead = document.getElementById('uw-thead');
+    const tb    = document.getElementById('uw-tbody');
+    const ac    = document.getElementById('uw-count');
+    if(ac)    ac.textContent = _uwData.length;
+    if(thead) thead.innerHTML = theadHtml(paid);
+    if(tb)    tb.innerHTML = _uwData.length
+      ? _uwData.map(s => rowHtml(s, paid)).join('')
+      : '<tr><td colspan="'+cols+'" class="sf-empty">Your watchlist is empty. Add a symbol or upload a CSV above.</td></tr>';
+  }
+
+  function sort(key){
+    if(_uwSort.key===key){ _uwSort.dir *= -1; } else { _uwSort = { key, dir: (key==='symbol'||key==='company_name')?1:-1 }; }
+    applySort(); render();
+  }
+
+  async function add(){
+    const si = document.getElementById('uw-sym'); const ni = document.getElementById('uw-name');
+    const sym = (si.value||'').trim().toUpperCase();
+    const name = (ni.value||'').trim() || null;
+    if(!sym){ msg('Enter a symbol first.', 'err'); return; }
+    if(!validSym(sym)){ msg('“'+sym+'” doesn’t look like a valid NSE symbol.', 'err'); return; }
+    if(_uwData.some(s=>s.symbol===sym)){ msg(sym+' is already in your watchlist.', 'err'); return; }
+    try{
+      const { error } = await sb.from('user_watchlist').insert({ symbol: sym, company_name: name });
+      if(error){ msg(/duplicate|unique/i.test(error.message)? sym+' is already in your watchlist.' : ('Could not add: '+error.message), 'err'); return; }
+      si.value=''; ni.value=''; si.focus();
+      msg('Added '+sym+'. Technicals appear after the next end-of-day update.', 'ok');
+      await load();
+    }catch(e){ msg('Could not add: '+(e.message||e), 'err'); }
+  }
+
+  async function remove(sym){
+    try{
+      const { error } = await sb.from('user_watchlist').delete().eq('symbol', sym);
+      if(error){ msg('Could not remove: '+error.message, 'err'); return; }
+      await load();
+    }catch(e){ msg('Could not remove: '+(e.message||e), 'err'); }
+  }
+
+  function parseCSV(text){
+    const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+    const out = []; const seen = new Set();
+    lines.forEach((line, i)=>{
+      const parts = line.split(',').map(c=>c.trim().replace(/^"|"$/g,''));
+      const raw = (parts[0]||'');
+      if(i===0 && /^(symbol|ticker|scrip|stock)$/i.test(raw)) return; // header
+      const sym = raw.toUpperCase();
+      if(!sym || !validSym(sym) || seen.has(sym)) return;
+      seen.add(sym);
+      out.push({ symbol: sym, company_name: (parts[1]||'').trim() || null });
+    });
+    return out;
+  }
+
+  async function upload(input){
+    const file = input.files && input.files[0]; if(!file) return;
+    input.value = '';
+    const CAP = 100;
+    try{
+      const text = await file.text();
+      let rows = parseCSV(text);
+      if(!rows.length){ msg('No valid symbols found. Use format: symbol,company_name', 'err'); return; }
+      const existing = new Set(_uwData.map(s=>s.symbol));
+      rows = rows.filter(r=>!existing.has(r.symbol));
+      if(!rows.length){ msg('All symbols in that file are already in your watchlist.', 'err'); return; }
+      let capped = false;
+      if(rows.length > CAP){ rows = rows.slice(0, CAP); capped = true; }
+      const { error } = await sb.from('user_watchlist').insert(rows);
+      if(error){ msg('Upload failed: '+error.message, 'err'); return; }
+      msg('Added '+rows.length+' symbol'+(rows.length===1?'':'s')+(capped?(' (capped at '+CAP+')'):'')+'. Technicals appear after the next end-of-day update.', 'ok');
+      await load();
+    }catch(e){ msg('Could not read file: '+(e.message||e), 'err'); }
+  }
+
+  function maybeDisclaimer(){
+    try{ if(sessionStorage.getItem('uw_disc_seen')==='1') return; }catch(e){}
+    if(document.getElementById('uw-disc-modal')) return;
+    const bg = document.createElement('div');
+    bg.className = 'wl-modal-bg'; bg.id = 'uw-disc-modal';
+    bg.innerHTML =
+      '<div class="wl-modal">'+
+        '<div class="wl-modal-ic"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div>'+
+        '<h3>A quick note on the data</h3>'+
+        '<p>Market data displayed on this platform is delayed. It is strictly intended for post-market journaling, backtesting, learning, and end-of-day analysis. Do not use this data for real-time order execution.</p>'+
+        '<button class="wl-modal-ok" onclick="UW.closeDisclaimer()">I understand</button>'+
+      '</div>';
+    document.body.appendChild(bg);
+    bg.addEventListener('click', e=>{ if(e.target===bg) UW.closeDisclaimer(); });
+  }
+  function closeDisclaimer(){
+    try{ sessionStorage.setItem('uw_disc_seen','1'); }catch(e){}
+    const m = document.getElementById('uw-disc-modal'); if(m) m.remove();
+  }
+
+  function init(){ maybeDisclaimer(); load(); }
+
+  return { init, load, sort, add, remove, upload, maybeDisclaimer, closeDisclaimer };
+})();
+</script>
+<script>
+/* ══════════════════════════════════════════════════════════
    WATCHLIST CHARTS — TradingView Lightweight Charts™ per stock
    Candles + 21/50/200 EMAs from your own pipeline data.
    Data: watchlist (list) + watchlist_enriched (stats) +
@@ -8509,26 +8770,41 @@ async function loadCharts(){
     if(e.key === 'ArrowRight'){ e.preventDefault(); navChart(1); }
     else if(e.key === 'ArrowLeft'){ e.preventDefault(); navChart(-1); }
   });
+  const _um = (window._WL_MODE === 'user');
+  const _umPaid = (window.USER_ROLE==='paid' || window.USER_ROLE==='admin');
+  // Toggle the delayed-data disclaimer footer (user mode only)
+  const _cd = document.getElementById('ch-userdisc'); if(_cd) _cd.style.display = _um ? 'block' : 'none';
+  // In My Watchlist mode: no rule-based "Focused/buy-range" subset — show the
+  // user's full list only. Fundamental/Technical tables are paid-only.
+  const _chMode = document.querySelector('#pane-charts .ch-mode');
+  if(_chMode) _chMode.style.display = _um ? 'none' : '';
+  if(_um) _watchMode = 'full';
+  const _chTbls = document.querySelector('#pane-charts .ch-tables');
+  if(_chTbls) _chTbls.style.display = (_um && !_umPaid) ? 'none' : '';
   const listEl = document.getElementById('ch-list');
   listEl.innerHTML = '<div class="ch-empty">Loading watchlist…</div>';
   try{
+    // Symbol source decides which list this is; watchlist_enriched is a SHARED
+    // technical cache (admin ∪ all users), so we restrict to our own symbols.
+    const srcTable = _um ? 'user_watchlist' : 'watchlist';
+    const srcSel   = _um ? 'symbol,company_name' : 'symbol,company_name,rs_rating';
     const [rawRes, enrRes] = await Promise.all([
-      sb.from('watchlist').select('symbol,company_name,rs_rating'),
+      sb.from(srcTable).select(srcSel),
       sb.from('watchlist_enriched').select('*'),
     ]);
-    const rawMap = {}; (rawRes.data || []).forEach(r => rawMap[r.symbol] = r);
-    const enrMap = {}; (enrRes.data || []).forEach(r => enrMap[r.symbol] = r);
+    const rawMap = {}; (rawRes.data || []).forEach(r => rawMap[(r.symbol||'').toUpperCase()] = r);
+    const enrMap = {}; (enrRes.data || []).forEach(r => enrMap[(r.symbol||'').toUpperCase()] = r);
 
     (enrRes.data || []).forEach(r => { if(r.enriched_date && (!_chartsAsOf || r.enriched_date > _chartsAsOf)) _chartsAsOf = r.enriched_date; });
 
-    const syms = new Set([...Object.keys(rawMap), ...Object.keys(enrMap)]);
+    const syms = new Set(Object.keys(rawMap));   // ONLY this list's own symbols
     _chartsData = [...syms].map(s => {
       const r = rawMap[s] || {}, e = enrMap[s] || {};
       return {
         ...e,                       // carry ALL enriched fields (incl. in_buy_range) verbatim
         symbol:       s,
         company_name: r.company_name || e.company_name || null,
-        rs_rating:    r.rs_rating != null ? r.rs_rating : (e.rs_rating != null ? e.rs_rating : null),
+        rs_rating:    _um ? null : (r.rs_rating != null ? r.rs_rating : (e.rs_rating != null ? e.rs_rating : null)),
         cur_price:    e.cur_price != null ? e.cur_price : null,
         pct21:        e.pct_from_21ema  != null ? e.pct_from_21ema  : null,
         pct50:        e.pct_from_50ema  != null ? e.pct_from_50ema  : null,
@@ -8536,10 +8812,12 @@ async function loadCharts(){
         in_buy_range: e.in_buy_range === true || e.in_buy_range === 'true',
         sector_name:  e.sector_name || null,
       };
-    }).sort((a,b) => (b.rs_rating || 0) - (a.rs_rating || 0));
+    }).sort((a,b) => _um ? (a.symbol < b.symbol ? -1 : 1) : ((b.rs_rating || 0) - (a.rs_rating || 0)));
 
     if(!_chartsData.length){
-      listEl.innerHTML = '<div class="ch-empty">No watchlist stocks yet.<br>Upload a MarketSmith CSV in the Admin panel to populate this.</div>';
+      listEl.innerHTML = _um
+        ? '<div class="ch-empty">No stocks in your watchlist yet.<br>Add symbols in the Watchlist tab to chart them.</div>'
+        : '<div class="ch-empty">No watchlist stocks yet.<br>Upload a MarketSmith CSV in the Admin panel to populate this.</div>';
       document.getElementById('ch-count').textContent = '0 stocks';
       return;
     }
@@ -8800,6 +9078,7 @@ async function renderChart(symbol){
              (v >= 0 ? '+' : '') + v.toFixed(1) + '%</td></tr>';
     };
     const rsRow = (() => {
+      if(window._WL_MODE === 'user') return '';   // no Price Strength in My Watchlist
       const rs = (_chartsData.find(x => x.symbol === symbol) || {}).rs_rating;
       const val = rs != null
         ? '<span class="ch-rsbadge">' + rs + '</span>'
