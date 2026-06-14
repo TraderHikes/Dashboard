@@ -426,6 +426,7 @@
     <button class="tab-btn" onclick="openTab('tab-perf-stats',this);loadPerformanceStats()">Performance Stats</button>
     <button class="tab-btn" onclick="openTab('tab-notify',this);loadNotifyAudience();loadSentNotifs()">Notifications</button>
     <button class="tab-btn" onclick="openTab('tab-inbox',this);loadInbox()">Inbox</button>
+    <button class="tab-btn" onclick="openTab('tab-brief',this);loadBriefEditor()">Market Brief</button>
   </div>
 
   <!-- ════ TAB 1: ADD / VIEW OPEN TRADES ════ -->
@@ -1160,6 +1161,48 @@
               <button class="btn btn-primary" onclick="sendAdminMessage()">Send</button>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ MARKET BRIEF (compose / edit) ════ -->
+  <div class="tab-pane" id="tab-brief">
+    <div class="card">
+      <div class="card-hdr"><span class="card-title">Daily Market Brief</span>
+        <button class="btn btn-ghost btn-sm" onclick="loadBriefEditor()">↻ Reload</button>
+      </div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.6">
+          India-first macro brief (economy, sector, policy, light geopolitics/US). Shows on paid users' 360° Overview.
+          Keep it brief. Auto-generation can populate this daily later; for now, compose or edit here.
+        </p>
+        <div class="alert alert-success" id="brief-success"></div>
+        <div class="alert alert-error"   id="brief-error"></div>
+        <div class="form-grid" style="margin-bottom:12px">
+          <div class="form-group">
+            <label class="form-label">Date</label>
+            <input class="form-input" type="date" id="brief-date">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Overall Sentiment</label>
+            <select class="form-input" id="brief-sentiment">
+              <option value="neutral">Neutral</option>
+              <option value="bullish">Bullish</option>
+              <option value="bearish">Bearish</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:14px">
+          <label class="form-label">Narrative summary (blank line = new paragraph)</label>
+          <textarea class="form-input" id="brief-summary" rows="6" placeholder="The Nifty closed the week firmer as…"></textarea>
+        </div>
+        <div class="card-hdr" style="padding:0 0 8px"><span class="card-title" style="font-size:13px">Themes</span>
+          <button class="btn btn-ghost btn-sm" onclick="addThemeRow()">+ Add theme</button>
+        </div>
+        <div id="brief-themes"></div>
+        <div style="display:flex;justify-content:flex-end;margin-top:16px">
+          <button class="btn btn-primary" id="brief-save-btn" onclick="saveBrief()">Publish Brief</button>
         </div>
       </div>
     </div>
@@ -2386,6 +2429,57 @@ async function sendAdminMessage(){
   const { error } = await sb.from('messages').insert({ user_id:_inboxThread, sender:'admin', body:txt, read_by_admin:true });
   if(error){ inp.value=txt; return; }
   await loadInbox();
+}
+
+/* ════ MARKET BRIEF (compose / edit) ════ */
+function _themeRow(text, sentiment){
+  text=text||''; sentiment=sentiment||'neutral';
+  const esc=s=>(s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  return `<div class="brief-theme-row" style="display:flex;gap:8px;margin-bottom:8px;align-items:flex-start">
+    <select class="form-input bt-sent" style="flex:0 0 130px">
+      <option value="neutral"${sentiment==='neutral'?' selected':''}>Neutral</option>
+      <option value="bullish"${sentiment==='bullish'?' selected':''}>Bullish</option>
+      <option value="bearish"${sentiment==='bearish'?' selected':''}>Bearish</option>
+    </select>
+    <input class="form-input bt-text" style="flex:1" value="${esc(text)}" placeholder="One-line theme…">
+    <button class="btn btn-danger btn-sm" type="button" onclick="this.closest('.brief-theme-row').remove()">✕</button>
+  </div>`;
+}
+function addThemeRow(text, sentiment){
+  document.getElementById('brief-themes').insertAdjacentHTML('beforeend', _themeRow(text, sentiment));
+}
+async function loadBriefEditor(){
+  const ok=document.getElementById('brief-success'), err=document.getElementById('brief-error');
+  if(ok) ok.style.display='none'; if(err) err.style.display='none';
+  const today=new Date().toISOString().slice(0,10);
+  let data=null;
+  try{ const r=await sb.from('market_brief').select('*').order('brief_date',{ascending:false}).limit(1).maybeSingle(); data=r.data; }catch(e){}
+  document.getElementById('brief-date').value = (data && data.brief_date) ? String(data.brief_date).slice(0,10) : today;
+  document.getElementById('brief-sentiment').value = (data && data.overall_sentiment) || 'neutral';
+  document.getElementById('brief-summary').value = (data && data.summary) || '';
+  const wrap=document.getElementById('brief-themes'); wrap.innerHTML='';
+  let themes=[]; if(data){ try{ themes=Array.isArray(data.themes)?data.themes:JSON.parse(data.themes||'[]'); }catch(e){} }
+  if(themes.length) themes.forEach(t=>addThemeRow(t.text, t.sentiment)); else addThemeRow();
+}
+async function saveBrief(){
+  const ok=document.getElementById('brief-success'), err=document.getElementById('brief-error');
+  ok.style.display='none'; err.style.display='none';
+  const brief_date=document.getElementById('brief-date').value;
+  const overall_sentiment=document.getElementById('brief-sentiment').value;
+  const summary=document.getElementById('brief-summary').value.trim();
+  const themes=[...document.querySelectorAll('#brief-themes .brief-theme-row')].map(r=>({
+    sentiment:r.querySelector('.bt-sent').value,
+    text:r.querySelector('.bt-text').value.trim()
+  })).filter(t=>t.text);
+  if(!brief_date){ err.textContent='Pick a date.'; err.style.display='block'; return; }
+  if(!summary && !themes.length){ err.textContent='Add a summary or at least one theme.'; err.style.display='block'; return; }
+  const btn=document.getElementById('brief-save-btn'); btn.disabled=true; btn.textContent='Publishing…';
+  const { error } = await sb.from('market_brief').upsert({
+    brief_date, overall_sentiment, summary, themes, source:'manual', updated_at:new Date().toISOString()
+  }, { onConflict:'brief_date' });
+  btn.disabled=false; btn.textContent='Publish Brief';
+  if(error){ err.textContent='Error: '+error.message; err.style.display='block'; return; }
+  ok.textContent='✓ Brief published — live on paid users\u2019 360° Overview.'; ok.style.display='block';
 }
 
 function tierMeta(tier, until) {
