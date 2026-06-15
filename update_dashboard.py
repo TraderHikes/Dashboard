@@ -477,7 +477,15 @@ def save_portfolio_snapshot(cmp_map, n500_val):
             unreal   += (cmp - entry) * qty
         total_cap  = float(os.environ.get("TOTAL_CAPITAL", 8500000))
         cash_avail = max(0.0, total_cap - deployed)
-        port_val   = total_cap + unreal
+        # Realized P&L from booked (closed) model trades — so the portfolio
+        # value and return reflect BOTH booked and open gains, not just open.
+        realised = 0.0
+        try:
+            closed = sb.table("closed_trades").select("realised_pnl").eq("is_model", True).execute().data or []
+            realised = sum(float(c.get("realised_pnl") or 0) for c in closed)
+        except Exception:
+            realised = 0.0
+        port_val   = total_cap + realised + unreal
         cum_ret    = round((port_val / total_cap - 1) * 100, 4) if total_cap else 0.0
         sb.table("portfolio_snapshots").upsert({
             "user_id":               admin_uid,
