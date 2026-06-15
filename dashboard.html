@@ -2787,6 +2787,40 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
 .wl-rm{cursor:pointer;color:var(--muted);font-size:15px;line-height:1;padding:2px 8px;border-radius:5px;transition:all .15s;border:1px solid transparent;display:inline-block}
 .wl-rm:hover{color:var(--red);border-color:var(--red-bd);background:var(--red-dim)}
 .wl-disc{margin-top:14px;padding:11px 14px;background:var(--card2);border:1px solid var(--bdr2);border-left:3px solid var(--amber);border-radius:8px;font-size:11px;line-height:1.55;color:var(--muted)}
+/* ── multi-watchlist bar (switcher + Modify) ── */
+.uw-bar{display:flex;align-items:center;gap:10px;padding:2px 0 16px;flex-wrap:wrap}
+.uwd{position:relative;display:inline-block}
+.uwd-btn{display:flex;align-items:center;gap:8px;background:linear-gradient(180deg,rgba(51,68,230,.14),rgba(51,68,230,.03));border:1px solid rgba(92,111,251,.34);border-radius:9px;padding:8px 14px;cursor:pointer;font-family:var(--f);color:var(--blue)}
+.uwd-btn:hover{border-color:var(--blue)}
+.uwd.open .uwd-btn{border-color:var(--blue);background:linear-gradient(180deg,rgba(51,68,230,.22),rgba(51,68,230,.06))}
+.uwd-cur{font-size:13.5px;font-weight:800;color:var(--blue)}
+.uwd-chev{color:var(--blue);transition:transform .18s;flex:0 0 auto}
+.uwd.open .uwd-chev{transform:rotate(180deg)}
+.uwd-menu{position:absolute;top:calc(100% + 7px);left:0;min-width:240px;background:var(--card);border:1px solid var(--bdr2);border-radius:12px;box-shadow:0 14px 36px rgba(0,0,0,.5);padding:6px;z-index:60;display:none}
+.uwd-menu.show{display:block}
+.uwd-sec{display:flex;align-items:center;justify-content:space-between;font-size:8.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800;padding:6px 10px}
+.uwd-q{color:var(--blue-lt);font-weight:800}
+.uwd-item{padding:9px 11px;border-radius:8px;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--text2)}
+.uwd-item:hover{background:var(--card2);color:var(--white)}
+.uwd-item.active{background:var(--blue-dim);color:var(--white)}
+.uwd-star{color:var(--amber);margin-right:4px}
+.uwd-new{display:flex;align-items:center;gap:7px;padding:9px 11px;margin-top:4px;border-top:1px solid var(--bdr);color:var(--blue-lt);font-size:12.5px;font-weight:700;cursor:pointer;border-radius:8px}
+.uwd-new:hover{background:var(--blue-dim)}
+.uwd-cap{padding:8px 11px;margin-top:4px;border-top:1px solid var(--bdr);font-size:10.5px;color:var(--muted);line-height:1.45}
+.uw-mod{position:relative;margin-left:auto}
+.uwm-btn{display:inline-flex;align-items:center;gap:5px;background:var(--card2);border:1px solid var(--bdr2);color:var(--text2);font-family:var(--f);font-size:12px;font-weight:600;padding:8px 14px;border-radius:9px;cursor:pointer}
+.uwm-btn:hover{border-color:var(--blue);color:var(--blue-lt)}
+.uwm-menu{position:absolute;top:calc(100% + 6px);right:0;min-width:194px;background:var(--card);border:1px solid var(--bdr2);border-radius:11px;box-shadow:0 12px 30px rgba(0,0,0,.45);padding:5px;z-index:60;display:none}
+.uwm-menu.show{display:block}
+.uwm-menu>div{padding:9px 12px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--text2);cursor:pointer}
+.uwm-menu>div:hover{background:var(--card2);color:var(--white)}
+.uwm-menu>div.danger{color:var(--red)}
+.uwm-menu>div.danger:hover{background:var(--red-dim)}
+.uw-x{display:inline-block;cursor:pointer;color:var(--muted);font-size:16px;line-height:1;padding:0 6px;border-radius:5px}
+.uw-x:hover{color:var(--red)}
+.uw-chbar{padding:12px 12px 0}
+.uw-chbar .uwd{display:block}
+.uw-chbar .uwd-btn{width:100%;justify-content:space-between}
 .wl-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.66);backdrop-filter:blur(3px);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px}
 .wl-modal{background:var(--card);border:1px solid var(--bdr2);border-radius:16px;max-width:450px;width:100%;padding:24px 26px;box-shadow:0 24px 60px rgba(0,0,0,.5)}
 .wl-modal-ic{width:44px;height:44px;border-radius:12px;background:var(--amber-dim);border:1px solid var(--amber-bd);display:flex;align-items:center;justify-content:center;margin-bottom:14px;color:var(--amber)}
@@ -2797,6 +2831,9 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
 </style>
 <div class="pane" id="pane-mywatch">
   <div class="sf-wrap">
+
+    <!-- Watchlist switcher + Modify -->
+    <div class="uw-bar" id="uw-bar"></div>
 
     <!-- Add / Upload toolbar -->
     <div class="wl-tools">
@@ -3092,6 +3129,7 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
 <div class="pane" id="pane-charts">
   <div class="ch-wrap wm-focused" id="ch-wrap">
     <div class="ch-side">
+      <div class="uw-chbar" id="uw-chbar" style="display:none"></div>
       <div class="ch-mode">
         <button class="ch-mode-btn active" id="ch-mode-focused" onclick="setWatchMode('focused',this)">
           <span class="ch-mode-t">Focused Watchlist</span>
@@ -3549,7 +3587,7 @@ function sw(id){
   if(id==='heatmap'){loadHeatmap();}
   if(id==='charts'){window._WL_MODE='model';loadCharts();}
   if(id==='mywatch'){window._WL_MODE='user';UW.init();}
-  if(id==='mycharts'){window._WL_MODE='user';const cp=document.getElementById('pane-charts');if(cp)cp.classList.add('active');loadCharts();if(window.UW)UW.maybeDisclaimer();}
+  if(id==='mycharts'){window._WL_MODE='user';const cp=document.getElementById('pane-charts');if(cp)cp.classList.add('active');if(window.UW)UW.initCharts();else loadCharts();}
   if(id==='mtoverview'){MT.init();renderUserPortfolio();}
   if(id==='mtmanager'){MT.init();MT.loadOpen();MT.loadClosed();loadUserFinalExits();loadCapitalBox();}
   if(id==='mtportfolio'){MT.init();renderUserOpen();}
@@ -9227,6 +9265,286 @@ try{
 }catch(e){}
 </script>
 <script>
+/* ════════════════════════════════════════════════════════════
+   MY WATCHLIST (UW) — multiple named watchlists per user.
+   Free users: 1 list. Paid/course users: up to 10. One list can
+   be the favourite (the user's default). Powers both the
+   "Watchlist" tab and the "Chart Scan" list dropdown.
+   ════════════════════════════════════════════════════════════ */
+const UW = (()=>{
+  const esc = s => (s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fmtPct = v => (v==null||isNaN(v)) ? '—' : (v>=0?'+':'')+Number(v).toFixed(1)+'%';
+  const pcol   = v => (v==null||isNaN(v)) ? 'var(--muted)' : (v>=0?'var(--green)':'var(--red)');
+
+  let lists=[];        // [{id,name,is_favourite,sort_order}]
+  let activeId=null;
+  let items=[];        // active list's stock rows
+  let enr={};          // symbol -> enriched row (paid columns)
+  let searchTimer=null, acIdx=-1, acData=[];
+
+  const isPaid = ()=> (window.USER_ROLE==='paid' || window.USER_ROLE==='admin');
+  const quota  = ()=> isPaid()?10:1;
+  function activeList(){ return lists.find(l=>l.id===activeId) || lists[0] || {name:'Watchlist'}; }
+
+  /* ── data ──────────────────────────────────────────────── */
+  async function loadLists(){
+    try{ const {data}=await sb.from('user_watchlists').select('id,name,is_favourite,sort_order').order('sort_order',{ascending:true}).order('id',{ascending:true}); lists=data||[]; }
+    catch(e){ lists=[]; }
+    if(!lists.length) await createDefault();
+    if(!lists.find(l=>l.id===activeId)){ const fav=lists.find(l=>l.is_favourite); activeId=(fav||lists[0]||{}).id||null; }
+    window._WL_ACTIVE_ID=activeId;
+  }
+  async function createDefault(){
+    try{ const {data}=await sb.from('user_watchlists').insert({name:'My Watchlist',is_favourite:true,sort_order:0}).select().single(); if(data){ lists=[data]; activeId=data.id; } }
+    catch(e){}
+  }
+  async function loadItems(){
+    items=[]; enr={};
+    if(!activeId) return;
+    try{ const {data}=await sb.from('user_watchlist').select('symbol,company_name').eq('watchlist_id',activeId).order('symbol',{ascending:true}); items=data||[]; }
+    catch(e){ items=[]; }
+    if(isPaid() && items.length){
+      try{ const {data}=await sb.from('watchlist_enriched').select('symbol,pct_from_21ema,pct_from_10wema,pct_from_200ema,cur_price');
+        (data||[]).forEach(r=>enr[(r.symbol||'').toUpperCase()]=r); }catch(e){}
+    }
+  }
+
+  /* ── Watchlist tab ─────────────────────────────────────── */
+  async function init(){
+    await loadLists();
+    renderBar();
+    await loadItems();
+    renderTable();
+    bindSearch();
+    maybeDisclaimer();
+  }
+  function renderBar(){
+    const host=document.getElementById('uw-bar'); if(host) host.innerHTML = dropdownHTML() + modifyHTML();
+  }
+  function dropdownHTML(){
+    const a=activeList();
+    const li=lists.map(l=>`<div class="uwd-item${l.id===activeId?' active':''}" onclick="UW.switchList(${l.id})"><span class="uwd-il">${l.is_favourite?'<span class="uwd-star">★</span>':''}${esc(l.name)}</span></div>`).join('');
+    const canNew=lists.length<quota();
+    return `<div class="uwd">
+      <button class="uwd-btn" onclick="UW.toggleDD(event)"><span class="uwd-cur">${a.is_favourite?'★ ':''}${esc(a.name)}</span><svg class="uwd-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M6 9l6 6 6-6"/></svg></button>
+      <div class="uwd-menu">
+        <div class="uwd-sec">Your Watchlists <span class="uwd-q">${lists.length}/${quota()}</span></div>
+        ${li}
+        ${canNew ? `<div class="uwd-new" onclick="UW.newList()"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M12 5v14M5 12h14"/></svg>New Watchlist</div>`
+                 : `<div class="uwd-cap">Limit reached (${quota()}/${quota()})${isPaid()?'':' · upgrade for 10'}</div>`}
+      </div></div>`;
+  }
+  function modifyHTML(){
+    const a=activeList();
+    return `<div class="uw-mod">
+      <button class="uwm-btn" id="uwm-btn" onclick="UW.toggleMod(event)">Modify<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></button>
+      <div class="uwm-menu" id="uwm-menu">
+        <div onclick="UW.focusAdd()">Add stock</div>
+        <div onclick="UW.renameList()">Rename watchlist</div>
+        <div onclick="UW.toggleFav()">${a.is_favourite?'★ Favourite (default)':'☆ Set as favourite'}</div>
+        ${lists.length<quota() ? `<div onclick="UW.newList()">New watchlist</div>`:''}
+        ${lists.length>1 ? `<div class="danger" onclick="UW.deleteList()">Delete watchlist</div>`:''}
+      </div></div>`;
+  }
+  function renderTable(){
+    const tb=document.getElementById('uw-tbody'), th=document.getElementById('uw-thead'), cnt=document.getElementById('uw-count');
+    if(cnt) cnt.textContent=items.length;
+    const paid=isPaid();
+    if(th) th.innerHTML = paid
+      ? `<tr><th>Symbol</th><th>Company</th><th>vs 21 EMA</th><th>vs 10W EMA</th><th>vs 200 EMA</th><th></th></tr>`
+      : `<tr><th>Symbol</th><th>Company</th><th></th></tr>`;
+    if(!tb) return;
+    if(!items.length){ tb.innerHTML=`<tr><td class="sf-empty" colspan="${paid?6:3}">No stocks yet — search above to add some.</td></tr>`; return; }
+    tb.innerHTML = items.map(r=>{
+      const s=(r.symbol||'').toUpperCase(), e=enr[s]||{};
+      const cols = paid
+        ? `<td style="color:${pcol(e.pct_from_21ema)};font-family:var(--fm)">${fmtPct(e.pct_from_21ema)}</td>
+           <td style="color:${pcol(e.pct_from_10wema)};font-family:var(--fm)">${fmtPct(e.pct_from_10wema)}</td>
+           <td style="color:${pcol(e.pct_from_200ema)};font-family:var(--fm)">${fmtPct(e.pct_from_200ema)}</td>`
+        : '';
+      return `<tr><td><span class="hk-sym">${esc(s)}</span></td><td style="color:var(--text2)">${esc(r.company_name||'')}</td>${cols}<td style="text-align:right"><span class="uw-x" title="Remove from watchlist" onclick="UW.removeStock('${esc(s)}')">&times;</span></td></tr>`;
+    }).join('');
+  }
+
+  /* ── dropdown / menu plumbing ──────────────────────────── */
+  function toggleDD(e){ if(e)e.stopPropagation(); const dd=e&&e.currentTarget?e.currentTarget.closest('.uwd'):null; if(!dd)return; const m=dd.querySelector('.uwd-menu'); const open=m.classList.toggle('show'); dd.classList.toggle('open',open); }
+  function closeDD(){ document.querySelectorAll('.uwd-menu.show').forEach(m=>m.classList.remove('show')); document.querySelectorAll('.uwd.open').forEach(d=>d.classList.remove('open')); }
+  function toggleMod(e){ if(e)e.stopPropagation(); document.getElementById('uwm-menu')?.classList.toggle('show'); }
+  function closeMod(){ document.getElementById('uwm-menu')?.classList.remove('show'); }
+  document.addEventListener('click', e=>{
+    if(!e.target.closest('.uwd')) closeDD();
+    if(!e.target.closest('.uw-mod')) closeMod();
+    const ac=document.getElementById('uw-ac'), box=document.getElementById('uw-search');
+    if(ac && box && !box.contains(e.target) && !ac.contains(e.target)) ac.classList.remove('show');
+  });
+
+  /* ── list operations ───────────────────────────────────── */
+  async function switchList(id){
+    closeDD();
+    if(id===activeId){ renderBar(); renderChartBar(); renderTable(); return; }
+    activeId=id; window._WL_ACTIVE_ID=id;
+    renderBar(); renderChartBar();
+    await loadItems(); renderTable();
+    reloadChartsIfActive();
+  }
+  function newList(){
+    closeDD(); closeMod();
+    if(lists.length>=quota()){ msg(isPaid()?'You can create up to 10 watchlists.':'The free plan includes 1 watchlist — upgrade for up to 10.', true); return; }
+    modalPrompt('Name your watchlist','My Watchlist', async name=>{
+      name=(name||'').trim()||'My Watchlist';
+      try{ const {data}=await sb.from('user_watchlists').insert({name,is_favourite:lists.length===0,sort_order:lists.length}).select().single();
+        if(data){ lists.push(data); activeId=data.id; window._WL_ACTIVE_ID=activeId; renderBar(); renderChartBar(); await loadItems(); renderTable(); focusAdd(); }
+      }catch(e){ msg('Could not create the watchlist.',true); }
+    });
+  }
+  function renameList(){
+    closeMod();
+    modalPrompt('Rename watchlist', activeList().name, async name=>{
+      name=(name||'').trim(); if(!name) return;
+      try{ await sb.from('user_watchlists').update({name}).eq('id',activeId); const l=lists.find(x=>x.id===activeId); if(l)l.name=name; renderBar(); renderChartBar(); }catch(e){}
+    });
+  }
+  async function toggleFav(){
+    closeMod();
+    if(activeList().is_favourite) return;
+    try{
+      await sb.from('user_watchlists').update({is_favourite:false}).eq('is_favourite',true);
+      await sb.from('user_watchlists').update({is_favourite:true}).eq('id',activeId);
+      lists.forEach(l=>l.is_favourite=(l.id===activeId));
+      renderBar(); renderChartBar(); msg('Set as your default watchlist.',false);
+    }catch(e){}
+  }
+  function deleteList(){
+    closeMod();
+    if(lists.length<=1){ msg('You need at least one watchlist.',true); return; }
+    confirmModal('Delete <b>'+esc(activeList().name)+'</b>? Its stocks will be removed from this list.', async ()=>{
+      const id=activeId;
+      try{ await sb.from('user_watchlists').delete().eq('id',id); }catch(e){}
+      lists=lists.filter(l=>l.id!==id);
+      const fav=lists.find(l=>l.is_favourite); activeId=(fav||lists[0]).id; window._WL_ACTIVE_ID=activeId;
+      renderBar(); renderChartBar(); await loadItems(); renderTable(); reloadChartsIfActive();
+    });
+  }
+
+  /* ── stock operations ──────────────────────────────────── */
+  async function addSymbol(symbol, company){
+    symbol=(symbol||'').trim().toUpperCase(); if(!symbol||!activeId) return;
+    if(items.find(r=>(r.symbol||'').toUpperCase()===symbol)){ msg(symbol+' is already in this list.',true); return; }
+    try{ const {error}=await sb.from('user_watchlist').insert({watchlist_id:activeId,symbol,company_name:company||null}); if(error) throw error;
+      await loadItems(); renderTable(); msg(symbol+' added.',false); reloadChartsIfActive();
+    }catch(e){ msg('Could not add '+symbol+'.',true); }
+  }
+  async function removeStock(symbol){
+    symbol=(symbol||'').toUpperCase();
+    try{ await sb.from('user_watchlist').delete().eq('watchlist_id',activeId).eq('symbol',symbol); }catch(e){}
+    await loadItems(); renderTable(); reloadChartsIfActive();
+  }
+  function focusAdd(){ closeMod(); document.getElementById('uw-search')?.focus(); }
+
+  /* ── typeahead (shared search_stocks RPC) ──────────────── */
+  function bindSearch(){
+    const box=document.getElementById('uw-search'); if(!box || box._bound) return; box._bound=true;
+    box.addEventListener('input', ()=>{ const q=box.value.trim(); if(searchTimer)clearTimeout(searchTimer);
+      if(q.length<1){ document.getElementById('uw-ac')?.classList.remove('show'); return; } searchTimer=setTimeout(()=>runSearch(q),180); });
+    box.addEventListener('keydown', e=>{ const ac=document.getElementById('uw-ac'); if(!ac||!ac.classList.contains('show')) return;
+      if(e.key==='ArrowDown'){ e.preventDefault(); acIdx=Math.min(acIdx+1,acData.length-1); paintAc(); }
+      else if(e.key==='ArrowUp'){ e.preventDefault(); acIdx=Math.max(acIdx-1,0); paintAc(); }
+      else if(e.key==='Enter'){ e.preventDefault(); if(acData[acIdx]) acPick(acData[acIdx]); }
+      else if(e.key==='Escape'){ ac.classList.remove('show'); } });
+  }
+  async function runSearch(q){
+    const ac=document.getElementById('uw-ac'); if(!ac) return;
+    let data=[]; try{ const r=await sb.rpc('search_stocks',{q,lim:8}); data=r.data||[]; }catch(e){}
+    acData=data; acIdx=data.length?0:-1;
+    if(!data.length){ ac.innerHTML='<div class="mt-ac-item" style="cursor:default;color:var(--muted)">No matches</div>'; ac.classList.add('show'); return; }
+    paintAc(); ac.classList.add('show');
+  }
+  function paintAc(){
+    const ac=document.getElementById('uw-ac'); if(!ac) return;
+    ac.innerHTML=acData.map((r,i)=>`<div class="mt-ac-item${i===acIdx?' active':''}" onclick="UW.acPickIdx(${i})">
+      <span class="mt-ac-sym">${esc(r.symbol)}</span><span class="mt-ac-co">${esc(r.company_name)}</span><span class="mt-ac-bd">${esc(r.board)}</span></div>`).join('');
+  }
+  function acPickIdx(i){ if(acData[i]) acPick(acData[i]); }
+  function acPick(r){ const box=document.getElementById('uw-search'); if(box) box.value=''; document.getElementById('uw-ac')?.classList.remove('show'); addSymbol(r.symbol, r.company_name); }
+
+  /* ── CSV bulk add ──────────────────────────────────────── */
+  async function upload(input){
+    const file=input.files&&input.files[0]; if(!file) return;
+    let text=''; try{ text=await file.text(); }catch(e){} input.value='';
+    const rows=text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+    const seen=new Set(items.map(r=>(r.symbol||'').toUpperCase())); const toAdd=[];
+    rows.forEach(line=>{ const parts=line.split(','); const s=(parts[0]||'').trim().toUpperCase(); if(!s||s==='SYMBOL'||seen.has(s)) return; seen.add(s); toAdd.push({watchlist_id:activeId,symbol:s,company_name:(parts.slice(1).join(',').trim()||null)}); });
+    if(!toAdd.length){ msg('Nothing new to add from that file.',true); return; }
+    try{ const {error}=await sb.from('user_watchlist').insert(toAdd); if(error) throw error; await loadItems(); renderTable(); msg(toAdd.length+' stock(s) added.',false); reloadChartsIfActive(); }
+    catch(e){ msg('Some rows could not be added.',true); }
+  }
+
+  /* ── Chart Scan dropdown ───────────────────────────────── */
+  async function initCharts(){
+    if(!lists.length) await loadLists();
+    window._WL_ACTIVE_ID=activeId;
+    renderChartBar();
+    if(typeof loadCharts==='function') loadCharts();
+    maybeDisclaimer();
+  }
+  function renderChartBar(){
+    const host=document.getElementById('uw-chbar'); if(!host) return;
+    if(window._WL_MODE!=='user'){ host.style.display='none'; host.innerHTML=''; return; }
+    host.style.display='block'; host.innerHTML=dropdownHTML();
+  }
+  function reloadChartsIfActive(){
+    const cp=document.getElementById('pane-charts');
+    if(cp && cp.classList.contains('active') && window._WL_MODE==='user' && typeof loadCharts==='function') loadCharts();
+  }
+
+  /* ── small UI helpers ──────────────────────────────────── */
+  function msg(t, err){ const m=document.getElementById('uw-msg'); if(!m) return; m.textContent=t; m.style.display='block'; m.style.color=err?'var(--red)':'var(--green)'; clearTimeout(msg._t); msg._t=setTimeout(()=>{ m.style.display='none'; },3200); }
+  function modalPrompt(title, val, cb){
+    const bg=document.createElement('div'); bg.className='wl-modal-bg';
+    bg.innerHTML=`<div class="wl-modal"><h3>${esc(title)}</h3>
+      <input class="wl-in" id="uw-mp-input" maxlength="40" autocomplete="off" style="width:100%;box-sizing:border-box;margin-bottom:16px" placeholder="e.g. Breakout Setups">
+      <div style="display:flex;gap:9px;justify-content:flex-end">
+        <button class="wl-btn" id="uw-mp-cancel">Cancel</button>
+        <button class="wl-modal-ok" style="width:auto;padding:10px 22px" id="uw-mp-ok">OK</button>
+      </div></div>`;
+    document.body.appendChild(bg);
+    const inp=bg.querySelector('#uw-mp-input'); inp.value=val||''; const close=()=>bg.remove();
+    const ok=()=>{ const v=inp.value; close(); cb(v); };
+    bg.querySelector('#uw-mp-cancel').onclick=close;
+    bg.querySelector('#uw-mp-ok').onclick=ok;
+    bg.addEventListener('click',e=>{ if(e.target===bg) close(); });
+    inp.addEventListener('keydown',e=>{ if(e.key==='Enter') ok(); else if(e.key==='Escape') close(); });
+    setTimeout(()=>{ inp.focus(); inp.select(); },30);
+  }
+  function confirmModal(html, cb){
+    const bg=document.createElement('div'); bg.className='wl-modal-bg';
+    bg.innerHTML=`<div class="wl-modal"><p style="margin-bottom:18px">${html}</p>
+      <div style="display:flex;gap:9px;justify-content:flex-end">
+        <button class="wl-btn" id="uw-cf-cancel">Cancel</button>
+        <button class="wl-modal-ok" style="width:auto;padding:10px 22px;background:var(--red)" id="uw-cf-ok">Delete</button>
+      </div></div>`;
+    document.body.appendChild(bg); const close=()=>bg.remove();
+    bg.querySelector('#uw-cf-cancel').onclick=close;
+    bg.querySelector('#uw-cf-ok').onclick=()=>{ close(); cb(); };
+    bg.addEventListener('click',e=>{ if(e.target===bg) close(); });
+  }
+  function maybeDisclaimer(){
+    try{ if(sessionStorage.getItem('uw_disc_seen')) return; }catch(e){}
+    const bg=document.createElement('div'); bg.className='wl-modal-bg';
+    bg.innerHTML=`<div class="wl-modal"><div class="wl-modal-ic">!</div>
+      <h3>Delayed data — for study, not execution</h3>
+      <p>The market data here is delayed and intended for post-market journaling, backtesting, learning and end-of-day analysis. Please don't use it for real-time order execution.</p>
+      <button class="wl-modal-ok" id="uw-disc-ok">I understand</button></div>`;
+    document.body.appendChild(bg);
+    bg.querySelector('#uw-disc-ok').onclick=()=>{ bg.remove(); try{ sessionStorage.setItem('uw_disc_seen','1'); }catch(e){} };
+  }
+
+  return { init, initCharts, upload, maybeDisclaimer, switchList, newList, renameList,
+           toggleFav, deleteList, removeStock, focusAdd, toggleDD, toggleMod, acPickIdx };
+})();
+window.UW = UW;
+</script>
+<script>
 /* ══════════════════════════════════════════════════════════
    WATCHLIST CHARTS — TradingView Lightweight Charts™ per stock
    Candles + 21/50/200 EMAs from your own pipeline data.
@@ -9355,6 +9673,7 @@ async function loadCharts(){
   // user's full list only. Fundamental/Technical tables are paid-only.
   const _chMode = document.querySelector('#pane-charts .ch-mode');
   if(_chMode) _chMode.style.display = _um ? 'none' : '';
+  const _chbar = document.getElementById('uw-chbar'); if(_chbar) _chbar.style.display = _um ? 'block' : 'none';
   if(_um) _watchMode = 'full';
   const _chTbls = document.querySelector('#pane-charts .ch-tables');
   if(_chTbls){
@@ -9368,8 +9687,10 @@ async function loadCharts(){
     // technical cache (admin ∪ all users), so we restrict to our own symbols.
     const srcTable = _um ? 'user_watchlist' : 'watchlist';
     const srcSel   = _um ? 'symbol,company_name' : 'symbol,company_name,rs_rating';
+    let _rawQ = sb.from(srcTable).select(srcSel);
+    if(_um && window._WL_ACTIVE_ID) _rawQ = _rawQ.eq('watchlist_id', window._WL_ACTIVE_ID);  // active list only
     const [rawRes, enrRes] = await Promise.all([
-      sb.from(srcTable).select(srcSel),
+      _rawQ,
       sb.from('watchlist_enriched').select('*'),
     ]);
     const rawMap = {}; (rawRes.data || []).forEach(r => rawMap[(r.symbol||'').toUpperCase()] = r);
