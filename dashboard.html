@@ -3552,7 +3552,7 @@ function sw(id){
   const pane=document.getElementById('pane-'+id); if(pane) pane.classList.add('active');
   const _hh=document.getElementById('hawk-hdr'); if(_hh) _hh.style.display=(id==='hawk')?'flex':'none';
   if(id==='portfolio'){setTimeout(drawPortfolioCharts,80);}
-  if(id==='hawk'){HAWK.open();}
+  if(id==='hawk'){ if(typeof HAWK!=='undefined'){ try{HAWK.open();}catch(e){} } }
   if(id==='marketbrief'){loadMarketBrief();}
   if(id==='breadth'){loadMarketBreadth();}
   if(id==='filter'){window._WL_MODE='model';loadStockFilter();}
@@ -9054,7 +9054,7 @@ const HAWK = (() => {
     teardownGrid(); curCustom=null; active=key;
     const p=PRESETS[key], cv=document.getElementById('hawk-canvas'); if(!cv) return;
     cv.classList.remove('hawk-custom','editing'); cv.style.height='';
-    renderSubnav(); setBar(p);
+    renderSubnav(); setBar(p); rememberActive();
     cv.style.gridTemplateColumns=p.cols; cv.style.gridTemplateRows=p.rows;
     cv.innerHTML=p.tiles.map(t=>`<div class="hawk-tile${t.glow?' glow':''}" style="grid-column:${t.gc};grid-row:${t.gr}"><div class="ht-hd"><span class="ht-ttl">${esc(t.t)}</span></div><div class="ht-body" id="ht-${t.k}"><div class="hk-empty">Loading…</div></div></div>`).join('');
     layout();
@@ -9115,7 +9115,7 @@ const HAWK = (() => {
   async function renderCustom(dash){
     teardownGrid(); curCustom=dash; active='cust:'+dash.id; editMode=false;
     const cv=document.getElementById('hawk-canvas'); if(!cv) return;
-    renderSubnav(); setBarCustom(dash);
+    renderSubnav(); setBarCustom(dash); rememberActive();
     cv.classList.add('hawk-custom'); cv.classList.remove('editing');
     cv.style.gridTemplateColumns=''; cv.style.gridTemplateRows='';
     cv.innerHTML='<div class="grid-stack"></div><div class="hawk-emptyhint" id="hawk-emptyhint" style="display:none">This dashboard is empty. Tap <b>Edit</b> → <b>Add Apps</b> to drop indicators here.</div>';
@@ -9200,8 +9200,25 @@ const HAWK = (() => {
     ).join('')).join('');
   }
 
+  /* ── remember the last dashboard per user (localStorage) ── */
+  function lsKey(){ return 'hawk_last_'+(window._uid||'anon'); }
+  function rememberActive(){ try{ if(active) localStorage.setItem(lsKey(), active); }catch(e){} }
+  function lastTarget(){
+    let saved=null; try{ saved=localStorage.getItem(lsKey()); }catch(e){}
+    if(saved){
+      if(saved.indexOf('cust:')===0){ const id=parseInt(saved.slice(5),10); if(custom.find(d=>d.id===id)) return {type:'custom',id}; }
+      else if(PRESETS[saved]) return {type:'preset',key:saved};
+    }
+    return {type:'preset',key:presetKeys()[0]};   // new user → Pre-Market Pulse
+  }
+
   function refresh(){ cache={}; if(curCustom) showCustom(curCustom.id); else show(active||presetKeys()[0]); }
-  async function open(){ cache={}; await loadCustom(); show(presetKeys()[0]); }
+  async function open(){
+    cache={};
+    await loadCustom();
+    const t=lastTarget();
+    if(t.type==='custom') showCustom(t.id); else show(t.key);
+  }
 
   window.addEventListener('resize', ()=>{ const p=document.getElementById('pane-hawk'); if(!p||!p.classList.contains('active')) return; if(curCustom) customResize(); else layout(); });
 
@@ -9210,6 +9227,17 @@ const HAWK = (() => {
            createDashboard, renameDashboard, deleteDashboard, toggleMenu,
            modalClose, modalConfirm };
 })();
+
+/* Self-heal: if the app landed on Hawk Eye before this module finished loading
+   (fast cached-session boot), the sub-nav/canvas may be empty. Render now. */
+try{
+  if(window._curGroup==='hawk'){
+    const _cv=document.getElementById('hawk-canvas');
+    const _subs=document.getElementById('nav-subs');
+    const needSub=_subs && !_subs.querySelector('.hpd');
+    if((_cv && !_cv.children.length) || needSub){ if(_subs) _subs.innerHTML=HAWK.subnav(); HAWK.open(); }
+  }
+}catch(e){}
 </script>
 <script>
 /* ══════════════════════════════════════════════════════════
