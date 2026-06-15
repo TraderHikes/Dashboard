@@ -5,8 +5,8 @@ on:
     # All times shifted off the top-of-hour to avoid GitHub's scheduled-run
     # congestion (runs at :00 UTC are most often delayed/dropped).
     # Cron is in UTC; IST = UTC + 5:30.
-    - cron: '45 23 * * 0-4'   #  5:15 AM IST (Mon–Fri) — pre-market Daily Brief
-                              #  NOTE: 23:45 UTC Sun–Thu maps to 05:15 IST Mon–Fri.
+    - cron: '43 1 * * 1-5'    #  7:13 AM IST — PRE-MARKET BRIEF
+    - cron: '13 3 * * 1-5'    #  8:43 AM IST — pre-market brief (safety-net retry)
     - cron: '13 4 * * 1-5'    #  9:43 AM IST — intraday
     - cron: '13 5 * * 1-5'    # 10:43 AM IST — intraday
     - cron: '13 6 * * 1-5'    # 11:43 AM IST — intraday
@@ -21,7 +21,7 @@ on:
   workflow_dispatch:
     inputs:
       run_mode:
-        description: 'Run mode (intraday / full_eod / fii_dii / premarket)'
+        description: 'Run mode (premarket / intraday / full_eod / fii_dii)'
         required: false
         default: 'full_eod'
 
@@ -62,8 +62,8 @@ jobs:
           else
             HOUR=$(TZ='Asia/Kolkata' date '+%H')   # IST hour, 24h, zero-padded
             HOUR=$((10#$HOUR))                      # force base-10 (avoid octal)
-            if   [ "$HOUR" -ge 9 ]  && [ "$HOUR" -le 14 ]; then MODE="intraday"
-            elif [ "$HOUR" -eq 5 ]  || [ "$HOUR" -eq 6 ];  then MODE="premarket"
+            if   [ "$HOUR" -ge 5 ]  && [ "$HOUR" -le 8 ];  then MODE="premarket"
+            elif [ "$HOUR" -ge 9 ]  && [ "$HOUR" -le 14 ]; then MODE="intraday"
             elif [ "$HOUR" -eq 15 ] || [ "$HOUR" -eq 16 ]; then MODE="full_eod"
             elif [ "$HOUR" -eq 19 ] || [ "$HOUR" -eq 20 ]; then MODE="fii_dii"
             else MODE="full_eod"
@@ -77,15 +77,15 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          ANTHROPIC_BRIEF_MODEL: ${{ vars.ANTHROPIC_BRIEF_MODEL }}
+          ANTHROPIC_BRIEF_MODEL: ${{ secrets.ANTHROPIC_BRIEF_MODEL }}
           RUN_MODE: ${{ steps.mode.outputs.mode }}
         run: |
           python update_dashboard.py
 
       - name: Done
         if: success()
-        run: echo "✅ Pipeline complete — $(TZ='Asia/Kolkata' date '+%d %b %Y · %I:%M %p IST')"
+        run: echo "Pipeline complete - $(TZ='Asia/Kolkata' date '+%d %b %Y - %I:%M %p IST')"
 
       - name: Failed
         if: failure()
-        run: echo "❌ Pipeline failed. Check logs above."
+        run: echo "Pipeline failed. Check logs above."
