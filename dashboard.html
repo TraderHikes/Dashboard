@@ -4723,11 +4723,14 @@ async function loadPortfolioOverview() {
   if(window.applyHeader) applyHeader();
 
   // ── EQUITY CURVE STATS ROW ─────────────────
+  window._eqSnaps = allSnaps || [];
   let niftyReturn = 0;
   if(allSnaps && allSnaps.length>=2){
-    const f=allSnaps[0], l=allSnaps[allSnaps.length-1];
-    if(f.nifty500_level && l.nifty500_level)
+    const withN = allSnaps.filter(s=>s.nifty500_level);   // ignore null/0 levels
+    if(withN.length>=2){
+      const f=withN[0], l=withN[withN.length-1];
       niftyReturn = (l.nifty500_level-f.nifty500_level)/f.nifty500_level*100;
+    }
   }
   const alpha = portReturn - niftyReturn;
   setText('eq-port-return', (portReturn>=0?'+':'')+portReturn.toFixed(1)+'%');
@@ -4739,28 +4742,13 @@ async function loadPortfolioOverview() {
 
   // ── CAPITAL ALLOCATION DONUT ───────────────
   setText('donut-pct', deployedPct+'%');
-  const allocEl = document.getElementById('alloc-list');
-  if(allocEl){
-    const colors=['#5c6ffb','#7b8bfc','#00d4c8','#1ec993','#7c4dff','#f5a623','#4da8ff','#ff5d7a'];
-    let html = '';
-    if(openTrades && openTrades.length>0){
-      html = openTrades.map((t,i)=>{
-        const ae2=t.avg_entry_price||t.entry_price,rq2=t.remaining_qty||t.quantity; const pct = totalCapital>0?(ae2*rq2/totalCapital*100).toFixed(1):0;
-        return `<div class="alloc-item">
-          <div class="alloc-dot" style="background:${colors[i%colors.length]}"></div>
-          <div class="alloc-name">${t.company_name}</div>
-          <div class="alloc-bar-wrap"><div class="alloc-bar-fill" style="width:${Math.min(pct*2,100)}%;background:${colors[i%colors.length]}"></div></div>
-          <div class="alloc-pct">${pct}%</div>
-        </div>`;
-      }).join('');
-    }
-    if(cashAvail>0) html += `<div class="alloc-item">
-      <div class="alloc-dot" style="background:rgba(60,70,100,.8)"></div>
-      <div class="alloc-name">Cash</div>
-      <div class="alloc-bar-wrap"><div class="alloc-bar-fill" style="width:${Math.min(cashPct*2,100)}%;background:rgba(60,70,100,.8)"></div></div>
-      <div class="alloc-pct">${cashPct}%</div>
-    </div>`;
-    allocEl.innerHTML = html || '<div style="padding:16px;color:var(--muted);font-size:12px">No open positions</div>';
+  {
+    const items=(openTrades||[]).map((t,i)=>({
+      name:(t.symbol||t.company_name||'—'),
+      val:(t.avg_entry_price||t.entry_price||0)*(t.remaining_qty||t.quantity||0),
+      c:ALLOC_COLORS[i%ALLOC_COLORS.length]
+    })).filter(it=>it.val>0).sort((a,b)=>b.val-a.val);
+    paintAlloc('donut-canvas','alloc-list',items);
   }
 
   // ── DRAWDOWN ───────────────────────────────
@@ -5226,8 +5214,7 @@ let eqData = genEquityData(3);
 function setEqPeriod(m,el){
   document.querySelectorAll('.eperiod').forEach(e=>e.classList.remove('on'));
   el.classList.add('on');
-  eqPeriod=m; eqData=genEquityData(m);
-  drawEquityCurve();
+  eqPeriod=m; drawEquityCurve();
 }
 
 function drawEquityCurve(){
@@ -5236,16 +5223,30 @@ function drawEquityCurve(){
   const ctx=cv.getContext('2d');
   ctx.clearRect(0,0,W,220);
 
-  const {port,nifty}=eqData;
+  // Real model snapshots, rebased to 100 at the start of the visible window.
+  let snaps=(window._eqSnaps||[]).filter(s=>s.portfolio_value);
+  if(eqPeriod){ const cut=new Date(); cut.setMonth(cut.getMonth()-eqPeriod);
+    const f=snaps.filter(s=>new Date(s.snapshot_date)>=cut); if(f.length>=2) snaps=f; }
+  if(snaps.length<2){
+    ctx.fillStyle='rgba(136,146,192,.6)';ctx.font='12px Plus Jakarta Sans,sans-serif';ctx.textAlign='center';
+    ctx.fillText('Building portfolio history… the curve appears after a few daily snapshots.',W/2,110);
+    return;
+  }
+  const p0=snaps[0].portfolio_value;
+  const nBase=(snaps.find(s=>s.nifty500_level)||{}).nifty500_level||0;
+  const port=snaps.map(s=>s.portfolio_value/p0*100);
+  const nifty=snaps.map(s=>nBase?(s.nifty500_level?s.nifty500_level/nBase*100:null):null);
+  const haveNifty=nifty.some(v=>v!=null);
+  const dates=snaps.map(s=>s.snapshot_date);
   const n=port.length;
-  const allV=[...port,...nifty];
+  const allV=[...port,...nifty.filter(v=>v!=null)];
   const vMin=Math.min(...allV)*.995,vMax=Math.max(...allV)*1.005;
   const PL=12,PR=16,PT=14,PB=28;
   const cW=W-PL-PR,cH=220-PT-PB;
   const xc=i=>PL+i*(cW/(n-1));
   const yp=v=>PT+cH*(1-(v-vMin)/(vMax-vMin));
 
-  // Grid
+  // Grid + % labels
   for(let i=0;i<=4;i++){
     const y=PT+i*(cH/4);
     ctx.strokeStyle='rgba(255,255,255,.04)';ctx.lineWidth=1;ctx.setLineDash([3,6]);
@@ -5255,30 +5256,21 @@ function drawEquityCurve(){
     ctx.fillText((pct>=0?'+':'')+pct+'%',PL-2,y+3);
   }
 
-  // Nifty area fill
-  ctx.beginPath();
-  ctx.moveTo(xc(0),yp(nifty[0]));
-  nifty.forEach((v,i)=>ctx.lineTo(xc(i),yp(v)));
-  ctx.lineTo(xc(n-1),220-PB);ctx.lineTo(xc(0),220-PB);ctx.closePath();
-  const ag=ctx.createLinearGradient(0,PT,0,220-PB);
-  ag.addColorStop(0,'rgba(245,166,35,.12)');ag.addColorStop(1,'rgba(245,166,35,.01)');
-  ctx.fillStyle=ag;ctx.fill();
+  // Nifty benchmark (only if we have levels)
+  if(haveNifty){
+    ctx.beginPath();ctx.strokeStyle='rgba(245,166,35,.6)';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);
+    let started=false;
+    nifty.forEach((v,i)=>{ if(v==null)return; if(!started){ctx.moveTo(xc(i),yp(v));started=true;}else ctx.lineTo(xc(i),yp(v)); });
+    ctx.stroke();ctx.setLineDash([]);
+  }
 
-  // Nifty line
-  ctx.beginPath();ctx.strokeStyle='rgba(245,166,35,.6)';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);
-  nifty.forEach((v,i)=>i===0?ctx.moveTo(xc(i),yp(v)):ctx.lineTo(xc(i),yp(v)));
-  ctx.stroke();ctx.setLineDash([]);
-
-  // Portfolio area fill
-  ctx.beginPath();
-  ctx.moveTo(xc(0),yp(port[0]));
+  // Portfolio area + line
+  ctx.beginPath();ctx.moveTo(xc(0),yp(port[0]));
   port.forEach((v,i)=>ctx.lineTo(xc(i),yp(v)));
   ctx.lineTo(xc(n-1),220-PB);ctx.lineTo(xc(0),220-PB);ctx.closePath();
   const pg=ctx.createLinearGradient(0,PT,0,220-PB);
   pg.addColorStop(0,'rgba(92,111,251,.25)');pg.addColorStop(1,'rgba(92,111,251,.02)');
   ctx.fillStyle=pg;ctx.fill();
-
-  // Portfolio line
   ctx.beginPath();ctx.strokeStyle='#7b8bfc';ctx.lineWidth=2;
   port.forEach((v,i)=>i===0?ctx.moveTo(xc(i),yp(v)):ctx.lineTo(xc(i),yp(v)));
   ctx.stroke();
@@ -5288,21 +5280,14 @@ function drawEquityCurve(){
   ctx.beginPath();ctx.arc(lastX,lastY,5,0,Math.PI*2);ctx.fillStyle='#7b8bfc';
   ctx.shadowColor='rgba(92,111,251,.7)';ctx.shadowBlur=12;ctx.fill();ctx.shadowBlur=0;
 
-  // Alpha fill between lines (where portfolio > nifty)
-  ctx.globalAlpha=.06;
-  ctx.beginPath();ctx.moveTo(xc(0),yp(port[0]));
-  port.forEach((v,i)=>ctx.lineTo(xc(i),yp(v)));
-  for(let i=n-1;i>=0;i--)ctx.lineTo(xc(i),yp(nifty[i]));
-  ctx.closePath();ctx.fillStyle='rgba(92,111,251,1)';ctx.fill();
-  ctx.globalAlpha=1;
-
-  // X axis labels
-  const labCount=Math.min(8,n);
-  ctx.fillStyle='rgba(136,146,192,.5)';ctx.font='9px Plus Jakarta Sans,sans-serif';ctx.textAlign='center';
+  // X axis — real dates
+  const labCount=Math.min(6,n);
+  ctx.fillStyle='rgba(136,146,192,.55)';ctx.font='9px Plus Jakarta Sans,sans-serif';ctx.textAlign='center';
   for(let i=0;i<labCount;i++){
     const idx=Math.round(i*(n-1)/(labCount-1));
-    const dayLabel=`D${idx+1}`;
-    ctx.fillText(dayLabel,xc(idx),220-PB+14);
+    const d=new Date(dates[idx]);
+    const lbl=isNaN(d)?'':d.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+    ctx.fillText(lbl,xc(idx),220-PB+14);
   }
 }
 
@@ -5360,32 +5345,50 @@ function drawDrawdown(liveSeries){
   ['Jan','Feb','Mar','Apr','May','Jun'].forEach((m,i)=>ctx.fillText(m,PL+i*(cW/5),160-PB+14));
 }
 
-function drawDonut(){
-  const cv=document.getElementById('donut-canvas');if(!cv)return;
-  cv.width=200;cv.height=200;
-  const ctx=cv.getContext('2d');
-  const cx=100,cy=100,r=78,inner=52;
-  // segments: Dixon, Tata Elxsi, Polycab, Zomato, ABB, BPCL, HDFC, Cash
-  const segs=[
-    {v:12.5,c:'#5c6ffb'},{v:11.4,c:'#7b8bfc'},{v:7.3,c:'#00d4c8'},
-    {v:5.2,c:'#1ec993'},{v:5.8,c:'#7c4dff'},{v:5.7,c:'#f5a623'},
-    {v:9.2,c:'#4da8ff'},{v:42.9,c:'rgba(30,32,56,.9)'}
-  ];
-  let angle=-Math.PI/2;
-  segs.forEach(s=>{
-    const sweep=(s.v/100)*Math.PI*2;
-    ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,angle,angle+sweep);ctx.closePath();
-    ctx.fillStyle=s.c;ctx.fill();
-    ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--card').trim()||'#0d1326';
-    ctx.lineWidth=2;ctx.stroke();
-    angle+=sweep;
-  });
-  // inner hole
-  ctx.beginPath();ctx.arc(cx,cy,inner,0,Math.PI*2);
-  const hg=ctx.createRadialGradient(cx,cy,inner*.5,cx,cy,inner);
-  hg.addColorStop(0,'#070b17');hg.addColorStop(1,'#0d1326');
-  ctx.fillStyle=hg;ctx.fill();
+// Paint the capital-allocation donut + list from live positions.
+// Every slice is a share of TOTAL DEPLOYED (sum of position values), so the
+// ring is always complete — whether the book is 70% or 214% deployed.
+function paintAlloc(canvasId, listId, items){
+  const total = items.reduce((s,it)=>s+(it.val||0),0);
+  const cv=document.getElementById(canvasId);
+  if(cv){
+    cv.width=200;cv.height=200;
+    const ctx=cv.getContext('2d');
+    const cx=100,cy=100,r=78,inner=52;
+    const cardCol=getComputedStyle(document.documentElement).getPropertyValue('--card').trim()||'#0d1326';
+    if(total>0){
+      let angle=-Math.PI/2;
+      items.forEach(it=>{
+        const sweep=((it.val||0)/total)*Math.PI*2; if(sweep<=0) return;
+        ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,angle,angle+sweep);ctx.closePath();
+        ctx.fillStyle=it.c;ctx.fill();
+        ctx.strokeStyle=cardCol;ctx.lineWidth=2;ctx.stroke();
+        angle+=sweep;
+      });
+    } else {
+      ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fillStyle='rgba(60,70,100,.35)';ctx.fill();
+    }
+    ctx.beginPath();ctx.arc(cx,cy,inner,0,Math.PI*2);
+    const hg=ctx.createRadialGradient(cx,cy,inner*.5,cx,cy,inner);
+    hg.addColorStop(0,'#070b17');hg.addColorStop(1,'#0d1326');
+    ctx.fillStyle=hg;ctx.fill();
+  }
+  const el=document.getElementById(listId);
+  if(el){
+    if(!items.length || total<=0){ el.innerHTML='<div style="padding:16px;color:var(--muted);font-size:12px">No open positions</div>'; return; }
+    const maxPct=Math.max(...items.map(it=>(it.val/total*100)),1);
+    el.innerHTML=items.map(it=>{
+      const pct=it.val/total*100;
+      return `<div class="alloc-item">
+        <div class="alloc-dot" style="background:${it.c}"></div>
+        <div class="alloc-name">${it.name}</div>
+        <div class="alloc-bar-wrap"><div class="alloc-bar-fill" style="width:${(pct/maxPct*100).toFixed(0)}%;background:${it.c}"></div></div>
+        <div class="alloc-pct">${pct.toFixed(1)}%</div>
+      </div>`;
+    }).join('');
+  }
 }
+const ALLOC_COLORS=['#5c6ffb','#7b8bfc','#00d4c8','#1ec993','#7c4dff','#f5a623','#4da8ff','#ff5d7a','#34d399','#a78bfa','#f472b6','#60a5fa'];
 
 function drawMarginRing(){
   const cv=document.getElementById('margin-canvas');if(!cv)return;
@@ -5406,46 +5409,15 @@ function drawMarginRing(){
 
 async function buildAllocList(){
   const el=document.getElementById('alloc-list');if(!el)return;
-  // Fetch live open trades
   const { data: trades } = await sb.from('open_trades')
-    .select('symbol,avg_entry_price,remaining_qty,capital_at_entry,position_size_pct')
-    .eq('is_model', true)
-    .order('capital_at_entry', {ascending:false});
-
-  if(!trades||trades.length===0){
-    el.innerHTML='<div style="padding:12px;color:var(--muted);font-size:11px">No open positions.</div>';
-    return;
-  }
-
-  const colours=['#5c6ffb','#00d4c8','#7b8bfc','#f5a623','#1ec993','#4da8ff','#7c4dff','#f05272'];
-  const totalCap = Math.max(trades[0]?.capital_at_entry||0, 8500000);
-  const deployed = trades.reduce((s,t)=>{
-    const ae = t.avg_entry_price||0;
-    const rq = t.remaining_qty||0;
-    return s + ae*rq;
-  }, 0);
-  const cashPct = totalCap > 0 ? Math.max(0, (totalCap-deployed)/totalCap*100) : 0;
-
-  const items = trades.map((t,i) => {
-    const ae  = t.avg_entry_price||0;
-    const rq  = t.remaining_qty||0;
-    const val = ae*rq;
-    // Dynamic: current exposure (avg entry x remaining qty) / capital — moves with pyramids & partials.
-    const pct = totalCap>0 ? val/totalCap*100
-      : (t.position_size_pct ? parseFloat(t.position_size_pct) : 0);
-    return { name:t.symbol, pct:parseFloat(pct.toFixed(1)), c:colours[i%colours.length] };
-  });
-
-  // Add cash
-  items.push({ name:'Cash', pct:parseFloat(cashPct.toFixed(1)), c:'rgba(60,70,100,.8)' });
-
-  el.innerHTML = items.map(i=>`
-    <div class="alloc-item">
-      <div class="alloc-dot" style="background:${i.c}"></div>
-      <div class="alloc-name">${i.name}</div>
-      <div class="alloc-bar-wrap"><div class="alloc-bar-fill" style="width:${Math.min(i.pct*2,100)}%;background:${i.c}"></div></div>
-      <div class="alloc-pct">${i.pct}%</div>
-    </div>`).join('');
+    .select('symbol,company_name,avg_entry_price,remaining_qty')
+    .eq('is_model', true);
+  const items=(trades||[]).map((t,i)=>({
+    name:(t.symbol||t.company_name||'—'),
+    val:(t.avg_entry_price||0)*(t.remaining_qty||0),
+    c:ALLOC_COLORS[i%ALLOC_COLORS.length]
+  })).filter(it=>it.val>0).sort((a,b)=>b.val-a.val);
+  paintAlloc('donut-canvas','alloc-list',items);
 }
 
 
@@ -5453,18 +5425,16 @@ function drawPortfolioCharts(){
   drawEquityCurve();
   // Use live drawdown data if available, otherwise simulate
   drawDrawdown(window._ddSeries || null);
-  drawDonut();drawMarginRing();buildAllocList();
+  drawMarginRing();buildAllocList();
 }
 
 
 /* ══ USER · 360° OVERVIEW chart drawers (personal book) ══ */
 let ueqPeriod = 3;
-let ueqData = genEquityData(3);
 function setUEqPeriod(m,el){
   document.querySelectorAll('.ueperiod').forEach(e=>e.classList.remove('on'));
   el.classList.add('on');
-  ueqPeriod=m; ueqData=genEquityData(m);
-  drawUserEquityCurve();
+  ueqPeriod=m; drawUserEquityCurve();
 }
 
 function drawUserEquityCurve(){
@@ -5473,16 +5443,28 @@ function drawUserEquityCurve(){
   const ctx=cv.getContext('2d');
   ctx.clearRect(0,0,W,220);
 
-  const {port,nifty}=ueqData;
+  let snaps=(window._ueqSnaps||[]).filter(s=>s.portfolio_value);
+  if(ueqPeriod){ const cut=new Date(); cut.setMonth(cut.getMonth()-ueqPeriod);
+    const f=snaps.filter(s=>new Date(s.snapshot_date)>=cut); if(f.length>=2) snaps=f; }
+  if(snaps.length<2){
+    ctx.fillStyle='rgba(136,146,192,.6)';ctx.font='12px Plus Jakarta Sans,sans-serif';ctx.textAlign='center';
+    ctx.fillText('Building your portfolio history… the curve appears after a few daily snapshots.',W/2,110);
+    return;
+  }
+  const p0=snaps[0].portfolio_value;
+  const nBase=(snaps.find(s=>s.nifty500_level)||{}).nifty500_level||0;
+  const port=snaps.map(s=>s.portfolio_value/p0*100);
+  const nifty=snaps.map(s=>nBase?(s.nifty500_level?s.nifty500_level/nBase*100:null):null);
+  const haveNifty=nifty.some(v=>v!=null);
+  const dates=snaps.map(s=>s.snapshot_date);
   const n=port.length;
-  const allV=[...port,...nifty];
+  const allV=[...port,...nifty.filter(v=>v!=null)];
   const vMin=Math.min(...allV)*.995,vMax=Math.max(...allV)*1.005;
   const PL=12,PR=16,PT=14,PB=28;
   const cW=W-PL-PR,cH=220-PT-PB;
   const xc=i=>PL+i*(cW/(n-1));
   const yp=v=>PT+cH*(1-(v-vMin)/(vMax-vMin));
 
-  // Grid
   for(let i=0;i<=4;i++){
     const y=PT+i*(cH/4);
     ctx.strokeStyle='rgba(255,255,255,.04)';ctx.lineWidth=1;ctx.setLineDash([3,6]);
@@ -5491,55 +5473,31 @@ function drawUserEquityCurve(){
     ctx.fillStyle='rgba(136,146,192,.5)';ctx.font='9px Plus Jakarta Sans,sans-serif';ctx.textAlign='right';
     ctx.fillText((pct>=0?'+':'')+pct+'%',PL-2,y+3);
   }
-
-  // Nifty area fill
-  ctx.beginPath();
-  ctx.moveTo(xc(0),yp(nifty[0]));
-  nifty.forEach((v,i)=>ctx.lineTo(xc(i),yp(v)));
-  ctx.lineTo(xc(n-1),220-PB);ctx.lineTo(xc(0),220-PB);ctx.closePath();
-  const ag=ctx.createLinearGradient(0,PT,0,220-PB);
-  ag.addColorStop(0,'rgba(245,166,35,.12)');ag.addColorStop(1,'rgba(245,166,35,.01)');
-  ctx.fillStyle=ag;ctx.fill();
-
-  // Nifty line
-  ctx.beginPath();ctx.strokeStyle='rgba(245,166,35,.6)';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);
-  nifty.forEach((v,i)=>i===0?ctx.moveTo(xc(i),yp(v)):ctx.lineTo(xc(i),yp(v)));
-  ctx.stroke();ctx.setLineDash([]);
-
-  // Portfolio area fill
-  ctx.beginPath();
-  ctx.moveTo(xc(0),yp(port[0]));
+  if(haveNifty){
+    ctx.beginPath();ctx.strokeStyle='rgba(245,166,35,.6)';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);
+    let started=false;
+    nifty.forEach((v,i)=>{ if(v==null)return; if(!started){ctx.moveTo(xc(i),yp(v));started=true;}else ctx.lineTo(xc(i),yp(v)); });
+    ctx.stroke();ctx.setLineDash([]);
+  }
+  ctx.beginPath();ctx.moveTo(xc(0),yp(port[0]));
   port.forEach((v,i)=>ctx.lineTo(xc(i),yp(v)));
   ctx.lineTo(xc(n-1),220-PB);ctx.lineTo(xc(0),220-PB);ctx.closePath();
   const pg=ctx.createLinearGradient(0,PT,0,220-PB);
   pg.addColorStop(0,'rgba(92,111,251,.25)');pg.addColorStop(1,'rgba(92,111,251,.02)');
   ctx.fillStyle=pg;ctx.fill();
-
-  // Portfolio line
   ctx.beginPath();ctx.strokeStyle='#7b8bfc';ctx.lineWidth=2;
   port.forEach((v,i)=>i===0?ctx.moveTo(xc(i),yp(v)):ctx.lineTo(xc(i),yp(v)));
   ctx.stroke();
-
-  // Current value dot
   const lastX=xc(n-1),lastY=yp(port[n-1]);
   ctx.beginPath();ctx.arc(lastX,lastY,5,0,Math.PI*2);ctx.fillStyle='#7b8bfc';
   ctx.shadowColor='rgba(92,111,251,.7)';ctx.shadowBlur=12;ctx.fill();ctx.shadowBlur=0;
-
-  // Alpha fill between lines (where portfolio > nifty)
-  ctx.globalAlpha=.06;
-  ctx.beginPath();ctx.moveTo(xc(0),yp(port[0]));
-  port.forEach((v,i)=>ctx.lineTo(xc(i),yp(v)));
-  for(let i=n-1;i>=0;i--)ctx.lineTo(xc(i),yp(nifty[i]));
-  ctx.closePath();ctx.fillStyle='rgba(92,111,251,1)';ctx.fill();
-  ctx.globalAlpha=1;
-
-  // X axis labels
-  const labCount=Math.min(8,n);
-  ctx.fillStyle='rgba(136,146,192,.5)';ctx.font='9px Plus Jakarta Sans,sans-serif';ctx.textAlign='center';
+  const labCount=Math.min(6,n);
+  ctx.fillStyle='rgba(136,146,192,.55)';ctx.font='9px Plus Jakarta Sans,sans-serif';ctx.textAlign='center';
   for(let i=0;i<labCount;i++){
     const idx=Math.round(i*(n-1)/(labCount-1));
-    const dayLabel=`D${idx+1}`;
-    ctx.fillText(dayLabel,xc(idx),220-PB+14);
+    const d=new Date(dates[idx]);
+    const lbl=isNaN(d)?'':d.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+    ctx.fillText(lbl,xc(idx),220-PB+14);
   }
 }
 
@@ -5643,46 +5601,15 @@ function drawUserMarginRing(){
 
 async function buildUserAllocList(){
   const el=document.getElementById('ualloc-list');if(!el)return;
-  // Fetch live open trades
   const { data: trades } = await sb.from('open_trades')
-    .select('symbol,avg_entry_price,remaining_qty,capital_at_entry,position_size_pct')
-    .eq('is_model', false)
-    .order('capital_at_entry', {ascending:false});
-
-  if(!trades||trades.length===0){
-    el.innerHTML='<div style="padding:12px;color:var(--muted);font-size:11px">No open positions.</div>';
-    return;
-  }
-
-  const colours=['#5c6ffb','#00d4c8','#7b8bfc','#f5a623','#1ec993','#4da8ff','#7c4dff','#f05272'];
-  const totalCap = (window._personalCapital||0) || (trades[0]?.capital_at_entry||0);
-  const deployed = trades.reduce((s,t)=>{
-    const ae = t.avg_entry_price||0;
-    const rq = t.remaining_qty||0;
-    return s + ae*rq;
-  }, 0);
-  const cashPct = totalCap > 0 ? Math.max(0, (totalCap-deployed)/totalCap*100) : 0;
-
-  const items = trades.map((t,i) => {
-    const ae  = t.avg_entry_price||0;
-    const rq  = t.remaining_qty||0;
-    const val = ae*rq;
-    // Dynamic: current exposure (avg entry x remaining qty) / capital — moves with pyramids & partials.
-    const pct = totalCap>0 ? val/totalCap*100
-      : (t.position_size_pct ? parseFloat(t.position_size_pct) : 0);
-    return { name:t.symbol, pct:parseFloat(pct.toFixed(1)), c:colours[i%colours.length] };
-  });
-
-  // Add cash
-  items.push({ name:'Cash', pct:parseFloat(cashPct.toFixed(1)), c:'rgba(60,70,100,.8)' });
-
-  el.innerHTML = items.map(i=>`
-    <div class="alloc-item">
-      <div class="alloc-dot" style="background:${i.c}"></div>
-      <div class="alloc-name">${i.name}</div>
-      <div class="alloc-bar-wrap"><div class="alloc-bar-fill" style="width:${Math.min(i.pct*2,100)}%;background:${i.c}"></div></div>
-      <div class="alloc-pct">${i.pct}%</div>
-    </div>`).join('');
+    .select('symbol,company_name,avg_entry_price,remaining_qty')
+    .eq('is_model', false);
+  const items=(trades||[]).map((t,i)=>({
+    name:(t.symbol||t.company_name||'—'),
+    val:(t.avg_entry_price||0)*(t.remaining_qty||0),
+    c:ALLOC_COLORS[i%ALLOC_COLORS.length]
+  })).filter(it=>it.val>0).sort((a,b)=>b.val-a.val);
+  paintAlloc('udonut-canvas','ualloc-list',items);
 }
 
 
@@ -5690,7 +5617,7 @@ function drawUserPortfolioCharts(){
   drawUserEquityCurve();
   // Use live drawdown data if available, otherwise simulate
   drawUserDrawdown(window._u_ddSeries || null);
-  drawUserDonut();drawUserMarginRing();buildUserAllocList();
+  drawUserMarginRing();buildUserAllocList();
 }
 
 
@@ -5796,8 +5723,9 @@ async function renderUserPortfolio(){
   if(window.applyHeader) applyHeader();
 
   // Equity stats row
+  window._ueqSnaps = allSnaps || [];
   let niftyReturn=0;
-  if(allSnaps&&allSnaps.length>=2){ const f=allSnaps[0],l=allSnaps[allSnaps.length-1]; if(f.nifty500_level&&l.nifty500_level) niftyReturn=(l.nifty500_level-f.nifty500_level)/f.nifty500_level*100; }
+  if(allSnaps&&allSnaps.length>=2){ const withN=allSnaps.filter(s=>s.nifty500_level); if(withN.length>=2){ const f=withN[0],l=withN[withN.length-1]; niftyReturn=(l.nifty500_level-f.nifty500_level)/f.nifty500_level*100; } }
   const alpha=portReturn-niftyReturn;
   setText('ueq-port-return',(portReturn>=0?'+':'')+portReturn.toFixed(1)+'%');
   setText('ueq-nifty-return',(niftyReturn>=0?'+':'')+niftyReturn.toFixed(1)+'%');
