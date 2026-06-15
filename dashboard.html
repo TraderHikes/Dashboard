@@ -3793,6 +3793,15 @@ const MT = (() => {
       e.preventDefault();
       if(!picked){ alert('mt-new-alert','Please search and pick a stock first.','err'); return; }
       const btn=$('mt-new-btn'); btn.disabled=true; btn.textContent='Adding…';
+      // Cap: at most 50 active (open) positions per user.
+      try{
+        const { count } = await sb.from('open_trades').select('id',{count:'exact',head:true}).eq('is_model',false);
+        if((count||0) >= 50){
+          btn.disabled=false; btn.textContent='Add Trade';
+          alert('mt-new-alert','You have 50 open positions — the maximum. Close or exit one before adding another.','err');
+          return;
+        }
+      }catch(e){}
       const fd=new FormData(e.target);
       const entry=parseFloat(fd.get('entry_price')), qty=parseInt(fd.get('quantity'));
       const payload={
