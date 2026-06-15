@@ -911,7 +911,7 @@ def build_rationale(score):
 # Requires ANTHROPIC_API_KEY (web search must be enabled in the Anthropic
 # Console). Model is configurable via ANTHROPIC_BRIEF_MODEL.
 # ════════════════════════════════════════════════════════════
-def generate_market_brief():
+def generate_market_brief(only_if_missing=False):
     import json as _json
     print("📰 Generating Daily Market Brief...")
     key = os.environ.get("ANTHROPIC_API_KEY")
@@ -924,12 +924,19 @@ def generate_market_brief():
         ex = sb.table("market_brief").select("source").eq("brief_date", brief_date).limit(1).execute().data
         if ex and ex[0].get("source") == "manual":
             print("   ℹ️  Today's brief was edited by admin — leaving it.\n"); return
+        # EOD safety-net: if the morning pre-market run already published today's
+        # brief, don't regenerate it post-market.
+        if only_if_missing and ex:
+            print("   ℹ️  Today's brief already exists — EOD backfill not needed.\n"); return
     except Exception:
         pass
 
     # NOTE: `or` (not get-default) so an empty env value falls back too.
     model = os.environ.get("ANTHROPIC_BRIEF_MODEL") or "claude-sonnet-4-6"
+    _today_str = NOW_IST.strftime("%A, %d %B %Y")
     prompt = (
+        f"Today's date is {_today_str} (India Standard Time). Treat this as the current day; "
+        "do not guess or infer a different date, and refer to weekdays correctly relative to it.\n\n"
         "You are the market desk for an Indian swing-trading platform. Use web search to find the "
         "most important and LATEST market-moving news as of this morning (India time), then write a "
         "concise PRE-MARKET brief for retail swing traders.\n\n"
@@ -1767,6 +1774,10 @@ if __name__ == "__main__":
             run_step("sector_breadth",     fetch_sector_breadth, sector_map)
             run_step("watchlist_enrich",   enrich_watchlist)
             run_step("watchlist_candles",  fetch_candles_for_watchlist)
+            # Safety net: if the pre-market run didn't publish today's brief
+            # (e.g. a missed/late scheduled run), generate it now. Never
+            # overwrites an existing brief for today.
+            run_step("market_brief_backfill", generate_market_brief, only_if_missing=True)
 
         # ── Run summary ──────────────────────────────────────
         ok     = [n for n, s in _results if s == "ok"]
