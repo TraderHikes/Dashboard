@@ -975,16 +975,6 @@ canvas.tc{display:block;width:100%;height:100%}
     <div class="hdr-stat"><div class="hdr-stat-l">Open P&L</div><div class="hdr-stat-v" id="hdr-pnl" style="color:var(--green)">—</div></div>
   </div>
   <div class="hdr-r">
-    <div class="hawk-hdr" id="hawk-hdr" style="display:none">
-      <button class="hawk-btn" id="hawk-addbtn" onclick="HAWK.openAddApps()" style="display:none"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>Add Apps</button>
-      <button class="hawk-btn" id="hawk-editbtn" onclick="HAWK.toggleEdit()" style="display:none">Edit</button>
-      <button class="hawk-btn hawk-ic" id="hawk-menubtn" onclick="HAWK.toggleMenu(event)" style="display:none" title="Dashboard options">&#8943;</button>
-      <button class="hawk-btn" id="hawk-refbtn" onclick="HAWK.refresh()" title="Refresh data"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Refresh</button>
-      <div class="hawk-menu" id="hawk-menu">
-        <div onclick="HAWK.renameDashboard()">Rename</div>
-        <div class="danger" onclick="HAWK.deleteDashboard()">Delete dashboard</div>
-      </div>
-    </div>
     <div class="live-pill"><div class="ldot"></div>LIVE NSE</div>
     <div class="htime" id="clk">10:34:52 IST</div>
   </div>
@@ -2661,8 +2651,8 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
 .hawk-refresh:hover{border-color:var(--blue);color:var(--blue-lt)}
 .hawk-refresh svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2}
 .hawk-canvas{display:grid;gap:12px;padding:10px 0 0 0;overflow:hidden}      /* fixed canvas, full-bleed — never scrolls */
-.hawk-tile{background:var(--card);border:1px solid var(--bdr2);border-radius:14px;display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden}
-.hawk-tile.glow{border-color:rgba(92,111,251,.5);box-shadow:0 0 24px rgba(92,111,251,.14)}
+.hawk-tile{background:var(--card);border:1px solid rgba(92,111,251,.5);border-radius:14px;display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden;box-shadow:0 0 22px rgba(92,111,251,.15),inset 0 0 26px rgba(92,111,251,.04)}
+.hawk-tile.glow{border-color:rgba(92,111,251,.72);box-shadow:0 0 30px rgba(92,111,251,.22),inset 0 0 30px rgba(92,111,251,.06)}
 .ht-hd{padding:10px 14px 8px;border-bottom:1px solid var(--bdr);flex:0 0 auto}
 .ht-ttl{font-family:var(--f);font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--white)}
 .ht-body{padding:12px 14px;overflow-y:auto;min-height:0;flex:1 1 auto}    /* only indicators scroll */
@@ -2685,12 +2675,12 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
 .hk-row:last-child{border-bottom:none}
 .hk-sym{font-family:var(--fm);font-weight:700;color:var(--white);font-size:12px}
 /* ── Stage-2 top-bar actions (live in the locked top nav) + dashboard menu ── */
-.hawk-hdr{align-items:center;gap:8px;position:relative}
 .hawk-actions{margin-left:auto;display:flex;align-items:center;gap:8px;position:relative}
 .hawk-btn{display:inline-flex;align-items:center;gap:6px;background:var(--card2);border:1px solid var(--bdr2);color:var(--text2);font-family:var(--f);font-size:11.5px;font-weight:600;padding:7px 12px;border-radius:9px;cursor:pointer}
 .hawk-btn:hover{border-color:var(--blue);color:var(--blue-lt)}
 .hawk-btn.on{background:var(--blue-dim);border-color:rgba(92,111,251,.4);color:var(--blue-lt)}
 .hawk-ic{padding:7px 10px;font-size:15px;line-height:1}
+.hb-chev{margin-left:1px}
 /* sub-nav row: dropdown on the left, controls in the right corner of the locked bar */
 .hsub{flex:1 1 100%;display:flex;align-items:center;gap:12px;min-width:0}
 .hsub-actions{margin-left:auto;display:flex;align-items:center;gap:8px}
@@ -3550,7 +3540,6 @@ window.addEventListener('resize', ()=>{ clearTimeout(_hmRz); _hmRz=setTimeout(()
 function sw(id){
   document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
   const pane=document.getElementById('pane-'+id); if(pane) pane.classList.add('active');
-  const _hh=document.getElementById('hawk-hdr'); if(_hh) _hh.style.display=(id==='hawk')?'flex':'none';
   if(id==='portfolio'){setTimeout(drawPortfolioCharts,80);}
   if(id==='hawk'){ if(typeof HAWK!=='undefined'){ try{HAWK.open();}catch(e){} } }
   if(id==='marketbrief'){loadMarketBrief();}
@@ -9012,15 +9001,18 @@ const HAWK = (() => {
         </div>
       </div>
       <div class="hsub-actions">
-        <button class="hawk-btn" id="hawk-addbtn" onclick="HAWK.openAddApps()" style="display:${(isC&&editMode)?'inline-flex':'none'}"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>Add Apps</button>
-        <button class="hawk-btn${editMode?' on':''}" id="hawk-editbtn" onclick="HAWK.toggleEdit()" style="display:${isC?'inline-flex':'none'}">${editMode?'Done':'Edit'}</button>
-        <div class="hawk-more" style="display:${isC?'inline-flex':'none'}">
-          <button class="hawk-btn hawk-ic" id="hawk-menubtn" onclick="HAWK.toggleMenu(event)" title="Dashboard options">&#8943;</button>
-          <div class="hawk-menu" id="hawk-menu">
-            <div onclick="HAWK.renameDashboard()">Rename</div>
-            <div class="danger" onclick="HAWK.deleteDashboard()">Delete dashboard</div>
-          </div>
-        </div>
+        ${isC ? (editMode
+          ? `<button class="hawk-btn" onclick="HAWK.openAddApps()"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>Add Apps</button>
+             <button class="hawk-btn on" onclick="HAWK.toggleEdit()">Done</button>`
+          : `<div class="hawk-more">
+               <button class="hawk-btn" id="hawk-menubtn" onclick="HAWK.toggleMenu(event)">Modify<svg class="hb-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></button>
+               <div class="hawk-menu" id="hawk-menu">
+                 <div onclick="HAWK.toggleEdit()">Edit layout</div>
+                 <div onclick="HAWK.renameDashboard()">Rename</div>
+                 <div class="danger" onclick="HAWK.deleteDashboard()">Delete dashboard</div>
+               </div>
+             </div>`
+        ) : ''}
         <button class="hawk-refresh" onclick="HAWK.refresh()" title="Refresh data"><svg viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Refresh</button>
       </div>
     </div>`;
@@ -9032,14 +9024,9 @@ const HAWK = (() => {
   function pickCustom(id){ closeDD(); showCustom(id); }
   document.addEventListener('click', e=>{ const d=document.getElementById('hawk-dd'); if(d && !d.contains(e.target)) closeDD(); const mb=document.getElementById('hawk-menu'); if(mb && mb.classList.contains('show') && !e.target.closest('#hawk-menubtn') && !e.target.closest('#hawk-menu')) mb.classList.remove('show'); });
 
-  /* ── current label + which header controls are visible ── */
-  function setBar(p){ const cur=document.getElementById('hpd-cur'); if(cur) cur.textContent=p.label; customControls(false); }
-  function setBarCustom(d){ const cur=document.getElementById('hpd-cur'); if(cur) cur.textContent=d.name; customControls(true); }
-  function customControls(on){
-    const eb=document.getElementById('hawk-editbtn'); if(eb){ eb.style.display=on?'inline-flex':'none'; eb.textContent=editMode?'Done':'Edit'; eb.classList.toggle('on',editMode); }
-    const mn=document.getElementById('hawk-menubtn'); if(mn) mn.style.display=on?'inline-flex':'none';
-    const ab=document.getElementById('hawk-addbtn'); if(ab) ab.style.display=(on&&editMode)?'inline-flex':'none';
-  }
+  /* ── current label (the action buttons are rendered by subnav per state) ── */
+  function setBar(p){ const cur=document.getElementById('hpd-cur'); if(cur) cur.textContent=p.label; }
+  function setBarCustom(d){ const cur=document.getElementById('hpd-cur'); if(cur) cur.textContent=d.name; }
   function toggleMenu(e){ if(e) e.stopPropagation(); const m=document.getElementById('hawk-menu'); if(m) m.classList.toggle('show'); }
 
   /* ════════ built-in presets (fixed canvas) ════════ */
@@ -9161,7 +9148,7 @@ const HAWK = (() => {
   function applyEditUI(){
     const cv=document.getElementById('hawk-canvas'); if(cv) cv.classList.toggle('editing', editMode);
     if(grid){ try{ grid.setStatic(!editMode); }catch(e){} }
-    customControls(true);
+    renderSubnav();
     if(!editMode) closeAddApps();
   }
   function createDashboard(){
