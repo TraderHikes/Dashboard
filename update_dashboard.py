@@ -475,7 +475,20 @@ def save_portfolio_snapshot(cmp_map, n500_val):
             cmp   = float(cmp_map.get(t["symbol"].upper(), t.get("cmp") or entry))
             deployed += entry * qty
             unreal   += (cmp - entry) * qty
-        total_cap  = float(os.environ.get("TOTAL_CAPITAL", 8500000))
+        # Base capital — single source of truth: the admin's portfolio_config
+        # row (editable in the Admin panel). Falls back to the TOTAL_CAPITAL env,
+        # then to 85L. Change this ONLY for real capital in/out — trading profit
+        # already compounds into portfolio_value below, so it must not be folded
+        # into the base (that would double-count it).
+        total_cap = None
+        try:
+            cfg = sb.table("portfolio_config").select("total_capital").eq("user_id", admin_uid).limit(1).execute().data or []
+            if cfg and cfg[0].get("total_capital"):
+                total_cap = float(cfg[0]["total_capital"])
+        except Exception:
+            total_cap = None
+        if not total_cap:
+            total_cap = float(os.environ.get("TOTAL_CAPITAL", 8500000))
         cash_avail = max(0.0, total_cap - deployed)
         # Realized P&L from booked (closed) model trades — so the portfolio
         # value and return reflect BOTH booked and open gains, not just open.
