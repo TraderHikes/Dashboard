@@ -205,7 +205,18 @@ body{overflow-x:hidden;
 /* ═══ PORTFOLIO OVERVIEW ═══ */
 
 /* Big stat cards */
-.port-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+.port-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:16px}
+.recent-feed{display:flex;flex-direction:column;gap:8px;padding:14px 16px;max-height:430px;overflow-y:auto}
+.rf-item{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:var(--card3);border:1px solid var(--bdr);border-radius:10px}
+.rf-badge{min-width:38px;height:24px;padding:0 6px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:10px;letter-spacing:.4px;flex-shrink:0;font-family:var(--fm)}
+.rf-buy{background:rgba(30,201,147,.14);color:var(--green);border:1px solid rgba(30,201,147,.32)}
+.rf-sell{background:rgba(240,82,114,.14);color:var(--red);border:1px solid rgba(240,82,114,.32)}
+.rf-main{flex:1;min-width:0}
+.rf-top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.rf-sym{font-weight:800;color:var(--white);font-size:13px}
+.rf-date{font-size:10px;color:var(--muted);white-space:nowrap}
+.rf-desc{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.5}
+.rf-desc b{color:var(--white);font-weight:700}
 .pstat{
   background:var(--card);
   border:1px solid var(--bdr);
@@ -1382,6 +1393,13 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
       <div class="pstat-icon pi-green">📈</div>
       <div class="pstat-label">Notional P&L (Open)</div>
       <div class="pstat-value" id="uport-pnl" style="color:var(--green)">—</div>
+    <div class="pstat ps-green">
+      <div class="pstat-icon pi-green">✅</div>
+      <div class="pstat-label">Realised P&L</div>
+      <div class="pstat-value" id="uport-realised" style="color:var(--green)">—</div>
+      <div class="pstat-sub">Booked on closed trades</div>
+      <div class="pstat-delta pd-up" id="uport-realised-pct">—</div>
+    </div>
       <div class="pstat-sub">Unrealised gain on open trades</div>
       <div class="pstat-delta pd-up" id="uport-pnl-pct">—</div>
     </div>
@@ -1401,8 +1419,81 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
     </div>
   </div>
 
-  <!-- Equity Curve vs Nifty 500 -->
-  <div class="card">
+  <div class="g2">
+    <div class="card">
+      <div class="ch"><span class="ct">Capital Allocation</span><span class="chip">By Position</span></div>
+      <div class="alloc-row">
+        <div class="alloc-chart-wrap">
+          <canvas id="udonut-canvas" width="200" height="200"></canvas>
+        </div>
+        <div class="alloc-list" id="ualloc-list"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ch"><span class="ct">Recent Buy &amp; Sell</span><span class="chip">Latest activity</span></div>
+      <div class="recent-feed" id="urecent-activity"><div style="padding:16px;color:var(--muted);font-size:12px">Loading…</div></div>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <div class="ch"><span class="ct">Performance Metrics</span><span class="chip">All closed trades</span></div>
+      <div class="perf-grid" id="uperf-grid">
+        <div class="perf-cell"><div class="pcl">Profit Factor</div><div class="pcv g" id="uperf-pf">—</div><div class="pcs">Gross win / gross loss</div></div>
+        <div class="perf-cell"><div class="pcl">Win Rate</div><div class="pcv b" id="uperf-wr">—</div><div class="pcs" id="uperf-wr-sub">— trades</div></div>
+        <div class="perf-cell"><div class="pcl">Avg Win</div><div class="pcv g" id="uperf-avgwin">—</div><div class="pcs">Per winning trade</div></div>
+        <div class="perf-cell"><div class="pcl">Avg Loss</div><div class="pcv r" id="uperf-avgloss">—</div><div class="pcs">Per losing trade</div></div>
+        <div class="perf-cell"><div class="pcl">Expectancy</div><div class="pcv g" id="uperf-exp">—</div><div class="pcs">Per trade expected</div></div>
+        <div class="perf-cell"><div class="pcl">Total Trades</div><div class="pcv c" id="uperf-total">—</div><div class="pcs">Closed positions</div></div>
+        <div class="perf-cell"><div class="pcl">Best Trade</div><div class="pcv g" id="uperf-best">—</div><div class="pcs" id="uperf-best-sym">—</div></div>
+        <div class="perf-cell"><div class="pcl">Worst Trade</div><div class="pcv r" id="uperf-worst">—</div><div class="pcs" id="uperf-worst-sym">—</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ch"><span class="ct">Cash & Margin Status</span><span class="chip">Live</span></div>
+      <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;gap:20px">
+          <canvas id="umargin-canvas" width="120" height="120"></canvas>
+          <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--card3);border:1px solid var(--bdr);border-radius:10px">
+              <div><div class="pcl">Total Capital</div><div id="umargin-total" style="font-size:16px;font-weight:800;color:var(--white);font-family:var(--fm)">—</div></div>
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--blue)"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--card3);border:1px solid var(--bdr);border-radius:10px">
+              <div><div class="pcl">Deployed in Trades</div><div id="umargin-deployed" style="font-size:16px;font-weight:800;color:var(--green);font-family:var(--fm)">—</div></div>
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--green)"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--card3);border:1px solid var(--bdr);border-radius:10px">
+              <div><div class="pcl">Cash Available</div><div id="umargin-cash" style="font-size:16px;font-weight:800;color:var(--cyan);font-family:var(--fm)">—</div></div>
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--cyan)"></div>
+            </div>
+          </div>
+        </div>
+        <div style="height:1px;background:var(--bdr)"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="background:var(--card3);border:1px solid var(--bdr);border-radius:10px;padding:12px">
+            <div class="pcl">Margin Utilised</div>
+            <div id="umargin-util-pct" style="font-size:18px;font-weight:800;color:var(--amber);font-family:var(--fm)">—</div>
+            <div style="height:5px;background:var(--card4);border-radius:3px;margin-top:8px;overflow:hidden">
+              <div id="umargin-util-bar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--blue),var(--amber));border-radius:3px"></div>
+            </div>
+          </div>
+          <div style="background:var(--card3);border:1px solid var(--bdr);border-radius:10px;padding:12px">
+            <div class="pcl">Risk Deployed</div>
+            <div id="umargin-risk-pct" style="font-size:18px;font-weight:800;color:var(--red);font-family:var(--fm)">—</div>
+            <div style="height:5px;background:var(--card4);border-radius:3px;margin-top:8px;overflow:hidden">
+              <div id="umargin-risk-bar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--red));border-radius:3px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
     <div class="equity-header">
       <div>
         <div class="ct" style="display:inline-block;margin-right:16px">Equity Curve vs Nifty 500 Index</div>
@@ -1452,23 +1543,6 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
     </div>
   </div>
 
-  <div class="g2">
-    <!-- Capital Allocation Donut -->
-    <div class="card">
-      <div class="ch"><span class="ct">Capital Allocation</span><span class="chip">By Position</span></div>
-      <div class="alloc-row">
-        <div class="alloc-chart-wrap">
-          <canvas id="udonut-canvas" width="200" height="200"></canvas>
-          <div style="text-align:center;margin-top:10px">
-            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-weight:600">Deployed</div>
-            <div id="udonut-pct" style="font-size:22px;font-weight:800;color:var(--white);letter-spacing:-.5px">—</div>
-          </div>
-        </div>
-        <div class="alloc-list" id="ualloc-list"></div>
-      </div>
-    </div>
-
-    <!-- Drawdown Chart -->
     <div class="card">
       <div class="ch"><span class="ct">Drawdown from Peak</span><div class="ch-r"><span id="umax-dd-label" style="font-size:11px;color:var(--red);font-weight:700">—</span><span class="chip">All-time</span></div></div>
       <div class="dd-canvas-wrap" style="padding:12px 8px 8px">
@@ -1482,63 +1556,6 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
     </div>
   </div>
 
-  <div class="g2">
-    <!-- Performance Stats — computed from closed trades -->
-    <div class="card">
-      <div class="ch"><span class="ct">Performance Metrics</span><span class="chip">All closed trades</span></div>
-      <div class="perf-grid" id="uperf-grid">
-        <div class="perf-cell"><div class="pcl">Profit Factor</div><div class="pcv g" id="uperf-pf">—</div><div class="pcs">Gross win / gross loss</div></div>
-        <div class="perf-cell"><div class="pcl">Win Rate</div><div class="pcv b" id="uperf-wr">—</div><div class="pcs" id="uperf-wr-sub">— trades</div></div>
-        <div class="perf-cell"><div class="pcl">Avg Win</div><div class="pcv g" id="uperf-avgwin">—</div><div class="pcs">Per winning trade</div></div>
-        <div class="perf-cell"><div class="pcl">Avg Loss</div><div class="pcv r" id="uperf-avgloss">—</div><div class="pcs">Per losing trade</div></div>
-        <div class="perf-cell"><div class="pcl">Expectancy</div><div class="pcv g" id="uperf-exp">—</div><div class="pcs">Per trade expected</div></div>
-        <div class="perf-cell"><div class="pcl">Total Trades</div><div class="pcv c" id="uperf-total">—</div><div class="pcs">Closed positions</div></div>
-        <div class="perf-cell"><div class="pcl">Best Trade</div><div class="pcv g" id="uperf-best">—</div><div class="pcs" id="uperf-best-sym">—</div></div>
-        <div class="perf-cell"><div class="pcl">Worst Trade</div><div class="pcv r" id="uperf-worst">—</div><div class="pcs" id="uperf-worst-sym">—</div></div>
-      </div>
-    </div>
-
-    <!-- Cash Margin & Exposure -->
-    <div class="card">
-      <div class="ch"><span class="ct">Cash & Margin Status</span><span class="chip">Live</span></div>
-      <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
-        <div style="display:flex;align-items:center;gap:20px">
-          <canvas id="umargin-canvas" width="120" height="120"></canvas>
-          <div style="flex:1;display:flex;flex-direction:column;gap:8px">
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--card3);border:1px solid var(--bdr);border-radius:10px">
-              <div><div class="pcl">Total Capital</div><div id="umargin-total" style="font-size:16px;font-weight:800;color:var(--white);font-family:var(--fm)">—</div></div>
-              <div style="width:8px;height:8px;border-radius:50%;background:var(--blue)"></div>
-            </div>
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--card3);border:1px solid var(--bdr);border-radius:10px">
-              <div><div class="pcl">Deployed in Trades</div><div id="umargin-deployed" style="font-size:16px;font-weight:800;color:var(--green);font-family:var(--fm)">—</div></div>
-              <div style="width:8px;height:8px;border-radius:50%;background:var(--green)"></div>
-            </div>
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--card3);border:1px solid var(--bdr);border-radius:10px">
-              <div><div class="pcl">Cash Available</div><div id="umargin-cash" style="font-size:16px;font-weight:800;color:var(--cyan);font-family:var(--fm)">—</div></div>
-              <div style="width:8px;height:8px;border-radius:50%;background:var(--cyan)"></div>
-            </div>
-          </div>
-        </div>
-        <div style="height:1px;background:var(--bdr)"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div style="background:var(--card3);border:1px solid var(--bdr);border-radius:10px;padding:12px">
-            <div class="pcl">Margin Utilised</div>
-            <div id="umargin-util-pct" style="font-size:18px;font-weight:800;color:var(--amber);font-family:var(--fm)">—</div>
-            <div style="height:5px;background:var(--card4);border-radius:3px;margin-top:8px;overflow:hidden">
-              <div id="umargin-util-bar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--blue),var(--amber));border-radius:3px"></div>
-            </div>
-          </div>
-          <div style="background:var(--card3);border:1px solid var(--bdr);border-radius:10px;padding:12px">
-            <div class="pcl">Risk Deployed</div>
-            <div id="umargin-risk-pct" style="font-size:18px;font-weight:800;color:var(--red);font-family:var(--fm)">—</div>
-            <div style="height:5px;background:var(--card4);border-radius:3px;margin-top:8px;overflow:hidden">
-              <div id="umargin-risk-bar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--red));border-radius:3px"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- Monthly Returns Heatmap -->
   <div class="card">
@@ -1764,6 +1781,13 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
       <div class="pstat-icon pi-green">📈</div>
       <div class="pstat-label">Notional P&L (Open)</div>
       <div class="pstat-value" id="port-pnl" style="color:var(--green)">—</div>
+    <div class="pstat ps-green">
+      <div class="pstat-icon pi-green">✅</div>
+      <div class="pstat-label">Realised P&L</div>
+      <div class="pstat-value" id="port-realised" style="color:var(--green)">—</div>
+      <div class="pstat-sub">Booked on closed trades</div>
+      <div class="pstat-delta pd-up" id="port-realised-pct">—</div>
+    </div>
       <div class="pstat-sub">Unrealised gain on open trades</div>
       <div class="pstat-delta pd-up" id="port-pnl-pct">—</div>
     </div>
@@ -1783,8 +1807,81 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
     </div>
   </div>
 
-  <!-- Equity Curve vs Nifty 500 -->
-  <div class="card">
+  <div class="g2">
+    <div class="card">
+      <div class="ch"><span class="ct">Capital Allocation</span><span class="chip">By Position</span></div>
+      <div class="alloc-row">
+        <div class="alloc-chart-wrap">
+          <canvas id="donut-canvas" width="200" height="200"></canvas>
+        </div>
+        <div class="alloc-list" id="alloc-list"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ch"><span class="ct">Recent Buy &amp; Sell</span><span class="chip">Latest activity</span></div>
+      <div class="recent-feed" id="recent-activity"><div style="padding:16px;color:var(--muted);font-size:12px">Loading…</div></div>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <div class="ch"><span class="ct">Performance Metrics</span><span class="chip">All closed trades</span></div>
+      <div class="perf-grid" id="perf-grid">
+        <div class="perf-cell"><div class="pcl">Profit Factor</div><div class="pcv g" id="perf-pf">—</div><div class="pcs">Gross win / gross loss</div></div>
+        <div class="perf-cell"><div class="pcl">Win Rate</div><div class="pcv b" id="perf-wr">—</div><div class="pcs" id="perf-wr-sub">— trades</div></div>
+        <div class="perf-cell"><div class="pcl">Avg Win</div><div class="pcv g" id="perf-avgwin">—</div><div class="pcs">Per winning trade</div></div>
+        <div class="perf-cell"><div class="pcl">Avg Loss</div><div class="pcv r" id="perf-avgloss">—</div><div class="pcs">Per losing trade</div></div>
+        <div class="perf-cell"><div class="pcl">Expectancy</div><div class="pcv g" id="perf-exp">—</div><div class="pcs">Per trade expected</div></div>
+        <div class="perf-cell"><div class="pcl">Total Trades</div><div class="pcv c" id="perf-total">—</div><div class="pcs">Closed positions</div></div>
+        <div class="perf-cell"><div class="pcl">Best Trade</div><div class="pcv g" id="perf-best">—</div><div class="pcs" id="perf-best-sym">—</div></div>
+        <div class="perf-cell"><div class="pcl">Worst Trade</div><div class="pcv r" id="perf-worst">—</div><div class="pcs" id="perf-worst-sym">—</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ch"><span class="ct">Cash & Margin Status</span><span class="chip">Live</span></div>
+      <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;gap:20px">
+          <canvas id="margin-canvas" width="120" height="120"></canvas>
+          <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--card3);border:1px solid var(--bdr);border-radius:10px">
+              <div><div class="pcl">Total Capital</div><div id="margin-total" style="font-size:16px;font-weight:800;color:var(--white);font-family:var(--fm)">—</div></div>
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--blue)"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--card3);border:1px solid var(--bdr);border-radius:10px">
+              <div><div class="pcl">Deployed in Trades</div><div id="margin-deployed" style="font-size:16px;font-weight:800;color:var(--green);font-family:var(--fm)">—</div></div>
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--green)"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--card3);border:1px solid var(--bdr);border-radius:10px">
+              <div><div class="pcl">Cash Available</div><div id="margin-cash" style="font-size:16px;font-weight:800;color:var(--cyan);font-family:var(--fm)">—</div></div>
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--cyan)"></div>
+            </div>
+          </div>
+        </div>
+        <div style="height:1px;background:var(--bdr)"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="background:var(--card3);border:1px solid var(--bdr);border-radius:10px;padding:12px">
+            <div class="pcl">Margin Utilised</div>
+            <div id="margin-util-pct" style="font-size:18px;font-weight:800;color:var(--amber);font-family:var(--fm)">—</div>
+            <div style="height:5px;background:var(--card4);border-radius:3px;margin-top:8px;overflow:hidden">
+              <div id="margin-util-bar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--blue),var(--amber));border-radius:3px"></div>
+            </div>
+          </div>
+          <div style="background:var(--card3);border:1px solid var(--bdr);border-radius:10px;padding:12px">
+            <div class="pcl">Risk Deployed</div>
+            <div id="margin-risk-pct" style="font-size:18px;font-weight:800;color:var(--red);font-family:var(--fm)">—</div>
+            <div style="height:5px;background:var(--card4);border-radius:3px;margin-top:8px;overflow:hidden">
+              <div id="margin-risk-bar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--red));border-radius:3px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
     <div class="equity-header">
       <div>
         <div class="ct" style="display:inline-block;margin-right:16px">Equity Curve vs Nifty 500 Index</div>
@@ -1834,23 +1931,6 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
     </div>
   </div>
 
-  <div class="g2">
-    <!-- Capital Allocation Donut -->
-    <div class="card">
-      <div class="ch"><span class="ct">Capital Allocation</span><span class="chip">By Position</span></div>
-      <div class="alloc-row">
-        <div class="alloc-chart-wrap">
-          <canvas id="donut-canvas" width="200" height="200"></canvas>
-          <div style="text-align:center;margin-top:10px">
-            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-weight:600">Deployed</div>
-            <div id="donut-pct" style="font-size:22px;font-weight:800;color:var(--white);letter-spacing:-.5px">—</div>
-          </div>
-        </div>
-        <div class="alloc-list" id="alloc-list"></div>
-      </div>
-    </div>
-
-    <!-- Drawdown Chart -->
     <div class="card">
       <div class="ch"><span class="ct">Drawdown from Peak</span><div class="ch-r"><span id="max-dd-label" style="font-size:11px;color:var(--red);font-weight:700">—</span><span class="chip">All-time</span></div></div>
       <div class="dd-canvas-wrap" style="padding:12px 8px 8px">
@@ -1864,63 +1944,6 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
     </div>
   </div>
 
-  <div class="g2">
-    <!-- Performance Stats — computed from closed trades -->
-    <div class="card">
-      <div class="ch"><span class="ct">Performance Metrics</span><span class="chip">All closed trades</span></div>
-      <div class="perf-grid" id="perf-grid">
-        <div class="perf-cell"><div class="pcl">Profit Factor</div><div class="pcv g" id="perf-pf">—</div><div class="pcs">Gross win / gross loss</div></div>
-        <div class="perf-cell"><div class="pcl">Win Rate</div><div class="pcv b" id="perf-wr">—</div><div class="pcs" id="perf-wr-sub">— trades</div></div>
-        <div class="perf-cell"><div class="pcl">Avg Win</div><div class="pcv g" id="perf-avgwin">—</div><div class="pcs">Per winning trade</div></div>
-        <div class="perf-cell"><div class="pcl">Avg Loss</div><div class="pcv r" id="perf-avgloss">—</div><div class="pcs">Per losing trade</div></div>
-        <div class="perf-cell"><div class="pcl">Expectancy</div><div class="pcv g" id="perf-exp">—</div><div class="pcs">Per trade expected</div></div>
-        <div class="perf-cell"><div class="pcl">Total Trades</div><div class="pcv c" id="perf-total">—</div><div class="pcs">Closed positions</div></div>
-        <div class="perf-cell"><div class="pcl">Best Trade</div><div class="pcv g" id="perf-best">—</div><div class="pcs" id="perf-best-sym">—</div></div>
-        <div class="perf-cell"><div class="pcl">Worst Trade</div><div class="pcv r" id="perf-worst">—</div><div class="pcs" id="perf-worst-sym">—</div></div>
-      </div>
-    </div>
-
-    <!-- Cash Margin & Exposure -->
-    <div class="card">
-      <div class="ch"><span class="ct">Cash & Margin Status</span><span class="chip">Live</span></div>
-      <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
-        <div style="display:flex;align-items:center;gap:20px">
-          <canvas id="margin-canvas" width="120" height="120"></canvas>
-          <div style="flex:1;display:flex;flex-direction:column;gap:8px">
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--card3);border:1px solid var(--bdr);border-radius:10px">
-              <div><div class="pcl">Total Capital</div><div id="margin-total" style="font-size:16px;font-weight:800;color:var(--white);font-family:var(--fm)">—</div></div>
-              <div style="width:8px;height:8px;border-radius:50%;background:var(--blue)"></div>
-            </div>
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--card3);border:1px solid var(--bdr);border-radius:10px">
-              <div><div class="pcl">Deployed in Trades</div><div id="margin-deployed" style="font-size:16px;font-weight:800;color:var(--green);font-family:var(--fm)">—</div></div>
-              <div style="width:8px;height:8px;border-radius:50%;background:var(--green)"></div>
-            </div>
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--card3);border:1px solid var(--bdr);border-radius:10px">
-              <div><div class="pcl">Cash Available</div><div id="margin-cash" style="font-size:16px;font-weight:800;color:var(--cyan);font-family:var(--fm)">—</div></div>
-              <div style="width:8px;height:8px;border-radius:50%;background:var(--cyan)"></div>
-            </div>
-          </div>
-        </div>
-        <div style="height:1px;background:var(--bdr)"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div style="background:var(--card3);border:1px solid var(--bdr);border-radius:10px;padding:12px">
-            <div class="pcl">Margin Utilised</div>
-            <div id="margin-util-pct" style="font-size:18px;font-weight:800;color:var(--amber);font-family:var(--fm)">—</div>
-            <div style="height:5px;background:var(--card4);border-radius:3px;margin-top:8px;overflow:hidden">
-              <div id="margin-util-bar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--blue),var(--amber));border-radius:3px"></div>
-            </div>
-          </div>
-          <div style="background:var(--card3);border:1px solid var(--bdr);border-radius:10px;padding:12px">
-            <div class="pcl">Risk Deployed</div>
-            <div id="margin-risk-pct" style="font-size:18px;font-weight:800;color:var(--red);font-family:var(--fm)">—</div>
-            <div style="height:5px;background:var(--card4);border-radius:3px;margin-top:8px;overflow:hidden">
-              <div id="margin-risk-bar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--red));border-radius:3px"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- Monthly Returns Heatmap -->
   <div class="card">
@@ -4711,6 +4734,11 @@ async function loadPortfolioOverview() {
   if(pnlEl){ pnlEl.textContent=(totalPnl>=0?'+':'')+fmt(totalPnl); pnlEl.style.color=totalPnl>=0?'var(--green)':'var(--red)'; }
   setText('port-pnl-pct', `${totalPnl>=0?'▲':'▼'} ${totalPnl>=0?'+':''}${pnlPct}% return on deployed`);
 
+  const realEl = document.getElementById('port-realised');
+  if(realEl){ realEl.textContent=(realisedPnl>=0?'+':'')+fmt(realisedPnl); realEl.style.color=realisedPnl>=0?'var(--green)':'var(--red)'; }
+  const realPct = totalCapital>0 ? (realisedPnl/totalCapital*100) : 0;
+  setText('port-realised-pct', `${realisedPnl>=0?'▲':'▼'} ${realisedPnl>=0?'+':''}${realPct.toFixed(1)}% of capital`);
+
   setText('port-cash', fmtL(cashAvail));
   setText('port-cash-pct', `▲ ${cashPct}% of total capital`);
   setText('port-risk', fmt(totalRisk));
@@ -5426,6 +5454,50 @@ function drawPortfolioCharts(){
   // Use live drawdown data if available, otherwise simulate
   drawDrawdown(window._ddSeries || null);
   drawMarginRing();buildAllocList();
+  buildRecentActivity(true,'recent-activity');
+}
+
+// Recent Buy & Sell — merges latest entries (buys) and exits (sells), newest first.
+async function buildRecentActivity(isModel, containerId){
+  const el=document.getElementById(containerId); if(!el) return;
+  const money=n=>Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const whole=n=>Number(Math.abs(n||0)).toLocaleString('en-IN',{maximumFractionDigits:0});
+  let opens=[], closes=[];
+  try{
+    const r=await Promise.all([
+      sb.from('open_trades').select('*').eq('is_model',isModel).order('entry_date',{ascending:false}).limit(12),
+      sb.from('closed_trades').select('*').eq('is_model',isModel).order('exit_date',{ascending:false}).limit(12)
+    ]);
+    opens=r[0].data||[]; closes=r[1].data||[];
+  }catch(e){}
+  const items=[];
+  opens.forEach(t=>{
+    const qty=t.quantity||t.remaining_qty||0, px=t.avg_entry_price||t.entry_price||0;
+    const co=t.company_name||t.symbol;
+    items.push({side:'buy', sym:t.symbol, date:t.entry_date,
+      desc:`Bought <b>${qty}</b> share${qty==1?'':'s'} of ${co} (${t.symbol}) at an average price of <b>₹${money(px)}</b>`+
+           (t.position_size_pct!=null?`. Allocation <b>${Number(t.position_size_pct).toFixed(2)}%</b>`:'')});
+  });
+  closes.forEach(t=>{
+    const qty=t.quantity||t.exit_qty||0, px=t.avg_exit_price||t.exit_price||0, pnl=t.realised_pnl||0;
+    const co=t.company_name||t.symbol;
+    items.push({side:'sell', sym:t.symbol, date:t.exit_date,
+      desc:`Sold <b>${qty}</b> share${qty==1?'':'s'} of ${co} (${t.symbol}) at <b>₹${money(px)}</b>. Realised P&L <b>${pnl>=0?'+':'−'}₹${whole(pnl)}</b>`+
+           (t.return_pct!=null?` (<b>${Number(t.return_pct).toFixed(1)}%</b>)`:'')});
+  });
+  items.sort((a,b)=> new Date(b.date||0) - new Date(a.date||0));
+  const top=items.slice(0,10);
+  if(!top.length){ el.innerHTML='<div style="padding:16px;color:var(--muted);font-size:12px">No recent activity yet.</div>'; return; }
+  el.innerHTML=top.map(it=>{
+    const d=it.date?new Date(it.date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}):'';
+    return `<div class="rf-item">
+      <div class="rf-badge ${it.side==='buy'?'rf-buy':'rf-sell'}">${it.side==='buy'?'BUY':'SELL'}</div>
+      <div class="rf-main">
+        <div class="rf-top"><span class="rf-sym">${it.sym}</span><span class="rf-date">${d}</span></div>
+        <div class="rf-desc">${it.desc}</div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 
@@ -5618,6 +5690,7 @@ function drawUserPortfolioCharts(){
   // Use live drawdown data if available, otherwise simulate
   drawUserDrawdown(window._u_ddSeries || null);
   drawUserMarginRing();buildUserAllocList();
+  buildRecentActivity(false,'urecent-activity');
 }
 
 
@@ -5714,6 +5787,9 @@ async function renderUserPortfolio(){
   setText('uport-invested-pct',`▲ ${deployedPct}% of ${fmtL(totalCapital)} capital`);
   const pnlEl=document.getElementById('uport-pnl'); if(pnlEl){pnlEl.textContent=(totalPnl>=0?'+':'')+fmt(totalPnl); pnlEl.style.color=totalPnl>=0?'var(--green)':'var(--red)';}
   setText('uport-pnl-pct',`${totalPnl>=0?'▲':'▼'} ${totalPnl>=0?'+':''}${pnlPct}% return on deployed`);
+  const urealEl=document.getElementById('uport-realised'); if(urealEl){urealEl.textContent=(realisedPnl>=0?'+':'')+fmt(realisedPnl); urealEl.style.color=realisedPnl>=0?'var(--green)':'var(--red)';}
+  const urealPct=totalCapital>0?(realisedPnl/totalCapital*100):0;
+  setText('uport-realised-pct',`${realisedPnl>=0?'▲':'▼'} ${realisedPnl>=0?'+':''}${urealPct.toFixed(1)}% of capital`);
   setText('uport-cash',fmtL(cashAvail));
   setText('uport-cash-pct',`▲ ${cashPct}% of total capital`);
   setText('uport-risk',fmt(totalRisk));
