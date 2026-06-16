@@ -2793,7 +2793,7 @@ document.getElementById('form-snapshot').addEventListener('submit', async e => {
     const v = fd.get(k); if (v) payload[k] = parseFloat(v);
   });
   const { error } = await sb
-    .from('portfolio_snapshots').upsert(payload, { onConflict: 'user_id,snapshot_date' });
+    .from('portfolio_snapshots').upsert(payload, { onConflict: 'user_id,is_model,snapshot_date' });
   if (error) { showAlert('snap-error', '✗ ' + error.message, 'error'); return; }
   showAlert('snap-success', '✓ Portfolio snapshot saved for ' + payload.snapshot_date, 'success');
   e.target.reset();
@@ -2814,7 +2814,7 @@ document.getElementById('basecap-save')?.addEventListener('click', async () => {
   const v = parseFloat(document.getElementById('basecap-input').value);
   if(!v || v<=0){ showAlert('basecap-error','✗ Enter a valid capital amount','error'); return; }
   const { error } = await sb.from('portfolio_config').upsert(
-    { user_id: window._adminUid, total_capital: Math.round(v), updated_at: new Date().toISOString() },
+    { user_id: window._adminUid, book: 'model', total_capital: Math.round(v), updated_at: new Date().toISOString() },
     { onConflict: 'user_id' });
   if(error){ showAlert('basecap-error','✗ '+error.message,'error'); return; }
   showAlert('basecap-success','✓ Base capital saved. The next pipeline run will use it.','success');
