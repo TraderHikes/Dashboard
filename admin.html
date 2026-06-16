@@ -1378,6 +1378,27 @@
         </form>
       </div>
     </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="card-hdr"><span class="card-title">Model Base Capital</span></div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--muted);margin-bottom:14px">
+          The capital the model's return is measured against. The daily pipeline reads this value
+          for every snapshot. Change it <strong>only</strong> when you add or withdraw real capital —
+          trading profit (realised + unrealised) already compounds into the equity curve on its own,
+          so do not fold it in here.
+        </p>
+        <div class="alert alert-success" id="basecap-success"></div>
+        <div class="alert alert-error"   id="basecap-error"></div>
+        <div style="display:flex;gap:12px;align-items:flex-end;max-width:460px">
+          <div class="form-group" style="flex:1;margin:0">
+            <label class="form-label">Base Capital ₹</label>
+            <input class="form-input" id="basecap-input" type="number" placeholder="8500000">
+          </div>
+          <button class="btn btn-primary" type="button" id="basecap-save">Save Base Capital</button>
+        </div>
+      </div>
+    </div>
   </div>
 
 </div><!-- /app -->
@@ -1422,6 +1443,7 @@ async function checkAdminAuth() {
   }
 
   // Correct admin account — show the app
+  window._adminUid = session.user.id;
   document.getElementById('gate').classList.add('hidden');
   document.getElementById('app-content').style.display = 'block';
   document.getElementById('admin-email-display').textContent = session.user.email;
@@ -1476,6 +1498,7 @@ async function initApp() {
   await loadOpenTrades();
   await loadOpenTradesForSelect();
   await loadStudents();
+  await loadBaseCapital();
 }
 
 // ════════════════════════════════════════════
@@ -2763,17 +2786,38 @@ async function loadMarketScore() {
 document.getElementById('form-snapshot').addEventListener('submit', async e => {
   e.preventDefault();
   const fd = new FormData(e.target);
-  const payload = { snapshot_date: fd.get('snapshot_date') };
+  const payload = { snapshot_date: fd.get('snapshot_date'), is_model: true };
+  if (window._adminUid) payload.user_id = window._adminUid;
   ['total_capital','deployed','cash_available',
    'portfolio_value','nifty500_level','cumulative_return_pct'].forEach(k => {
     const v = fd.get(k); if (v) payload[k] = parseFloat(v);
   });
   const { error } = await sb
-    .from('portfolio_snapshots').upsert(payload, { onConflict: 'snapshot_date' });
+    .from('portfolio_snapshots').upsert(payload, { onConflict: 'user_id,snapshot_date' });
   if (error) { showAlert('snap-error', '✗ ' + error.message, 'error'); return; }
   showAlert('snap-success', '✓ Portfolio snapshot saved for ' + payload.snapshot_date, 'success');
   e.target.reset();
   document.querySelector('[name="snapshot_date"]').value = new Date().toISOString().split('T')[0];
+});
+
+// ── Model base capital (single source of truth; pipeline reads this) ──
+async function loadBaseCapital(){
+  if(!window._adminUid) return;
+  try{
+    const { data } = await sb.from('portfolio_config')
+      .select('total_capital').eq('user_id', window._adminUid).maybeSingle();
+    const inp=document.getElementById('basecap-input');
+    if(inp && data && data.total_capital) inp.value = Number(data.total_capital);
+  }catch(e){}
+}
+document.getElementById('basecap-save')?.addEventListener('click', async () => {
+  const v = parseFloat(document.getElementById('basecap-input').value);
+  if(!v || v<=0){ showAlert('basecap-error','✗ Enter a valid capital amount','error'); return; }
+  const { error } = await sb.from('portfolio_config').upsert(
+    { user_id: window._adminUid, total_capital: Math.round(v), updated_at: new Date().toISOString() },
+    { onConflict: 'user_id' });
+  if(error){ showAlert('basecap-error','✗ '+error.message,'error'); return; }
+  showAlert('basecap-success','✓ Base capital saved. The next pipeline run will use it.','success');
 });
 
 // ════════════════════════════════════════════
