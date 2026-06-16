@@ -476,6 +476,10 @@ canvas.tc{display:block;width:100%;height:100%}
 .tc-met{background:var(--card2);border-radius:6px;padding:6px 8px}
 .tc-met-l{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
 .tc-met-v{font-size:16px;font-weight:700;font-family:var(--fm);color:var(--white);letter-spacing:-.3px}
+.tc-toggle{display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;margin-top:8px;padding:7px;border-radius:8px;background:var(--card2);border:1px solid rgba(92,111,251,.3);font-size:11px;font-weight:700;color:var(--blue-lt);user-select:none;transition:background .12s}
+.tc-toggle:hover{background:var(--card3)}
+.tc-chev{transition:transform .2s}
+.tc-toggle.open .tc-chev{transform:rotate(180deg)}
 /* Risk bar compact */
 .tc-riskbar{margin-top:8px;display:flex;align-items:center;gap:6px}
 .tc-riskbar-track{flex:1;height:3px;background:var(--card2);border-radius:2px;overflow:hidden}
@@ -5465,6 +5469,14 @@ function drawPortfolioCharts(){
   buildRecentActivity(true,'recent-activity');
 }
 
+function toggleTcDetails(id, el){
+  const d=document.getElementById('tcdet_'+id); if(!d) return;
+  const open=d.style.display==='none';
+  d.style.display=open?'block':'none';
+  el.classList.toggle('open',open);
+  const s=el.querySelector('span'); if(s) s.textContent=open?'Hide Details':'Show Details';
+}
+
 // Recent Trading Activity — merges entries, pyramids (buys) and exits, partials (sells), newest first.
 async function buildRecentActivity(isModel, containerId){
   const el=document.getElementById(containerId); if(!el) return;
@@ -6234,19 +6246,21 @@ async function renderOpen(){
             <div style="font-size:20px;font-weight:800;letter-spacing:-.5px;line-height:1;color:${pct!==null?(pct>=0?'var(--green)':'var(--red)'):'var(--muted)'}">
               ${pct!==null?(pct>=0?'+':'')+pct.toFixed(1)+'%':'—'}
             </div>
-            ${rrRatio!==null?`<div style="font-size:9px;font-weight:700;color:${rrRatio>=2?'var(--green)':rrRatio>=1?'var(--amber)':'var(--red)'};margin-top:1px">${(rrRatio>=0?'+':'')+rrRatio.toFixed(1)}R</div>`:''}
+            ${pnl!==null?`<div style="margin-top:5px;display:inline-block;padding:3px 9px;border-radius:100px;font-size:11px;font-weight:800;font-family:var(--fm);${pnl>=0?'background:rgba(30,201,147,.16);border:1px solid rgba(30,201,147,.45);color:var(--green);box-shadow:0 0 12px rgba(30,201,147,.3)':'background:rgba(240,82,114,.16);border:1px solid rgba(240,82,114,.45);color:var(--red);box-shadow:0 0 12px rgba(240,82,114,.3)'}">${pnl>=0?'+':'-'}\u20B9${Math.abs(pnl).toLocaleString('en-IN',{maximumFractionDigits:0})}</div>`:''}
+            ${rrRatio!==null?`<div style="font-size:9px;font-weight:700;color:${rrRatio>=2?'var(--green)':rrRatio>=1?'var(--amber)':'var(--red)'};margin-top:3px">${(rrRatio>=0?'+':'')+rrRatio.toFixed(1)}R</div>`:''}
           </div>
         </div>
 
         ${t.trade_notes ? `<div style="font-size:9px;color:var(--white);opacity:.75;font-style:italic;padding:3px 7px;background:rgba(255,255,255,.02);border-radius:4px;border-left:2px solid var(--bdr2);margin:4px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">"${t.trade_notes}"</div>` : ''}
 
         <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);padding:6px 0;border-top:1px solid var(--bdr);border-bottom:1px solid var(--bdr);margin:4px 0">
-          <span>Entry <b style="color:var(--green);font-family:var(--fm)">\u20B9${Number(t.entry_price).toLocaleString('en-IN')}</b></span>
-          ${t.avg_entry_price && t.avg_entry_price !== t.entry_price ? `<span>Avg <b style="color:var(--amber);font-family:var(--fm)">\u20B9${Number(avgEntry).toLocaleString('en-IN')}</b></span>` : ''}
-          <span>CMP <b style="color:${pp?'var(--green)':'var(--red)'};font-family:var(--fm)">${t.cmp?'\u20B9'+Number(t.cmp).toLocaleString('en-IN'):'—'}</b></span>
-          <span>SL <b style="color:var(--red);font-family:var(--fm)">\u20B9${Number(t.sl_price).toLocaleString('en-IN')}</b></span>
+          <span>Entry <b style="color:var(--white);font-family:var(--fm)">\u20B9${Number(t.entry_price).toLocaleString('en-IN')}</b></span>
+          ${t.avg_entry_price && t.avg_entry_price !== t.entry_price ? `<span>Avg <b style="color:var(--white);font-family:var(--fm)">\u20B9${Number(avgEntry).toLocaleString('en-IN')}</b></span>` : ''}
+          <span>CMP <b style="color:var(--white);font-family:var(--fm)">${t.cmp?'\u20B9'+Number(t.cmp).toLocaleString('en-IN'):'—'}</b></span>
         </div>
 
+        <div class="tc-toggle" onclick="toggleTcDetails('${t.id}',this)"><span>Show Details</span><svg class="tc-chev" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></div>
+        <div class="tc-details" id="tcdet_${t.id}" style="display:none">
         <div class="tc-metrics">
           <div class="tc-met">
             <div class="tc-met-l">Position Size</div>
@@ -6261,7 +6275,7 @@ async function renderOpen(){
           <div class="tc-met">
             <div class="tc-met-l">Open Risk</div>
             <div class="tc-met-v" style="color:var(--red);font-family:var(--fm)">\u20B9${Math.abs(risk).toLocaleString('en-IN',{maximumFractionDigits:0})}</div>
-            <div style="font-size:8px;color:var(--white);margin-top:1px">${riskPct.toFixed(1)}% of pos</div>
+            <div style="font-size:8px;color:var(--white);margin-top:1px">SL \u20B9${Number(t.sl_price).toLocaleString('en-IN')} · ${riskPct.toFixed(1)}% of pos</div>
           </div>
           <div class="tc-met">
             <div class="tc-met-l">Notional P&L</div>
@@ -6283,6 +6297,7 @@ async function renderOpen(){
         <!-- Trade Log (loaded async) -->
         <div id="tlog_${t.id}" style="margin-top:8px;padding-top:6px;border-top:1px solid var(--bdr)">
           <div style="font-size:9px;color:var(--muted)">Loading trade log...</div>
+        </div>
         </div>
       </div>`;
     c.appendChild(el);
@@ -6801,19 +6816,21 @@ async function renderUserOpen(){
             <div style="font-size:20px;font-weight:800;letter-spacing:-.5px;line-height:1;color:${pct!==null?(pct>=0?'var(--green)':'var(--red)'):'var(--muted)'}">
               ${pct!==null?(pct>=0?'+':'')+pct.toFixed(1)+'%':'—'}
             </div>
-            ${rrRatio!==null?`<div style="font-size:9px;font-weight:700;color:${rrRatio>=2?'var(--green)':rrRatio>=1?'var(--amber)':'var(--red)'};margin-top:1px">${(rrRatio>=0?'+':'')+rrRatio.toFixed(1)}R</div>`:''}
+            ${pnl!==null?`<div style="margin-top:5px;display:inline-block;padding:3px 9px;border-radius:100px;font-size:11px;font-weight:800;font-family:var(--fm);${pnl>=0?'background:rgba(30,201,147,.16);border:1px solid rgba(30,201,147,.45);color:var(--green);box-shadow:0 0 12px rgba(30,201,147,.3)':'background:rgba(240,82,114,.16);border:1px solid rgba(240,82,114,.45);color:var(--red);box-shadow:0 0 12px rgba(240,82,114,.3)'}">${pnl>=0?'+':'-'}\u20B9${Math.abs(pnl).toLocaleString('en-IN',{maximumFractionDigits:0})}</div>`:''}
+            ${rrRatio!==null?`<div style="font-size:9px;font-weight:700;color:${rrRatio>=2?'var(--green)':rrRatio>=1?'var(--amber)':'var(--red)'};margin-top:3px">${(rrRatio>=0?'+':'')+rrRatio.toFixed(1)}R</div>`:''}
           </div>
         </div>
 
         ${t.trade_notes ? `<div style="font-size:9px;color:var(--white);opacity:.75;font-style:italic;padding:3px 7px;background:rgba(255,255,255,.02);border-radius:4px;border-left:2px solid var(--bdr2);margin:4px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">"${t.trade_notes}"</div>` : ''}
 
         <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);padding:6px 0;border-top:1px solid var(--bdr);border-bottom:1px solid var(--bdr);margin:4px 0">
-          <span>Entry <b style="color:var(--green);font-family:var(--fm)">\u20B9${Number(t.entry_price).toLocaleString('en-IN')}</b></span>
-          ${t.avg_entry_price && t.avg_entry_price !== t.entry_price ? `<span>Avg <b style="color:var(--amber);font-family:var(--fm)">\u20B9${Number(avgEntry).toLocaleString('en-IN')}</b></span>` : ''}
-          <span>CMP <b style="color:${pp?'var(--green)':'var(--red)'};font-family:var(--fm)">${t.cmp?'\u20B9'+Number(t.cmp).toLocaleString('en-IN'):'—'}</b></span>
-          <span>SL <b style="color:var(--red);font-family:var(--fm)">\u20B9${Number(t.sl_price).toLocaleString('en-IN')}</b></span>
+          <span>Entry <b style="color:var(--white);font-family:var(--fm)">\u20B9${Number(t.entry_price).toLocaleString('en-IN')}</b></span>
+          ${t.avg_entry_price && t.avg_entry_price !== t.entry_price ? `<span>Avg <b style="color:var(--white);font-family:var(--fm)">\u20B9${Number(avgEntry).toLocaleString('en-IN')}</b></span>` : ''}
+          <span>CMP <b style="color:var(--white);font-family:var(--fm)">${t.cmp?'\u20B9'+Number(t.cmp).toLocaleString('en-IN'):'—'}</b></span>
         </div>
 
+        <div class="tc-toggle" onclick="toggleTcDetails('${t.id}',this)"><span>Show Details</span><svg class="tc-chev" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></div>
+        <div class="tc-details" id="tcdet_${t.id}" style="display:none">
         <div class="tc-metrics">
           <div class="tc-met">
             <div class="tc-met-l">Position Size</div>
@@ -6828,7 +6845,7 @@ async function renderUserOpen(){
           <div class="tc-met">
             <div class="tc-met-l">Open Risk</div>
             <div class="tc-met-v" style="color:var(--red);font-family:var(--fm)">\u20B9${Math.abs(risk).toLocaleString('en-IN',{maximumFractionDigits:0})}</div>
-            <div style="font-size:8px;color:var(--white);margin-top:1px">${riskPct.toFixed(1)}% of pos</div>
+            <div style="font-size:8px;color:var(--white);margin-top:1px">SL \u20B9${Number(t.sl_price).toLocaleString('en-IN')} · ${riskPct.toFixed(1)}% of pos</div>
           </div>
           <div class="tc-met">
             <div class="tc-met-l">Notional P&L</div>
@@ -6850,6 +6867,7 @@ async function renderUserOpen(){
         <!-- Trade Log (loaded async) -->
         <div id="tlog_${t.id}" style="margin-top:8px;padding-top:6px;border-top:1px solid var(--bdr)">
           <div style="font-size:9px;color:var(--muted)">Loading trade log...</div>
+        </div>
         </div>
       </div>`;
     c.appendChild(el);
