@@ -834,6 +834,52 @@ canvas.tc{display:block;width:100%;height:100%}
 .sf-spinner{width:28px;height:28px;border:3px solid var(--bdr);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}
 .sf-empty{text-align:center;padding:48px;color:var(--muted);font-size:13px}
 
+/* ── Account Settings modal ── */
+.am-bg{position:fixed;inset:0;background:rgba(4,7,16,.72);backdrop-filter:blur(6px);z-index:9000;display:flex;align-items:flex-start;justify-content:center;padding:40px 18px;overflow-y:auto}
+.am-modal{width:100%;max-width:840px;background:var(--card);border:1px solid rgba(92,111,251,.4);border-radius:18px;box-shadow:0 0 40px rgba(92,111,251,.18),0 24px 60px rgba(0,0,0,.5);overflow:hidden}
+.am-head{display:flex;justify-content:space-between;align-items:flex-start;padding:20px 24px 0}
+.am-welcome{font-size:17px;font-weight:800;color:var(--white);letter-spacing:-.3px}
+.am-close{background:var(--card2);border:1px solid var(--bdr);color:var(--muted);width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:14px;line-height:1;flex-shrink:0}
+.am-close:hover{color:var(--white);background:var(--card3)}
+.am-tabs{display:flex;gap:6px;margin-top:16px;border-bottom:1px solid var(--bdr);flex-wrap:wrap}
+.am-tab{background:none;border:none;color:var(--muted);font-size:13px;font-weight:700;padding:10px 14px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;font-family:inherit}
+.am-tab:hover{color:var(--white)}
+.am-tab.active{color:var(--blue-lt);border-bottom-color:var(--blue)}
+.am-body{padding:22px 24px 26px}
+.am-card{background:var(--card2);border:1px solid rgba(92,111,251,.28);border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:0 0 18px rgba(92,111,251,.06)}
+.am-card-h{font-size:14px;font-weight:800;color:var(--white);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.am-avatar-row{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+.am-avatar{width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,var(--blue),#7c4dff);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:#fff;flex-shrink:0;box-shadow:0 0 16px rgba(92,111,251,.4)}
+.am-locknote{font-size:11px;color:var(--muted);line-height:1.5}
+.am-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.am-field{display:flex;flex-direction:column;gap:5px}
+.am-field.am-full{grid-column:1/-1}
+.am-field label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;display:flex;align-items:center;gap:6px}
+.am-lock{font-size:9px;color:var(--amber);background:rgba(255,179,64,.12);border:1px solid var(--amber-bd);padding:1px 6px;border-radius:100px;text-transform:none;letter-spacing:0;font-weight:700}
+.am-opt{font-size:9px;color:var(--muted);font-weight:600;text-transform:none;letter-spacing:0;opacity:.7}
+.am-field input,.am-field select{background:var(--card);border:1px solid var(--bdr);border-radius:9px;padding:11px 13px;color:var(--white);font-size:13px;font-family:inherit;outline:none;transition:border-color .12s}
+.am-field input:focus,.am-field select:focus{border-color:var(--blue)}
+.am-field input:disabled{background:rgba(255,255,255,.02);color:var(--text2);cursor:not-allowed;border-style:dashed}
+.am-save{margin-top:18px;background:var(--blue);color:#fff;border:none;border-radius:9px;padding:11px 22px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 0 16px rgba(92,111,251,.35)}
+.am-save:hover{filter:brightness(1.08)}
+.am-save:disabled{opacity:.6;cursor:default}
+.am-alert{margin-top:14px;font-size:12px;font-weight:600;display:none}
+.am-alert.ok{display:block;color:var(--green)}
+.am-alert.err{display:block;color:var(--red)}
+.am-plan-row{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px}
+.am-plan-name{font-size:22px;font-weight:800;color:var(--white)}
+.am-plan-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.am-badge{font-size:10px;font-weight:700;padding:4px 11px;border-radius:100px}
+.am-badge.active{background:rgba(30,201,147,.14);border:1px solid rgba(30,201,147,.4);color:var(--green)}
+.am-badge.free{background:rgba(255,179,64,.12);border:1px solid var(--amber-bd);color:var(--amber)}
+.am-cta{display:inline-block;margin-top:16px;background:var(--blue);color:#fff;text-decoration:none;border-radius:9px;padding:11px 20px;font-size:13px;font-weight:700;box-shadow:0 0 16px rgba(92,111,251,.35)}
+.am-note{font-size:12px;color:var(--muted);line-height:1.6}
+.am-stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.am-stat{background:var(--card);border:1px solid var(--bdr);border-radius:11px;padding:14px}
+.am-stat-l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.am-stat-v{font-size:24px;font-weight:800;color:var(--white);margin-top:4px;font-family:var(--fm)}
+@media(max-width:600px){.am-grid,.am-stat-grid{grid-template-columns:1fr}}
+
 </style>
 <style>
 /* ══ WATCHLIST CHARTS TAB ══ */
@@ -1296,7 +1342,13 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
         <div class="acct-nm" id="hdr-user">—</div>
       </div>
       <div class="acct-pop" id="acct-pop">
-        <div class="acct-hd"><div class="acct-av lg" id="acct-av2">A</div><div><div class="acct-pop-nm" id="acct-pop-nm">—</div><div class="acct-pop-sub">Account</div></div></div>
+        <div class="acct-hd" onclick="openAcct('profile')" style="cursor:pointer"><div class="acct-av lg" id="acct-av2">A</div><div style="flex:1"><div class="acct-pop-nm" id="acct-pop-nm">—</div><div class="acct-pop-sub">Account Settings ›</div></div></div>
+        <div class="acct-div"></div>
+        <div class="acct-item" onclick="openAcct('profile')"><span class="ai-ic">&#128100;</span> Profile</div>
+        <div class="acct-item" onclick="openAcct('plan')"><span class="ai-ic">&#11088;</span> My Plan</div>
+        <div class="acct-item" id="acct-upgrade" onclick="openAcct('plan')"><span class="ai-ic">&#128640;</span> Upgrade Plan</div>
+        <div class="acct-item" onclick="openAcct('billing')"><span class="ai-ic">&#128179;</span> Billing</div>
+        <div class="acct-item" onclick="openAcct('achievements')"><span class="ai-ic">&#127942;</span> Accomplishments</div>
         <div class="acct-div"></div>
         <div class="acct-item" id="acct-admin" style="display:none" onclick="window.location.href='https://dashboard.traderhikes.com/admin.html'"><span class="ai-ic">&#9881;</span> Admin Panel</div>
         <div class="acct-item" onclick="toggleTheme()"><span class="ai-ic">&#9680;</span> Theme <span class="acct-toggle"><span id="theme-state">Dark</span></span></div>
@@ -3280,6 +3332,100 @@ async function signOut() {
 function toggleAcct(e){ if(e) e.stopPropagation(); const p=document.getElementById('acct-pop'); if(p) p.classList.toggle('open'); }
 document.addEventListener('click', e=>{ const p=document.getElementById('acct-pop'); if(p && p.classList.contains('open') && !e.target.closest('.side-acct')) p.classList.remove('open'); });
 function toggleTheme(){ const on=document.body.classList.toggle('theme-light'); const ts=document.getElementById('theme-state'); if(ts) ts.textContent=on?'Light':'Dark'; try{ localStorage.setItem('mb-theme', on?'light':'dark'); }catch(e){} }
+
+/* ── ACCOUNT SETTINGS MODAL ── */
+function _amText(id,v){ const e=document.getElementById(id); if(e) e.textContent=v; }
+function openAcct(tab){
+  const p=document.getElementById('acct-pop'); if(p) p.classList.remove('open');
+  document.getElementById('acctModal').style.display='flex';
+  document.body.style.overflow='hidden';
+  acctTab(tab||'profile');
+  loadProfile();
+}
+function closeAcct(){
+  document.getElementById('acctModal').style.display='none';
+  document.body.style.overflow='';
+}
+function acctTab(name){
+  document.querySelectorAll('.am-tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===name));
+  document.querySelectorAll('.am-pane').forEach(p=>p.style.display = (p.id==='am-'+name?'block':'none'));
+}
+async function loadProfile(){
+  let user=null;
+  try{ user=(await sb.auth.getUser()).data.user; }catch(e){}
+  if(!user) return;
+  const name = user.user_metadata?.full_name || user.user_metadata?.name || (user.email||'').split('@')[0];
+  const email = user.email||'';
+  document.getElementById('am-name').value = name;
+  document.getElementById('am-email').value = email;
+  _amText('am-firstname', (name||'there').split(' ')[0]);
+  document.getElementById('am-avatar').textContent = (name||'A').trim().charAt(0).toUpperCase();
+  window._profSince = user.created_at;
+  try{
+    const { data } = await sb.from('user_profiles').select('*').eq('user_id', user.id).maybeSingle();
+    if(data){
+      document.getElementById('am-mobile').value   = data.mobile||'';
+      document.getElementById('am-exp').value      = data.experience||'';
+      document.getElementById('am-age').value      = data.age||'';
+      document.getElementById('am-username').value = data.username||'';
+      document.getElementById('am-address').value  = data.address||'';
+      if(data.created_at) window._profSince = data.created_at;
+    }
+  }catch(e){}
+  populatePlan();
+}
+async function saveProfile(){
+  const btn=document.getElementById('am-save-btn'), al=document.getElementById('am-alert');
+  let user=null; try{ user=(await sb.auth.getUser()).data.user; }catch(e){}
+  if(!user) return;
+  const mobile=document.getElementById('am-mobile').value.trim();
+  if(mobile && !/^[+]?[0-9][0-9\s-]{6,15}$/.test(mobile)){ al.className='am-alert err'; al.textContent='Please enter a valid mobile number.'; return; }
+  const ageV=parseInt(document.getElementById('am-age').value);
+  btn.disabled=true; btn.textContent='Saving…';
+  const payload={
+    user_id:user.id,
+    full_name:user.user_metadata?.full_name||user.user_metadata?.name||null,
+    email:user.email||null,
+    mobile:mobile||null,
+    experience:document.getElementById('am-exp').value||null,
+    age:(ageV>0?ageV:null),
+    username:document.getElementById('am-username').value.trim()||null,
+    address:document.getElementById('am-address').value.trim()||null,
+    updated_at:new Date().toISOString()
+  };
+  const { error } = await sb.from('user_profiles').upsert(payload, { onConflict:'user_id' });
+  btn.disabled=false; btn.textContent='Save Profile';
+  if(error){ al.className='am-alert err'; al.textContent='Error: '+error.message; return; }
+  al.className='am-alert ok'; al.textContent='✓ Profile saved.';
+  populatePlan();
+  setTimeout(()=>{ al.className='am-alert'; al.textContent=''; },3000);
+}
+function populatePlan(){
+  const role=window.USER_ROLE||'free', tier=window.USER_TIER||'free';
+  const paid = role==='paid'||role==='admin';
+  const planName = role==='admin' ? 'Admin Access'
+    : tier==='course' ? 'MSTP Course Member'
+    : tier==='dashboard' ? 'Dashboard Subscriber'
+    : 'Free Plan';
+  _amText('am-plan-name', planName);
+  _amText('am-plan-sub', paid
+    ? 'Full access to the Model Portfolio, Market Data & Trading Desk'
+    : 'Limited access — upgrade to unlock the Model Portfolio & Market Data');
+  const badge=document.getElementById('am-plan-badge');
+  if(badge){ badge.textContent = paid?'● Active':'● Free'; badge.className='am-badge '+(paid?'active':'free'); }
+  const up=document.getElementById('am-upgrade');
+  if(up){ if(paid){ up.style.display='none'; } else { up.style.display='inline-block'; up.href=MSTP_URL; } }
+  const upMenu=document.getElementById('acct-upgrade'); if(upMenu) upMenu.style.display = paid?'none':'flex';
+  const bc=document.getElementById('am-billing-cta'); if(bc) bc.href=MSTP_URL;
+  const perks=document.getElementById('am-plan-perks');
+  if(perks) perks.innerHTML = paid
+    ? 'Live Model Swing Trader Portfolio · Market Breadth & Score · Sectoral rotation · Personal Trading Desk · Watchlists & Chart Scan.'
+    : 'You currently have limited access. Upgrade through the Master Swing Trader Program to unlock the live Model Portfolio, the full Market Data Tracker, and your personal Trading Desk.';
+  _amText('am-ach-since', window._profSince ? new Date(window._profSince).toLocaleDateString('en-IN',{month:'short',year:'numeric'}) : '—');
+  _amText('am-ach-plan', paid?'Premium':'Free');
+  const mob=document.getElementById('am-mobile'), exp=document.getElementById('am-exp');
+  _amText('am-ach-profile', (mob&&mob.value&&exp&&exp.value)?'Complete':'Incomplete');
+}
 
 /* ════════════════════════════════════════════════════════════
    BELL — Notifications (admin → user) + Messages (course ↔ admin)
@@ -10106,5 +10252,123 @@ function toggleEma(p, el){
     <div id="mt-modal-body"></div>
   </div>
 </div>
+<!-- ══ ACCOUNT SETTINGS MODAL ══ -->
+<div class="am-bg" id="acctModal" style="display:none" onclick="if(event.target===this)closeAcct()">
+  <div class="am-modal">
+    <div class="am-head">
+      <div style="flex:1">
+        <div class="am-welcome">Welcome back, <span id="am-firstname">there</span></div>
+        <div class="am-tabs">
+          <button class="am-tab active" data-tab="profile" onclick="acctTab('profile')">Profile</button>
+          <button class="am-tab" data-tab="plan" onclick="acctTab('plan')">My Plan</button>
+          <button class="am-tab" data-tab="billing" onclick="acctTab('billing')">Billing</button>
+          <button class="am-tab" data-tab="achievements" onclick="acctTab('achievements')">Accomplishments</button>
+        </div>
+      </div>
+      <button class="am-close" onclick="closeAcct()">&#10005;</button>
+    </div>
+    <div class="am-body">
+
+      <!-- PROFILE -->
+      <div class="am-pane" id="am-profile">
+        <div class="am-card">
+          <div class="am-card-h">Profile Information</div>
+          <div class="am-avatar-row">
+            <div class="am-avatar" id="am-avatar">A</div>
+            <div class="am-locknote">Your <b style="color:var(--white)">name</b> and <b style="color:var(--white)">email</b> come from your Google account — one account per email — so they're locked here. Everything else is yours to edit.</div>
+          </div>
+          <div class="am-grid">
+            <div class="am-field">
+              <label>Full Name <span class="am-lock">&#128274; locked</span></label>
+              <input id="am-name" disabled>
+            </div>
+            <div class="am-field">
+              <label>Email <span class="am-lock">&#128274; locked</span></label>
+              <input id="am-email" disabled>
+            </div>
+            <div class="am-field">
+              <label>Mobile</label>
+              <input id="am-mobile" placeholder="+91 98765 43210" inputmode="tel">
+            </div>
+            <div class="am-field">
+              <label>Trading Experience</label>
+              <select id="am-exp">
+                <option value="">Select…</option>
+                <option value="beginner">Beginner (&lt; 1 year)</option>
+                <option value="intermediate">Intermediate (1–3 years)</option>
+                <option value="advanced">Advanced (3–7 years)</option>
+                <option value="pro">Professional (7+ years)</option>
+              </select>
+            </div>
+            <div class="am-field">
+              <label>Age <span class="am-opt">optional</span></label>
+              <input id="am-age" type="number" min="18" max="100" placeholder="—">
+            </div>
+            <div class="am-field">
+              <label>Username <span class="am-opt">optional</span></label>
+              <input id="am-username" placeholder="—">
+            </div>
+            <div class="am-field am-full">
+              <label>Address <span class="am-opt">optional</span></label>
+              <input id="am-address" placeholder="City, State">
+            </div>
+          </div>
+          <div class="am-alert" id="am-alert"></div>
+          <button class="am-save" id="am-save-btn" onclick="saveProfile()">Save Profile</button>
+        </div>
+        <div class="am-card" style="margin-bottom:0">
+          <div class="am-card-h">Coming soon for KYC</div>
+          <div class="am-note">Once payments and the RA license are live, we'll collect the additional details required for regulatory KYC (PAN, etc.) right here. Nothing more is needed from you for now.</div>
+        </div>
+      </div>
+
+      <!-- MY PLAN -->
+      <div class="am-pane" id="am-plan" style="display:none">
+        <div class="am-card">
+          <div class="am-plan-row">
+            <div>
+              <div class="am-plan-name" id="am-plan-name">—</div>
+              <div class="am-plan-sub" id="am-plan-sub">—</div>
+            </div>
+            <span class="am-badge" id="am-plan-badge">—</span>
+          </div>
+          <a class="am-cta" id="am-upgrade" href="#" target="_blank" rel="noopener">Upgrade Plan →</a>
+        </div>
+        <div class="am-card" style="margin-bottom:0">
+          <div class="am-card-h">What you get</div>
+          <div class="am-note" id="am-plan-perks">—</div>
+        </div>
+      </div>
+
+      <!-- BILLING -->
+      <div class="am-pane" id="am-billing" style="display:none">
+        <div class="am-card">
+          <div class="am-card-h">Billing</div>
+          <div class="am-note">A secure payment gateway is being set up. Once live, your subscription, saved cards, invoices and billing history will appear here. For now, enrolment and renewals are handled directly through the Master Swing Trader Program.</div>
+          <a class="am-cta" id="am-billing-cta" href="#" target="_blank" rel="noopener">Manage enrolment →</a>
+        </div>
+        <div class="am-card" style="margin-bottom:0">
+          <div class="am-card-h">Billing History</div>
+          <div class="am-note">No invoices yet — they'll show here once online payments go live.</div>
+        </div>
+      </div>
+
+      <!-- ACCOMPLISHMENTS -->
+      <div class="am-pane" id="am-achievements" style="display:none">
+        <div class="am-card" style="margin-bottom:0">
+          <div class="am-card-h">Accomplishments</div>
+          <div class="am-stat-grid" id="am-ach-grid">
+            <div class="am-stat"><div class="am-stat-l">Member Since</div><div class="am-stat-v" id="am-ach-since">—</div></div>
+            <div class="am-stat"><div class="am-stat-l">Current Plan</div><div class="am-stat-v" id="am-ach-plan" style="font-size:18px">—</div></div>
+            <div class="am-stat"><div class="am-stat-l">Profile</div><div class="am-stat-v" id="am-ach-profile" style="font-size:18px">—</div></div>
+          </div>
+          <div class="am-note" style="margin-top:14px">Detailed accomplishments — stocks studied, watchlists built, streaks and milestones — will populate here as activity tracking comes online.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
