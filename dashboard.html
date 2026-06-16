@@ -354,6 +354,7 @@ body{overflow-x:hidden;
 /* ── Market Score hero card (proprietary 9-indicator composite) ── */
 .msc-card{border-color:var(--bdr3);box-shadow:0 0 30px rgba(92,111,251,.18),inset 0 0 40px rgba(92,111,251,.05)}
 .msc-card .ch{background:linear-gradient(135deg,rgba(92,111,251,.16),var(--card2) 60%,var(--card))}
+.msc-universe{display:inline-flex;align-items:center;font-size:10px;font-weight:700;letter-spacing:.3px;color:var(--blue-lt);background:rgba(92,111,251,.12);border:1px solid rgba(92,111,251,.45);padding:4px 11px;border-radius:100px;box-shadow:0 0 14px rgba(92,111,251,.4);text-shadow:0 0 8px rgba(92,111,251,.5)}
 .msc-aichip{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:700;padding:4px 11px;border-radius:100px;
   background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.55);color:#fff;letter-spacing:.3px;
   box-shadow:0 0 12px rgba(255,255,255,.12)}
@@ -1387,10 +1388,6 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
 <!-- ══ MY TRADING DESK · 360° Overview (replica of Model 360° Overview) ══ -->
 <div class="pane" id="pane-mtoverview">
 
-  <div class="sh">
-    <div class="st">360° Overview</div>
-    <div class="sb" id="uport-date">Loading...</div>
-  </div>
 
   <!-- 4 Big Stat Cards -->
   <div class="port-stats">
@@ -1596,7 +1593,6 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
 
 <!-- ══ MY TRADING DESK · Trade Manager ══ -->
 <div class="pane" id="pane-mtmanager">
-  <div class="sh"><div class="st">Trade Manager</div><div class="sb">Add a trade, pyramid in, book partials, or close</div></div>
 
   <!-- Capital Settings — one-line field (personal book) -->
   <div class="mt-card" id="ucapital-card" style="margin-bottom:14px">
@@ -1698,7 +1694,6 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
 
 <!-- ══ MY TRADING DESK · Open Trades (replica of Model Portfolio Open Trades) ══ -->
 <div class="pane" id="pane-mtportfolio">
-  <div class="sh"><div class="st">Open Positions</div><div class="sb" id="uopen-sub">Loading...</div></div>
   <div class="sstrip" id="uos-sstrip" style="grid-template-columns:repeat(6,1fr)">
     <div class="sc">
       <div class="scl">Deployed</div>
@@ -1757,7 +1752,6 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
 
 <!-- ══ MY TRADING DESK · Closed Trades (replica of Model Portfolio Closed Trades) ══ -->
 <div class="pane" id="pane-mtclosed">
-  <div class="sh"><div class="st">Trade Journal</div><div class="sb">Full journey — Entry → Partial Exits → Final Exit · Realised P&L</div></div>
   <div class="sstrip" id="uct-strip" style="grid-template-columns:repeat(6,1fr);margin-bottom:20px">
     <div class="sc"><div class="scl">Total Realised P&L</div><div class="scv" id="ucs-pnl">—</div><div class="scs">All closed trades</div><div class="sc-badge info" id="ucs-pnl-badge">—</div></div>
     <div class="sc"><div class="scl">Win Rate</div><div class="scv" id="ucs-wr">—</div><div class="scs" id="ucs-wr-sub">—</div><div class="sc-badge info" id="ucs-wr-badge">—</div></div>
@@ -1775,10 +1769,6 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
 ══════════════════════════════════════ -->
 <div class="pane active" id="pane-portfolio">
 
-  <div class="sh">
-    <div class="st">360° Overview</div>
-    <div class="sb" id="port-date">Loading...</div>
-  </div>
 
   <!-- 4 Big Stat Cards -->
   <div class="port-stats">
@@ -1982,9 +1972,6 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
      MARKET DATA · DAILY MARKET BRIEF
 ══════════════════════════════════════ -->
 <div class="pane" id="pane-marketbrief">
-  <div class="sh">
-    <div class="st">Daily Market Brief</div>
-  </div>
   <div class="mbrief" id="market-brief">
     <div class="mbrief-hd">
       <div class="mbrief-ttl">
@@ -2002,16 +1989,13 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
      TAB 2 — MARKET BREADTH
 ══════════════════════════════════════ -->
 <div class="pane" id="pane-breadth">
-  <div class="sh">
-    <div class="st">Market Breadth</div>
-    <div class="sb" id="breadth-sub">Loading...</div>
-  </div>
 
   <!-- ── Market Score (hero — proprietary 9-indicator composite) ── -->
   <div class="card mb-glow msc-card">
     <div class="ch">
       <span class="ct">Market Score</span>
       <div class="ch-r">
+        <span class="msc-universe">Nifty 500 Universe</span>
         <span class="msc-aichip"><span class="msc-aidot"></span>AI Powered</span>
       </div>
     </div>
@@ -2520,7 +2504,6 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
      TAB 3 — OPEN TRADES
 ══════════════════════════════════════ -->
 <div class="pane" id="pane-open">
-  <div class="sh"><div class="st">Open Positions</div><div class="sb" id="open-sub">Loading...</div></div>
   <div class="sstrip" id="os-sstrip" style="grid-template-columns:repeat(6,1fr)">
     <div class="sc">
       <div class="scl">Deployed</div>
@@ -2581,7 +2564,6 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
      TAB 4 — CLOSED TRADES
 ══════════════════════════════════════ -->
 <div class="pane" id="pane-closed">
-  <div class="sh"><div class="st">Trade Journal</div><div class="sb">Full journey — Entry → Partial Exits → Final Exit · Realised P&L</div></div>
   <div class="sstrip" id="ct-strip" style="grid-template-columns:repeat(6,1fr);margin-bottom:20px">
     <div class="sc"><div class="scl">Total Realised P&L</div><div class="scv" id="cs-pnl">—</div><div class="scs">All closed trades</div><div class="sc-badge info" id="cs-pnl-badge">—</div></div>
     <div class="sc"><div class="scl">Win Rate</div><div class="scv" id="cs-wr">—</div><div class="scs" id="cs-wr-sub">—</div><div class="sc-badge info" id="cs-wr-badge">—</div></div>
