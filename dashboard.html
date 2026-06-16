@@ -80,6 +80,14 @@ body{overflow-x:hidden;
 *{scrollbar-color:#5c6ffb rgba(255,255,255,.05)}
 /* Market Breadth — illuminated blue indicator borders (matches Sectoral) */
 .card.mb-glow{border-color:rgba(92,111,251,.55);box-shadow:0 0 24px rgba(92,111,251,.16),inset 0 0 26px rgba(92,111,251,.04)}
+/* 360° Overview — illuminated blue borders on every metric box (matches Market Breadth) */
+#pane-portfolio .card,#pane-mtoverview .card,#pane-portfolio .pstat,#pane-mtoverview .pstat{border-color:rgba(92,111,251,.5);box-shadow:0 0 22px rgba(92,111,251,.13),inset 0 0 24px rgba(92,111,251,.04)}
+/* Fill vertical space in the shorter g2 cards (Capital Allocation, Performance Metrics) */
+.g2 .card:has(.alloc-row){display:flex;flex-direction:column}
+.g2 .card:has(.alloc-row) .alloc-row{flex:1;align-content:center}
+.g2 .card:has(.perf-grid){display:flex;flex-direction:column}
+.g2 .card:has(.perf-grid) .perf-grid{flex:1;grid-auto-rows:1fr}
+.g2 .card:has(.perf-grid) .perf-cell{display:flex;flex-direction:column;justify-content:center}
 /* FII/DII history — cap ~10 rows, scroll the rest, sticky header */
 .fii-scroll{overflow:auto;max-height:430px;-webkit-overflow-scrolling:touch}
 #fii-dii-history thead th{position:sticky;top:0;z-index:2}
@@ -214,9 +222,9 @@ body{overflow-x:hidden;
 .rf-main{flex:1;min-width:0}
 .rf-top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
 .rf-sym{font-weight:800;color:var(--white);font-size:13px}
-.rf-date{font-size:10px;color:var(--muted);white-space:nowrap}
-.rf-desc{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.5}
-.rf-desc b{color:var(--white);font-weight:700}
+.rf-date{font-size:10px;color:var(--blue-lt);white-space:nowrap;background:rgba(92,111,251,.16);border:1px solid rgba(92,111,251,.32);padding:3px 8px;border-radius:6px;font-weight:600}
+.rf-desc{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5}
+.rf-desc b{color:inherit;font-weight:inherit}
 .pstat{
   background:var(--card);
   border:1px solid var(--bdr);
@@ -1393,15 +1401,15 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
       <div class="pstat-icon pi-green">📈</div>
       <div class="pstat-label">Notional P&L (Open)</div>
       <div class="pstat-value" id="uport-pnl" style="color:var(--green)">—</div>
+      <div class="pstat-sub">Unrealised gain on open trades</div>
+      <div class="pstat-delta pd-up" id="uport-pnl-pct">—</div>
+    </div>
     <div class="pstat ps-green">
       <div class="pstat-icon pi-green">✅</div>
       <div class="pstat-label">Realised P&L</div>
       <div class="pstat-value" id="uport-realised" style="color:var(--green)">—</div>
       <div class="pstat-sub">Booked on closed trades</div>
       <div class="pstat-delta pd-up" id="uport-realised-pct">—</div>
-    </div>
-      <div class="pstat-sub">Unrealised gain on open trades</div>
-      <div class="pstat-delta pd-up" id="uport-pnl-pct">—</div>
     </div>
     <div class="pstat ps-cyan">
       <div class="pstat-icon pi-cyan">💰</div>
@@ -1431,7 +1439,7 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
     </div>
 
     <div class="card">
-      <div class="ch"><span class="ct">Recent Buy &amp; Sell</span><span class="chip">Latest activity</span></div>
+      <div class="ch"><span class="ct">Recent Trading Activity</span><span class="chip">Latest activity</span></div>
       <div class="recent-feed" id="urecent-activity"><div style="padding:16px;color:var(--muted);font-size:12px">Loading…</div></div>
     </div>
   </div>
@@ -1781,15 +1789,15 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
       <div class="pstat-icon pi-green">📈</div>
       <div class="pstat-label">Notional P&L (Open)</div>
       <div class="pstat-value" id="port-pnl" style="color:var(--green)">—</div>
+      <div class="pstat-sub">Unrealised gain on open trades</div>
+      <div class="pstat-delta pd-up" id="port-pnl-pct">—</div>
+    </div>
     <div class="pstat ps-green">
       <div class="pstat-icon pi-green">✅</div>
       <div class="pstat-label">Realised P&L</div>
       <div class="pstat-value" id="port-realised" style="color:var(--green)">—</div>
       <div class="pstat-sub">Booked on closed trades</div>
       <div class="pstat-delta pd-up" id="port-realised-pct">—</div>
-    </div>
-      <div class="pstat-sub">Unrealised gain on open trades</div>
-      <div class="pstat-delta pd-up" id="port-pnl-pct">—</div>
     </div>
     <div class="pstat ps-cyan">
       <div class="pstat-icon pi-cyan">💰</div>
@@ -1819,7 +1827,7 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
     </div>
 
     <div class="card">
-      <div class="ch"><span class="ct">Recent Buy &amp; Sell</span><span class="chip">Latest activity</span></div>
+      <div class="ch"><span class="ct">Recent Trading Activity</span><span class="chip">Latest activity</span></div>
       <div class="recent-feed" id="recent-activity"><div style="padding:16px;color:var(--muted);font-size:12px">Loading…</div></div>
     </div>
   </div>
@@ -5457,7 +5465,7 @@ function drawPortfolioCharts(){
   buildRecentActivity(true,'recent-activity');
 }
 
-// Recent Buy & Sell — merges latest entries (buys) and exits (sells), newest first.
+// Recent Trading Activity — merges entries, pyramids (buys) and exits, partials (sells), newest first.
 async function buildRecentActivity(isModel, containerId){
   const el=document.getElementById(containerId); if(!el) return;
   const money=n=>Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -5465,28 +5473,49 @@ async function buildRecentActivity(isModel, containerId){
   let opens=[], closes=[];
   try{
     const r=await Promise.all([
-      sb.from('open_trades').select('*').eq('is_model',isModel).order('entry_date',{ascending:false}).limit(12),
-      sb.from('closed_trades').select('*').eq('is_model',isModel).order('exit_date',{ascending:false}).limit(12)
+      sb.from('open_trades').select('id,symbol,company_name,avg_entry_price,entry_price,quantity,remaining_qty,position_size_pct,entry_date').eq('is_model',isModel).order('entry_date',{ascending:false}).limit(20),
+      sb.from('closed_trades').select('symbol,company_name,avg_exit_price,exit_price,quantity,realised_pnl,return_pct,exit_date,origin_open_trade_id').eq('is_model',isModel).order('exit_date',{ascending:false}).limit(20)
     ]);
     opens=r[0].data||[]; closes=r[1].data||[];
   }catch(e){}
+  // Map open_trade_id → {sym,name} so pyramids/partials (which key off it) can label themselves.
+  const idMap={};
+  opens.forEach(t=>{ idMap[t.id]={sym:t.symbol,name:t.company_name||t.symbol}; });
+  closes.forEach(c=>{ if(c.origin_open_trade_id) idMap[c.origin_open_trade_id]={sym:c.symbol,name:c.company_name||c.symbol}; });
+  const ids=Object.keys(idMap);
+  let parts=[], pyrs=[];
+  if(ids.length){
+    try{
+      const r2=await Promise.all([
+        sb.from('partial_exits').select('open_trade_id,symbol,exit_date,exit_price,quantity,realised_pnl,return_pct').in('open_trade_id',ids).order('exit_date',{ascending:false}).limit(20),
+        sb.from('trade_entries').select('open_trade_id,entry_date,entry_price,quantity').in('open_trade_id',ids).order('entry_date',{ascending:false}).limit(20)
+      ]);
+      parts=r2[0].data||[]; pyrs=r2[1].data||[];
+    }catch(e){}
+  }
   const items=[];
   opens.forEach(t=>{
-    const qty=t.quantity||t.remaining_qty||0, px=t.avg_entry_price||t.entry_price||0;
-    const co=t.company_name||t.symbol;
-    items.push({side:'buy', sym:t.symbol, date:t.entry_date,
-      desc:`Bought <b>${qty}</b> share${qty==1?'':'s'} of ${co} (${t.symbol}) at an average price of <b>₹${money(px)}</b>`+
-           (t.position_size_pct!=null?`. Allocation <b>${Number(t.position_size_pct).toFixed(2)}%</b>`:'')});
+    const qty=t.quantity||t.remaining_qty||0, px=t.avg_entry_price||t.entry_price||0, co=t.company_name||t.symbol;
+    items.push({side:'buy',sym:t.symbol,date:t.entry_date,
+      desc:`Bought ${qty} share${qty==1?'':'s'} of ${co} (${t.symbol}) at an average price of ₹${money(px)}`+(t.position_size_pct!=null?`. Allocation ${Number(t.position_size_pct).toFixed(2)}%`:'')});
+  });
+  pyrs.forEach(p=>{
+    const m=idMap[p.open_trade_id]||{}, sym=m.sym||'—', co=m.name||sym, qty=p.quantity||0, px=p.entry_price||0;
+    items.push({side:'buy',sym,date:p.entry_date,
+      desc:`Pyramided ${qty} share${qty==1?'':'s'} into ${co} (${sym}) at ₹${money(px)}`});
   });
   closes.forEach(t=>{
-    const qty=t.quantity||t.exit_qty||0, px=t.avg_exit_price||t.exit_price||0, pnl=t.realised_pnl||0;
-    const co=t.company_name||t.symbol;
-    items.push({side:'sell', sym:t.symbol, date:t.exit_date,
-      desc:`Sold <b>${qty}</b> share${qty==1?'':'s'} of ${co} (${t.symbol}) at <b>₹${money(px)}</b>. Realised P&L <b>${pnl>=0?'+':'−'}₹${whole(pnl)}</b>`+
-           (t.return_pct!=null?` (<b>${Number(t.return_pct).toFixed(1)}%</b>)`:'')});
+    const qty=t.quantity||0, px=t.avg_exit_price||t.exit_price||0, pnl=t.realised_pnl||0, co=t.company_name||t.symbol;
+    items.push({side:'sell',sym:t.symbol,date:t.exit_date,
+      desc:`Sold ${qty} share${qty==1?'':'s'} of ${co} (${t.symbol}) at ₹${money(px)}. Realised P&L ${pnl>=0?'+':'−'}₹${whole(pnl)}`+(t.return_pct!=null?` (${Number(t.return_pct).toFixed(1)}%)`:'')});
+  });
+  parts.forEach(p=>{
+    const m=idMap[p.open_trade_id]||{}, sym=p.symbol||m.sym||'—', co=m.name||sym, qty=p.quantity||0, px=p.exit_price||0, pnl=p.realised_pnl||0;
+    items.push({side:'sell',sym,date:p.exit_date,
+      desc:`Partial exit — sold ${qty} share${qty==1?'':'s'} of ${co} (${sym}) at ₹${money(px)}. Realised P&L ${pnl>=0?'+':'−'}₹${whole(pnl)}`+(p.return_pct!=null?` (${Number(p.return_pct).toFixed(1)}%)`:'')});
   });
   items.sort((a,b)=> new Date(b.date||0) - new Date(a.date||0));
-  const top=items.slice(0,10);
+  const top=items.slice(0,12);
   if(!top.length){ el.innerHTML='<div style="padding:16px;color:var(--muted);font-size:12px">No recent activity yet.</div>'; return; }
   el.innerHTML=top.map(it=>{
     const d=it.date?new Date(it.date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}):'';
