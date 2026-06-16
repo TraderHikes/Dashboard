@@ -5645,7 +5645,7 @@ async function saveUserCapital(){
   const v=parseFloat(document.getElementById('ucap-input').value);
   if(!(v>0)){ setAlert('Enter a total capital amount greater than zero.','err'); return; }
   const { error } = await sb.from('portfolio_config')
-    .upsert({ user_id:window._uid, total_capital:Math.round(v), updated_at:new Date().toISOString() }, { onConflict:'user_id' });
+    .upsert({ user_id:window._uid, book:'personal', total_capital:Math.round(v), updated_at:new Date().toISOString() }, { onConflict:'user_id' });
   if(error){ setAlert('Error: '+error.message,'err'); return; }
   window._personalCapital=Math.round(v);
   setAlert('✓ Capital updated — metrics recalculated','ok');
