@@ -509,7 +509,7 @@ def save_portfolio_snapshot(cmp_map, n500_val):
             "cash_available":        round(cash_avail, 2),
             "nifty500_level":        n500_val,
             "cumulative_return_pct": cum_ret,
-        }, on_conflict="user_id,snapshot_date").execute()
+        }, on_conflict="user_id,is_model,snapshot_date").execute()
         print(f"   ✓ Model portfolio ₹{port_val:,.0f} | cash ₹{cash_avail:,.0f}\n")
     except Exception as e:
         print(f"   ⚠️  Snapshot failed: {e}\n")
