@@ -879,6 +879,23 @@ canvas.tc{display:block;width:100%;height:100%}
 .am-stat-l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
 .am-stat-v{font-size:24px;font-weight:800;color:var(--white);margin-top:4px;font-family:var(--fm)}
 @media(max-width:600px){.am-grid,.am-stat-grid{grid-template-columns:1fr}}
+.acct-hd-click{cursor:pointer;border-radius:10px;transition:background .14s,box-shadow .14s}
+.acct-hd-click:hover{background:rgba(92,111,251,.12);box-shadow:inset 0 0 0 1px rgba(92,111,251,.45),0 0 16px rgba(92,111,251,.28)}
+.acct-hd-arrow{color:var(--muted);flex-shrink:0;transition:transform .14s,color .14s}
+.acct-hd-click:hover .acct-hd-arrow{color:var(--blue-lt);transform:translateX(2px)}
+.acct-av.has-img,.am-avatar.has-img{background-size:cover!important;background-position:center!important;color:transparent!important;text-indent:-9999px}
+.am-upload-btn{display:inline-flex;align-items:center;gap:7px;background:var(--card);border:1px solid var(--bdr);color:var(--white);border-radius:9px;padding:9px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .12s,border-color .12s}
+.am-upload-btn:hover{background:var(--card3);border-color:rgba(92,111,251,.4)}
+.am-upload-hint{font-size:10px;color:var(--muted);margin-top:6px}
+.am-gami{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.am-gcard{background:var(--card);border:1px solid rgba(92,111,251,.22);border-radius:13px;padding:16px;display:flex;flex-direction:column;gap:9px;box-shadow:0 0 14px rgba(92,111,251,.05)}
+.am-gico{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:rgba(92,111,251,.14);color:var(--blue-lt)}
+.am-gv{font-size:26px;font-weight:800;color:var(--white);font-family:var(--fm);line-height:1}
+.am-gl{font-size:11px;color:var(--muted);font-weight:600}
+.am-streak{grid-column:1/-1;display:flex;align-items:center;gap:20px;flex-wrap:wrap;background:linear-gradient(135deg,rgba(92,111,251,.16),var(--card));border:1px solid rgba(92,111,251,.4);border-radius:13px;padding:18px 20px;box-shadow:0 0 22px rgba(92,111,251,.16)}
+.am-streak-big{font-size:38px;font-weight:800;color:var(--white);font-family:var(--fm);line-height:1}
+.am-streak-l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;font-weight:700;margin-top:3px}
+@media(max-width:600px){.am-gami{grid-template-columns:1fr 1fr}}
 
 </style>
 <style>
@@ -1342,18 +1359,12 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
         <div class="acct-nm" id="hdr-user">—</div>
       </div>
       <div class="acct-pop" id="acct-pop">
-        <div class="acct-hd" onclick="openAcct('profile')" style="cursor:pointer"><div class="acct-av lg" id="acct-av2">A</div><div style="flex:1"><div class="acct-pop-nm" id="acct-pop-nm">—</div><div class="acct-pop-sub">Account Settings ›</div></div></div>
+        <div class="acct-hd acct-hd-click" onclick="openAcct('profile')" title="Open Account Settings"><div class="acct-av lg" id="acct-av2">A</div><div style="flex:1"><div class="acct-pop-nm" id="acct-pop-nm">—</div><div class="acct-pop-sub">Account Settings ›</div></div><svg class="acct-hd-arrow" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></div>
         <div class="acct-div"></div>
-        <div class="acct-item" onclick="openAcct('profile')"><span class="ai-ic">&#128100;</span> Profile</div>
-        <div class="acct-item" onclick="openAcct('plan')"><span class="ai-ic">&#11088;</span> My Plan</div>
-        <div class="acct-item" id="acct-upgrade" onclick="openAcct('plan')"><span class="ai-ic">&#128640;</span> Upgrade Plan</div>
-        <div class="acct-item" onclick="openAcct('billing')"><span class="ai-ic">&#128179;</span> Billing</div>
-        <div class="acct-item" onclick="openAcct('achievements')"><span class="ai-ic">&#127942;</span> Accomplishments</div>
+        <div class="acct-item" id="acct-admin" style="display:none" onclick="window.location.href='https://dashboard.traderhikes.com/admin.html'"><span class="ai-ic"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> Admin Panel</div>
+        <div class="acct-item" onclick="toggleTheme()"><span class="ai-ic"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span> Theme <span class="acct-toggle"><span id="theme-state">Dark</span></span></div>
         <div class="acct-div"></div>
-        <div class="acct-item" id="acct-admin" style="display:none" onclick="window.location.href='https://dashboard.traderhikes.com/admin.html'"><span class="ai-ic">&#9881;</span> Admin Panel</div>
-        <div class="acct-item" onclick="toggleTheme()"><span class="ai-ic">&#9680;</span> Theme <span class="acct-toggle"><span id="theme-state">Dark</span></span></div>
-        <div class="acct-div"></div>
-        <div class="acct-item danger" onclick="signOut()"><span class="ai-ic">&#9211;</span> Sign Out</div>
+        <div class="acct-item danger" onclick="signOut()"><span class="ai-ic"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span> Sign Out</div>
       </div>
     </div>
   </div>
@@ -3321,6 +3332,7 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
   NAVUI.build(role);
   if(typeof initBell==='function') initBell();
+  if(typeof initAccount==='function') initAccount();
   if(role!=='admin'){ try{ MT.init(); MT.loadOpen(); }catch(e){} }
 })();
 
@@ -3370,6 +3382,7 @@ async function loadProfile(){
       document.getElementById('am-username').value = data.username||'';
       document.getElementById('am-address').value  = data.address||'';
       if(data.created_at) window._profSince = data.created_at;
+      if(data.avatar_url) applyAvatar(data.avatar_url);
     }
   }catch(e){}
   populatePlan();
@@ -3421,11 +3434,111 @@ function populatePlan(){
   if(perks) perks.innerHTML = paid
     ? 'Live Model Swing Trader Portfolio · Market Breadth & Score · Sectoral rotation · Personal Trading Desk · Watchlists & Chart Scan.'
     : 'You currently have limited access. Upgrade through the Master Swing Trader Program to unlock the live Model Portfolio, the full Market Data Tracker, and your personal Trading Desk.';
-  _amText('am-ach-since', window._profSince ? new Date(window._profSince).toLocaleDateString('en-IN',{month:'short',year:'numeric'}) : '—');
-  _amText('am-ach-plan', paid?'Premium':'Free');
-  const mob=document.getElementById('am-mobile'), exp=document.getElementById('am-exp');
-  _amText('am-ach-profile', (mob&&mob.value&&exp&&exp.value)?'Complete':'Incomplete');
+  renderAchievements();
 }
+
+/* ── AVATAR ── */
+function applyAvatar(url){
+  if(!url) return;
+  ['am-avatar','acct-av','acct-av2'].forEach(id=>{
+    const e=document.getElementById(id); if(e){ e.classList.add('has-img'); e.style.backgroundImage='url("'+url+'")'; }
+  });
+  window._avatarUrl=url;
+}
+async function uploadAvatar(input){
+  const file=input.files && input.files[0]; if(!file) return;
+  const al=document.getElementById('am-alert');
+  if(file.size > 800*1024){ if(al){al.className='am-alert err'; al.textContent='Image too large — please keep it under 800 KB.';} input.value=''; return; }
+  let user=null; try{ user=(await sb.auth.getUser()).data.user; }catch(e){}
+  if(!user){ return; }
+  if(al){ al.className='am-alert ok'; al.textContent='Uploading photo…'; }
+  const ext=(file.name.split('.').pop()||'png').toLowerCase().replace(/[^a-z0-9]/g,'')||'png';
+  const path=`${user.id}/avatar_${Date.now()}.${ext}`;
+  const up=await sb.storage.from('avatars').upload(path, file, {upsert:true, cacheControl:'3600', contentType:file.type});
+  if(up.error){ if(al){al.className='am-alert err'; al.textContent='Upload failed: '+up.error.message;} input.value=''; return; }
+  const { data:pub } = sb.storage.from('avatars').getPublicUrl(path);
+  const url=pub.publicUrl;
+  await sb.from('user_profiles').upsert({ user_id:user.id, avatar_url:url, updated_at:new Date().toISOString() }, { onConflict:'user_id' });
+  applyAvatar(url);
+  if(al){ al.className='am-alert ok'; al.textContent='✓ Photo updated.'; setTimeout(()=>{al.className='am-alert';al.textContent='';},3000); }
+  input.value='';
+}
+
+/* ── ACTIVITY / GAMIFICATION ── */
+let _actFlushT=null;
+function _todayISO(){ return new Date().toISOString().slice(0,10); }
+function _ydayISO(){ return new Date(Date.now()-86400000).toISOString().slice(0,10); }
+function flushActivity(){
+  if(!window._activity) return;
+  clearTimeout(_actFlushT);
+  _actFlushT=setTimeout(()=>{
+    const a={...window._activity}; a.updated_at=new Date().toISOString();
+    sb.from('user_activity').upsert(a,{onConflict:'user_id'}).then(()=>{},()=>{});
+  }, 900);
+}
+async function loadActivity(uid){
+  let a=null;
+  try{ a=(await sb.from('user_activity').select('*').eq('user_id',uid).maybeSingle()).data; }catch(e){}
+  const today=_todayISO();
+  if(!a){ a={user_id:uid,minutes_spent:0,charts_scanned:0,briefs_read:0,streak_days:1,longest_streak:1,last_active:today,breadth_streak:0,breadth_longest:0,breadth_last:null}; }
+  // visit streak
+  if(a.last_active!==today){
+    a.streak_days = (a.last_active===_ydayISO()) ? (a.streak_days||0)+1 : 1;
+    a.longest_streak = Math.max(a.longest_streak||0, a.streak_days);
+    a.last_active = today;
+  }
+  window._activity=a;
+  flushActivity();
+}
+function trackActivity(subId){
+  const a=window._activity; if(!a) return;
+  const today=_todayISO(); let changed=false;
+  if(subId==='charts'||subId==='mycharts'){
+    const k='act_charts_'+today; if(!sessionStorage.getItem(k)){ sessionStorage.setItem(k,'1'); a.charts_scanned=(a.charts_scanned||0)+1; changed=true; }
+  } else if(subId==='marketbrief'){
+    const k='act_brief_'+today; if(!sessionStorage.getItem(k)){ sessionStorage.setItem(k,'1'); a.briefs_read=(a.briefs_read||0)+1; changed=true; }
+  } else if(subId==='breadth'){
+    if(a.breadth_last!==today){ a.breadth_streak=(a.breadth_last===_ydayISO())?(a.breadth_streak||0)+1:1; a.breadth_longest=Math.max(a.breadth_longest||0,a.breadth_streak); a.breadth_last=today; changed=true; }
+  }
+  if(changed) flushActivity();
+}
+async function renderAchievements(){
+  const a=window._activity||{};
+  const mins=a.minutes_spent||0;
+  _amText('am-g-time', mins>=60 ? (mins/60).toFixed(1)+'h' : mins+'m');
+  _amText('am-g-charts', a.charts_scanned||0);
+  _amText('am-g-briefs', a.briefs_read||0);
+  _amText('am-g-streak', a.streak_days||0);
+  _amText('am-g-streak-best', a.longest_streak||0);
+  _amText('am-g-breadth', (a.breadth_streak||0)+(a.breadth_streak===1?' day':' days'));
+  _amText('am-g-since', window._profSince ? new Date(window._profSince).toLocaleDateString('en-IN',{month:'short',year:'numeric'}) : '—');
+  // live counts
+  try{
+    let user=(await sb.auth.getUser()).data.user;
+    if(user){
+      const [w,d]=await Promise.all([
+        sb.from('user_watchlists').select('id',{count:'exact',head:true}).eq('user_id',user.id),
+        sb.from('hawk_dashboards').select('id',{count:'exact',head:true}).eq('user_id',user.id)
+      ]);
+      _amText('am-g-watch', w.count||0);
+      _amText('am-g-dash', d.count||0);
+    }
+  }catch(e){ _amText('am-g-watch','0'); _amText('am-g-dash','0'); }
+}
+async function initAccount(){
+  let user=null; try{ user=(await sb.auth.getUser()).data.user; }catch(e){}
+  if(!user) return;
+  // sidebar avatar
+  try{
+    const { data } = await sb.from('user_profiles').select('avatar_url,created_at').eq('user_id',user.id).maybeSingle();
+    if(data){ window._profSince=data.created_at||user.created_at; if(data.avatar_url) applyAvatar(data.avatar_url); }
+    else window._profSince=user.created_at;
+  }catch(e){ window._profSince=user.created_at; }
+  await loadActivity(user.id);
+}
+// session minutes — count only while tab is visible
+setInterval(()=>{ if(window._activity && document.visibilityState==='visible'){ window._activity.minutes_spent=(window._activity.minutes_spent||0)+1; flushActivity(); } }, 60000);
+window.addEventListener('beforeunload', ()=>{ if(window._activity){ try{ const a={...window._activity}; a.updated_at=new Date().toISOString(); navigator.sendBeacon && sb.from('user_activity').upsert(a,{onConflict:'user_id'}); }catch(e){} } });
 
 /* ════════════════════════════════════════════════════════════
    BELL — Notifications (admin → user) + Messages (course ↔ admin)
@@ -3817,7 +3930,7 @@ const NAVUI=(()=>{
     document.querySelectorAll('.ns-btn').forEach(b=>b.classList.toggle('active', b.dataset.s===subId));
     const g=NAV.find(x=>x.key===curGroup);
     if(g && g.lockFor.includes(role)) showLock(g);
-    else { hideLock(); sw(subId); }
+    else { hideLock(); sw(subId); try{ trackActivity(subId); }catch(e){} }
   }
   function hideLock(){ const l=document.getElementById('lock-screen'); if(l) l.style.display='none'; }
   const LOCK_SVG='<svg viewBox="0 0 24 24" width="46" height="46" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
@@ -10275,8 +10388,16 @@ function toggleEma(p, el){
           <div class="am-card-h">Profile Information</div>
           <div class="am-avatar-row">
             <div class="am-avatar" id="am-avatar">A</div>
-            <div class="am-locknote">Your <b style="color:var(--white)">name</b> and <b style="color:var(--white)">email</b> come from your Google account — one account per email — so they're locked here. Everything else is yours to edit.</div>
+            <div style="flex:1">
+              <button type="button" class="am-upload-btn" onclick="document.getElementById('am-photo-input').click()">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                Upload Photo
+              </button>
+              <input type="file" id="am-photo-input" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="uploadAvatar(this)">
+              <div class="am-upload-hint">JPEG, PNG or WebP · max 800 KB</div>
+            </div>
           </div>
+          <div class="am-locknote" style="margin-bottom:16px">Your <b style="color:var(--white)">name</b> and <b style="color:var(--white)">email</b> come from your Google account — one account per email — so they're locked here. Everything else is yours to edit.</div>
           <div class="am-grid">
             <div class="am-field">
               <label>Full Name <span class="am-lock">&#128274; locked</span></label>
@@ -10357,12 +10478,25 @@ function toggleEma(p, el){
       <div class="am-pane" id="am-achievements" style="display:none">
         <div class="am-card" style="margin-bottom:0">
           <div class="am-card-h">Accomplishments</div>
-          <div class="am-stat-grid" id="am-ach-grid">
-            <div class="am-stat"><div class="am-stat-l">Member Since</div><div class="am-stat-v" id="am-ach-since">—</div></div>
-            <div class="am-stat"><div class="am-stat-l">Current Plan</div><div class="am-stat-v" id="am-ach-plan" style="font-size:18px">—</div></div>
-            <div class="am-stat"><div class="am-stat-l">Profile</div><div class="am-stat-v" id="am-ach-profile" style="font-size:18px">—</div></div>
+          <div class="am-gami">
+            <div class="am-streak">
+              <div>
+                <div class="am-streak-big"><span id="am-g-streak">—</span> <span style="font-size:16px;color:var(--muted);font-weight:700">days</span></div>
+                <div class="am-streak-l">Visit Streak · best <span id="am-g-streak-best">—</span></div>
+              </div>
+              <div style="border-left:1px solid var(--bdr);padding-left:20px">
+                <div class="am-streak-big" style="font-size:30px;color:var(--blue-lt)"><span id="am-g-breadth">—</span></div>
+                <div class="am-streak-l">Market-Breadth Streak</div>
+              </div>
+            </div>
+            <div class="am-gcard"><div class="am-gico"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg></div><div class="am-gv" id="am-g-time">—</div><div class="am-gl">Time Spent</div></div>
+            <div class="am-gcard"><div class="am-gico"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 4 8-9"/><path d="M16 7h5v5"/></svg></div><div class="am-gv" id="am-g-charts">—</div><div class="am-gl">Charts Scanned</div></div>
+            <div class="am-gcard"><div class="am-gico"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg></div><div class="am-gv" id="am-g-briefs">—</div><div class="am-gl">Market Briefs Read</div></div>
+            <div class="am-gcard"><div class="am-gico"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div><div class="am-gv" id="am-g-watch">—</div><div class="am-gl">Watchlists Built</div></div>
+            <div class="am-gcard"><div class="am-gico"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></div><div class="am-gv" id="am-g-dash">—</div><div class="am-gl">Dashboards Created</div></div>
+            <div class="am-gcard"><div class="am-gico"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div class="am-gv" id="am-g-since" style="font-size:18px">—</div><div class="am-gl">Member Since</div></div>
           </div>
-          <div class="am-note" style="margin-top:14px">Detailed accomplishments — stocks studied, watchlists built, streaks and milestones — will populate here as activity tracking comes online.</div>
+          <div class="am-note" style="margin-top:14px">Your streaks and counts update as you use the platform — visit daily, scan charts, read the morning brief, and check Market Breadth to keep them climbing.</div>
         </div>
       </div>
 
