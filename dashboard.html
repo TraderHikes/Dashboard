@@ -299,6 +299,7 @@ body{overflow-x:hidden;
 .pcl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:6px}
 .pcv{font-size:18px;font-weight:800;color:var(--white);letter-spacing:-.4px;font-family:var(--f)}
 .pcv.g{color:var(--green)}.pcv.r{color:var(--red)}.pcv.a{color:var(--amber)}.pcv.b{color:var(--blue-lt)}.pcv.c{color:var(--cyan)}
+.inception-pill{display:inline-block;margin-top:8px;font-size:10px;font-weight:700;font-family:var(--fm);color:#cfe0ff;padding:4px 11px;border-radius:100px;background:linear-gradient(180deg,rgba(60,110,255,.28),rgba(60,110,255,.14));border:1px solid rgba(90,140,255,.55);box-shadow:0 0 0 1px rgba(70,120,255,.15),0 0 14px rgba(70,120,255,.45);white-space:nowrap}
 .pcs{font-size:10px;color:var(--muted);margin-top:3px}
 
 /* Monthly returns heatmap */
@@ -1618,6 +1619,7 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
         <div class="pcl">Portfolio Return</div>
         <div class="pcv g" id="ueq-port-return">—</div>
         <div class="pcs">Since inception</div>
+        <div class="inception-pill" id="ueq-inception" style="display:none"></div>
       </div>
       <div style="background:var(--card2);padding:12px 18px;border-left:1px solid var(--bdr)">
         <div class="pcl">Nifty 500 Return</div>
@@ -2011,6 +2013,7 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
         <div class="pcl">Portfolio Return</div>
         <div class="pcv g" id="eq-port-return">—</div>
         <div class="pcs">Since inception</div>
+        <div class="inception-pill" id="eq-inception" style="display:none"></div>
       </div>
       <div style="background:var(--card2);padding:12px 18px;border-left:1px solid var(--bdr)">
         <div class="pcl">Nifty 500 Return</div>
@@ -5090,8 +5093,11 @@ async function loadPortfolioOverview() {
   setText('eq-nifty-return', (niftyReturn>=0?'+':'')+niftyReturn.toFixed(1)+'%');
   setText('eq-alpha', (alpha>=0?'+':'')+alpha.toFixed(1)+'%');
   setText('eq-port-value', fmtL(portValue));
+  // Inception pill — user-specific: first portfolio snapshot date (when equity
+  // tracking began). Glowing blue pill under Portfolio Return.
+  setInceptionPill('eq-inception', window._eqSnaps);
   const rpEl = document.getElementById('eq-realised-pnl');
-  if(rpEl){ rpEl.textContent=(realisedPnl>=0?'+':'')+fmt(realisedPnl); rpEl.style.color=realisedPnl>=0?'var(--green)':'var(--red)'; }
+  if(rpEl){ rpEl.textContent=(realisedPnl>=0?'+':'')+fmtL(realisedPnl); rpEl.style.color=realisedPnl>=0?'var(--green)':'var(--red)'; }
 
   // ── CAPITAL ALLOCATION DONUT ───────────────
   setText('donut-pct', deployedPct+'%');
@@ -5570,6 +5576,22 @@ function setEqPeriod(m,el){
   eqPeriod=m; drawEquityCurve();
 }
 
+// Inception pill: shows the user-specific date equity tracking began (the
+// earliest portfolio snapshot). Date-only, formatted like "1st April 2026".
+function setInceptionPill(pillId, snaps){
+  const el=document.getElementById(pillId); if(!el) return;
+  const valid=(snaps||[]).filter(s=>s && s.snapshot_date)
+    .sort((a,b)=> new Date(a.snapshot_date)-new Date(b.snapshot_date));
+  if(!valid.length){ el.style.display='none'; return; }
+  const d=new Date(valid[0].snapshot_date);
+  if(isNaN(d)){ el.style.display='none'; return; }
+  const day=d.getDate();
+  const ord = (day%10===1&&day!==11)?'st':(day%10===2&&day!==12)?'nd':(day%10===3&&day!==13)?'rd':'th';
+  const month=d.toLocaleDateString('en-IN',{month:'long'});
+  el.textContent=`◆ Inception: ${day}${ord} ${month} ${d.getFullYear()}`;
+  el.style.display='inline-block';
+}
+
 function drawEquityCurve(){
   const cv=document.getElementById('eq-canvas');if(!cv)return;
   const W=cv.offsetWidth||800;cv.width=W;cv.height=220;
@@ -5846,23 +5868,16 @@ async function buildRecentActivity(isModel, containerId){
       sb.from('closed_trades').select('symbol,company_name,avg_exit_price,exit_price,quantity,realised_pnl,return_pct,exit_date,entry_date,origin_open_trade_id').eq('is_model',isModel).order('exit_date',{ascending:false}).limit(200)
     ]);
     opens=r[0].data||[]; closes=r[1].data||[];
-    // Surface (don't swallow) query errors — a failed closes query is exactly
-    // how full closes would silently disappear from this feed.
     if(r[0].error) console.error('[recent] open_trades query error:', r[0].error);
     if(r[1].error) console.error('[recent] closed_trades query error:', r[1].error);
     // Resilience: if the explicit-column closes query failed or returned
-    // nothing, retry with select('*') (the same query the closed-trade cards
-    // use successfully). A single renamed/blocked column then can't wipe out
-    // the whole closes list.
+    // nothing, retry with select('*') (the query the closed-trade cards use).
+    // A single renamed/blocked column then can't wipe out the closes list.
     if(r[1].error || closes.length===0){
       const fb = await sb.from('closed_trades').select('*').eq('is_model',isModel).order('exit_date',{ascending:false}).limit(200);
-      if(fb.data && fb.data.length){ closes=fb.data; console.log('[recent] closes fallback select(*) →', closes.length); }
-      if(fb.error) console.error('[recent] closes fallback error:', fb.error);
+      if(fb.data && fb.data.length) closes=fb.data;
     }
-    console.log('[recent]', containerId, 'isModel='+isModel,
-      '| opens:', opens.length, '| closes:', closes.length,
-      closes.map(c=>`${c.symbol}@${c.exit_date}`));
-  }catch(e){ console.error('[recent] fetch threw:', e); }
+  }catch(e){ console.error('[recent] fetch error:', e); }
 
   // Map open_trade_id → {sym,name} so pyramids/partials (which key off it) can label themselves.
   const idMap={};
@@ -5913,31 +5928,14 @@ async function buildRecentActivity(isModel, containerId){
 
   items.sort((a,b)=> new Date(b.date||0) - new Date(a.date||0));
 
-  // Detect closed trades that exist but fall OUTSIDE the current window, so we
-  // can tell the user to widen the range rather than leave them hunting.
-  const closesOutside = closes.filter(t=>!inWindow(t.exit_date));
-  const rangeLbl = rng.days ? `last ${rng.days} days` : 'selected range';
-
-  // Caption: count + active range (+ widen hint when relevant)
-  let caption = `<div class="rf-cap">${items.length} event${items.length==1?'':'s'} · ${rangeLbl}`;
-  if(closesOutside.length){
-    const names=[...new Set(closesOutside.slice(0,4).map(c=>c.symbol))].join(', ');
-    caption += ` · <span class="rf-more" onclick="setRecentRange('${containerId}',${isModel},null,30)">${closesOutside.length} closed trade${closesOutside.length==1?'':'s'} (${names}${closesOutside.length>4?'…':''}) outside this window — show 30d</span>`;
-  }
-  caption += `</div>`;
+  items.sort((a,b)=> new Date(b.date||0) - new Date(a.date||0));
 
   if(!items.length){
     const lbl = rng.days ? `the last ${rng.days} days` : 'the selected range';
-    let html=`<div style="padding:16px;color:var(--muted);font-size:12px">No trading activity in ${lbl}.`;
-    if(closesOutside.length){
-      const names=[...new Set(closesOutside.slice(0,4).map(c=>c.symbol))].join(', ');
-      html += `<br><span class="rf-more" onclick="setRecentRange('${containerId}',${isModel},null,30)">${closesOutside.length} closed trade${closesOutside.length==1?'':'s'} (${names}${closesOutside.length>4?'…':''}) are older — show last 30 days</span>`;
-    }
-    html += `</div>`;
-    el.innerHTML=html;
+    el.innerHTML=`<div style="padding:16px;color:var(--muted);font-size:12px">No trading activity in ${lbl}.</div>`;
     return;
   }
-  el.innerHTML=caption+items.map(it=>{
+  el.innerHTML=items.map(it=>{
     const d=it.date?new Date(it.date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}):'';
     return `<div class="rf-item">
       <div class="rf-badge ${it.side==='buy'?'rf-buy':'rf-sell'}">${it.side==='buy'?'BUY':'SELL'}</div>
@@ -6256,7 +6254,8 @@ async function renderUserPortfolio(){
   setText('ueq-nifty-return',(niftyReturn>=0?'+':'')+niftyReturn.toFixed(1)+'%');
   setText('ueq-alpha',(alpha>=0?'+':'')+alpha.toFixed(1)+'%');
   setText('ueq-port-value',fmtL(portValue));
-  const rpEl=document.getElementById('ueq-realised-pnl'); if(rpEl){rpEl.textContent=(realisedPnl>=0?'+':'')+fmt(realisedPnl); rpEl.style.color=realisedPnl>=0?'var(--green)':'var(--red)';}
+  setInceptionPill('ueq-inception', window._ueqSnaps);
+  const rpEl=document.getElementById('ueq-realised-pnl'); if(rpEl){rpEl.textContent=(realisedPnl>=0?'+':'')+fmtL(realisedPnl); rpEl.style.color=realisedPnl>=0?'var(--green)':'var(--red)';}
 
   setText('udonut-pct',deployedPct+'%');
 
