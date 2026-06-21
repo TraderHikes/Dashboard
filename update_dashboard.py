@@ -694,26 +694,76 @@ def _index_trend_score():
     return sum(ts) / len(ts) * 100.0, len(ts)
 
 
-def _fii_dii_flow5d(scale=25000.0):
-    """FII/DII pillar. 5-day rolling net, FII weighted heavier than DII (foreign
-    flows drive Indian swing moves more; DII is steadier). Squashed with tanh so
-    extreme single days stay bounded:
-        flow5d = 0.7·ΣFII(5d) + 0.3·ΣDII(5d)
-        score  = 50 + 50·tanh(flow5d / scale)
-    Returns (score_0_100, flow5d_cr)."""
+def _period_rows(period_type, limit):
+    """Fetch the most recent rows of one period_type (daily/monthly/yearly).
+    Rows default to 'daily' when period_type is null (matches the dashboard)."""
     try:
         rows = (sb.table("fii_dii_activity")
-                  .select("fii_cash_net,dii_cash_net,activity_date")
-                  .order("activity_date", desc=True).limit(5).execute().data or [])
+                  .select("fii_cash_net,dii_cash_net,activity_date,period_key,period_type")
+                  .order("period_key", desc=True).limit(200).execute().data or [])
     except Exception:
-        rows = []
-    if not rows:
-        return 50.0, 0.0
+        return []
+    pick = [r for r in rows if (r.get("period_type") or "daily") == period_type]
+    return pick[:limit]
+
+
+def _weighted_net(rows):
+    """0.7·FII + 0.3·DII net across the given rows (₹cr). Foreign flows weigh
+    heavier — they drive Indian swing moves; DII is steadier."""
     fii = sum(float(r.get("fii_cash_net") or 0) for r in rows)
     dii = sum(float(r.get("dii_cash_net") or 0) for r in rows)
-    flow5d = 0.7 * fii + 0.3 * dii
-    score  = 50.0 + 50.0 * float(np.tanh(flow5d / scale))
-    return score, flow5d
+    return 0.7 * fii + 0.3 * dii
+
+
+# Scale constants (₹cr). A flow ≈ ±1×scale reads as a strong tilt (~88/12);
+# ±0.5×scale ≈ a mild tilt (~73/27). Tuned to REAL NSE magnitudes:
+#   • Daily 5-day weighted run of a strong week ≈ ±40,000 cr  → DAILY scale.
+#   • A decisive month ≈ ±60,000 cr; a decisive year ≈ ±300,000 cr.
+# These are single named knobs — retune here if your data scale differs.
+FII_DII_DAILY_SCALE   = 40000.0
+FII_DII_MONTHLY_SCALE = 60000.0
+FII_DII_YEARLY_SCALE  = 300000.0
+
+
+def _fii_dii_flow5d():
+    """FII/DII pillar (0..100, 50 = neutral).
+
+    PRIMARY = recent DAILY flow (last 5 daily rows), since the Market Score is a
+    timing tool. CONTEXT = latest monthly + yearly net, lightly weighted, so a
+    strong longer-horizon trend tempers a noisy daily reading ("balanced").
+
+        daily_score   = 50 + 50·tanh(weighted_daily_5d  / DAILY_SCALE)
+        monthly_score = 50 + 50·tanh(weighted_month_net  / MONTHLY_SCALE)
+        yearly_score  = 50 + 50·tanh(weighted_year_net   / YEARLY_SCALE)
+        pillar = 0.70·daily + 0.18·monthly + 0.12·yearly   (renormalised over
+                 whichever horizons actually have data)
+
+    Returns (pillar_score, daily_weighted_flow_cr).  Missing data → neutral 50.
+    CRITICAL: rows are filtered by period_type so daily/monthly/yearly figures
+    (very different magnitudes) are never summed together."""
+    daily_rows   = _period_rows("daily",   5)
+    monthly_rows = _period_rows("monthly", 1)
+    yearly_rows  = _period_rows("yearly",  1)
+
+    if not daily_rows and not monthly_rows and not yearly_rows:
+        return 50.0, 0.0
+
+    def squash(flow, scale):
+        return 50.0 + 50.0 * float(np.tanh(flow / scale))
+
+    parts, weights = [], []
+    daily_flow = 0.0
+    if daily_rows:
+        daily_flow = _weighted_net(daily_rows)
+        parts.append(squash(daily_flow, FII_DII_DAILY_SCALE));   weights.append(0.70)
+    if monthly_rows:
+        parts.append(squash(_weighted_net(monthly_rows), FII_DII_MONTHLY_SCALE)); weights.append(0.18)
+    if yearly_rows:
+        parts.append(squash(_weighted_net(yearly_rows), FII_DII_YEARLY_SCALE));   weights.append(0.12)
+
+    wsum = sum(weights)
+    pillar = sum(p * w for p, w in zip(parts, weights)) / wsum if wsum else 50.0
+    return pillar, daily_flow
 
 
 def _prev_breadth_row():
