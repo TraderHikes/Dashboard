@@ -372,10 +372,10 @@ body{overflow-x:hidden;
 .msc-card .ch{background:linear-gradient(135deg,rgba(92,111,251,.16),var(--card2) 60%,var(--card))}
 .msc-universe{display:inline-flex;align-items:center;font-size:10px;font-weight:700;letter-spacing:.3px;color:var(--blue-lt);background:rgba(92,111,251,.12);border:1px solid rgba(92,111,251,.45);padding:4px 11px;border-radius:100px;box-shadow:0 0 14px rgba(92,111,251,.4);text-shadow:0 0 8px rgba(92,111,251,.5)}
 .msc-aichip{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:700;padding:4px 11px;border-radius:100px;
-  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.55);color:#fff;letter-spacing:.3px;
-  box-shadow:0 0 12px rgba(255,255,255,.12)}
-.msc-aidot{width:6px;height:6px;border-radius:50%;background:#fff;
-  box-shadow:0 0 7px rgba(255,255,255,.85);animation:blink 1.4s infinite}
+  background:linear-gradient(180deg,rgba(60,110,255,.32),rgba(60,110,255,.16));border:1px solid rgba(90,140,255,.6);color:#dbe7ff;letter-spacing:.3px;
+  box-shadow:0 0 0 1px rgba(70,120,255,.15),0 0 14px rgba(70,120,255,.4)}
+.msc-aidot{width:6px;height:6px;border-radius:50%;background:#7fa6ff;
+  box-shadow:0 0 7px rgba(120,160,255,.95);animation:blink 1.4s infinite}
 .msc-cb-row{display:flex;justify-content:center;padding:18px 24px 0}
 @property --msc-angle{syntax:'<angle>';initial-value:0deg;inherits:false}
 .msc-cb-wrap{--msc-angle:0deg;position:relative;display:inline-block;border-radius:100px;padding:2px}
@@ -2131,8 +2131,8 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
           </div>
         </div>
         <div class="msc-rt">
-          <div><span class="msc-rt-l">Regime</span><span class="msc-rt-v" id="msc-regime">—</span><span class="msc-rt-sub">slow · ceiling</span></div>
-          <div><span class="msc-rt-l">Tactical</span><span class="msc-rt-v" id="msc-tactical">—</span><span class="msc-rt-sub">fast · timing</span></div>
+          <div><span class="msc-rt-l">Fast Regime</span><span class="msc-rt-v" id="msc-regime">—</span></div>
+          <div><span class="msc-rt-l">Fast Tactical</span><span class="msc-rt-v" id="msc-tactical">—</span></div>
         </div>
       </div>
       <!-- Pillars -->
@@ -2160,7 +2160,7 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
       <div class="msh-inner">
         <table class="msh-table">
           <thead><tr><th>Date</th><th>Market Score</th><th>Market Breadth Details</th></tr></thead>
-          <tbody id="msh-rows"><tr><td colspan="3" style="padding:16px;text-align:center;color:var(--muted)">Open to load history\u2026</td></tr></tbody>
+          <tbody id="msh-rows"><tr><td colspan="3" style="padding:16px;text-align:center;color:var(--muted)">Loading history…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -8863,8 +8863,8 @@ function mshBreakdownHTML(d){
           <div class="sb-gticks"><span>0</span><span>BEAR</span><span>NEUTRAL</span><span>BULL</span><span>100</span></div>
         </div></div>
       <div class="msc-rt" style="margin-top:12px;max-width:none">
-        <div><span class="msc-rt-l">Regime</span><span class="msc-rt-v" style="color:${typeof R==='number'?mscCol(R):'var(--text2)'}">${R}</span><span class="msc-rt-sub">slow \u00b7 ceiling</span></div>
-        <div><span class="msc-rt-l">Tactical</span><span class="msc-rt-v" style="color:${typeof T==='number'?mscCol(T):'var(--text2)'}">${T}</span><span class="msc-rt-sub">fast \u00b7 timing</span></div>
+        <div><span class="msc-rt-l">Fast Regime</span><span class="msc-rt-v" style="color:${typeof R==='number'?mscCol(R):'var(--text2)'}">${R}</span></div>
+        <div><span class="msc-rt-l">Fast Tactical</span><span class="msc-rt-v" style="color:${typeof T==='number'?mscCol(T):'var(--text2)'}">${T}</span></div>
       </div>
     </div>
     <div><div class="sb-pl">Indicator Breakdown</div>${pill}${vetoes}</div>
@@ -8875,13 +8875,15 @@ const MSH = (()=>{
   let data = [];
   async function load(){
     const rowsEl = document.getElementById('msh-rows'); if(!rowsEl) return;
+    rowsEl.innerHTML='<tr><td colspan="3" style="padding:16px;text-align:center;color:var(--muted)">Loading history…</td></tr>';
     try{
-      const { data:d } = await sb.from('market_breadth')
+      const { data:d, error } = await sb.from('market_breadth')
         .select('snapshot_date,composite_smoothed,market_signal,regime_score,tactical_score,score_breakdown,score_rationale')
         .order('snapshot_date',{ascending:false}).limit(90);
+      if(error){ console.error('[msh] query error:', error); }
       data = (d||[]).filter(r=>r.composite_smoothed!=null);
-    }catch(e){ data=[]; }
-    if(!data.length){ rowsEl.innerHTML='<tr><td colspan="3" style="padding:16px;text-align:center;color:var(--muted)">No score history yet.</td></tr>'; return; }
+    }catch(e){ console.error('[msh] load threw:', e); data=[]; }
+    if(!data.length){ rowsEl.innerHTML='<tr><td colspan="3" style="padding:16px;text-align:center;color:var(--muted)">No score history yet. Daily scores will appear here as the pipeline runs.</td></tr>'; return; }
     rowsEl.innerHTML = data.map(r=>{
       const c=Math.round(r.composite_smoothed), col=mscCol(c);
       const dt=new Date(r.snapshot_date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
