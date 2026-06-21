@@ -2101,7 +2101,6 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
       <span class="ct">Market Score</span>
       <div class="ch-r">
         <span class="msc-universe">Nifty 500 Universe</span>
-        <span class="msc-aichip"><span class="msc-aidot"></span>AI Powered</span>
       </div>
     </div>
     <div class="msc-cb-row">
@@ -2131,8 +2130,8 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
           </div>
         </div>
         <div class="msc-rt">
-          <div><span class="msc-rt-l">Fast Regime</span><span class="msc-rt-v" id="msc-regime">—</span></div>
-          <div><span class="msc-rt-l">Fast Tactical</span><span class="msc-rt-v" id="msc-tactical">—</span></div>
+          <div><span class="msc-rt-l">Regime/Slow</span><span class="msc-rt-v" id="msc-regime">—</span></div>
+          <div><span class="msc-rt-l">Tactical/Fast</span><span class="msc-rt-v" id="msc-tactical">—</span></div>
         </div>
       </div>
       <!-- Pillars -->
@@ -8863,8 +8862,8 @@ function mshBreakdownHTML(d){
           <div class="sb-gticks"><span>0</span><span>BEAR</span><span>NEUTRAL</span><span>BULL</span><span>100</span></div>
         </div></div>
       <div class="msc-rt" style="margin-top:12px;max-width:none">
-        <div><span class="msc-rt-l">Fast Regime</span><span class="msc-rt-v" style="color:${typeof R==='number'?mscCol(R):'var(--text2)'}">${R}</span></div>
-        <div><span class="msc-rt-l">Fast Tactical</span><span class="msc-rt-v" style="color:${typeof T==='number'?mscCol(T):'var(--text2)'}">${T}</span></div>
+        <div><span class="msc-rt-l">Regime/Slow</span><span class="msc-rt-v" style="color:${typeof R==='number'?mscCol(R):'var(--text2)'}">${R}</span></div>
+        <div><span class="msc-rt-l">Tactical/Fast</span><span class="msc-rt-v" style="color:${typeof T==='number'?mscCol(T):'var(--text2)'}">${T}</span></div>
       </div>
     </div>
     <div><div class="sb-pl">Indicator Breakdown</div>${pill}${vetoes}</div>
