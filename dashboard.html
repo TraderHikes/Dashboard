@@ -208,6 +208,15 @@ body{overflow-x:hidden;
 .ch{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--bdr);background:linear-gradient(135deg,var(--card2),var(--card))}
 .ct{font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--text2)}
 .chip{font-size:10px;padding:4px 11px;border-radius:100px;background:var(--card3);border:1px solid var(--bdr2);color:var(--muted);font-family:var(--fm)}
+.rf-filter{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.rf-fbtn{font-size:10px;font-weight:700;padding:4px 10px;border-radius:7px;background:var(--card3);border:1px solid var(--bdr2);color:var(--muted);cursor:pointer;font-family:var(--fm);transition:all .12s}
+.rf-fbtn:hover{border-color:var(--blue);color:var(--blue-lt)}
+.rf-fbtn.on{background:var(--blue-dim);border-color:var(--bdr3);color:var(--blue-lt)}
+.rf-custom{display:inline-flex;align-items:center;gap:5px}
+.rf-din{font-size:10px;padding:3px 6px;border-radius:6px;background:var(--card2);border:1px solid var(--bdr2);color:var(--text2);font-family:var(--fm);color-scheme:dark}
+.rf-din:focus{border-color:var(--blue-lt);outline:none}
+.rf-dsep{color:var(--muted);font-size:10px}
+.rf-apply{background:var(--blue);border-color:var(--blue-lt);color:#fff}
 .ch-r{display:flex;align-items:center;gap:8px}
 
 /* ═══ PORTFOLIO OVERVIEW ═══ */
@@ -1503,7 +1512,19 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
     </div>
 
     <div class="card">
-      <div class="ch"><span class="ct">Recent Trading Activity</span><span class="chip">Latest activity</span></div>
+      <div class="ch"><span class="ct">Recent Trading Activity</span>
+        <div class="rf-filter" id="rf-filter-urecent-activity">
+          <button class="rf-fbtn on" data-range="10" onclick="setRecentRange('urecent-activity',false,this,10)">10d</button>
+          <button class="rf-fbtn" data-range="30" onclick="setRecentRange('urecent-activity',false,this,30)">30d</button>
+          <button class="rf-fbtn" data-range="custom" onclick="toggleRecentCustom('urecent-activity')">Custom</button>
+          <span class="rf-custom" id="rf-custom-urecent-activity" style="display:none">
+            <input type="date" class="rf-din" id="rf-from-urecent-activity">
+            <span class="rf-dsep">→</span>
+            <input type="date" class="rf-din" id="rf-to-urecent-activity">
+            <button class="rf-fbtn rf-apply" onclick="applyRecentCustom('urecent-activity',false)">Go</button>
+          </span>
+        </div>
+      </div>
       <div class="recent-feed" id="urecent-activity"><div style="padding:16px;color:var(--muted);font-size:12px">Loading…</div></div>
     </div>
   </div>
@@ -1884,7 +1905,19 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
     </div>
 
     <div class="card">
-      <div class="ch"><span class="ct">Recent Trading Activity</span><span class="chip">Latest activity</span></div>
+      <div class="ch"><span class="ct">Recent Trading Activity</span>
+        <div class="rf-filter" id="rf-filter-recent-activity">
+          <button class="rf-fbtn on" data-range="10" onclick="setRecentRange('recent-activity',true,this,10)">10d</button>
+          <button class="rf-fbtn" data-range="30" onclick="setRecentRange('recent-activity',true,this,30)">30d</button>
+          <button class="rf-fbtn" data-range="custom" onclick="toggleRecentCustom('recent-activity')">Custom</button>
+          <span class="rf-custom" id="rf-custom-recent-activity" style="display:none">
+            <input type="date" class="rf-din" id="rf-from-recent-activity">
+            <span class="rf-dsep">→</span>
+            <input type="date" class="rf-din" id="rf-to-recent-activity">
+            <button class="rf-fbtn rf-apply" onclick="applyRecentCustom('recent-activity',true)">Go</button>
+          </span>
+        </div>
+      </div>
       <div class="recent-feed" id="recent-activity"><div style="padding:16px;color:var(--muted);font-size:12px">Loading…</div></div>
     </div>
   </div>
@@ -5751,59 +5784,115 @@ function toggleTcDetails(id, el){
   const s=el.querySelector('span'); if(s) s.textContent=open?'Hide Details':'Show Details';
 }
 
-// Recent Trading Activity — merges entries, pyramids (buys) and exits, partials (sells), newest first.
+// Recent Trading Activity — merges initial buys, pyramids, partial exits and
+// FULL closes, newest first, within a date window. Nothing in the window is
+// dropped (no blunt top-N slice).
+// State per container so each feed remembers its own range.
+const _recentRange = {};   // containerId → {days|null, from, to}
+
+function setRecentRange(containerId, isModel, btn, days){
+  // toggle active button
+  const wrap=document.getElementById('rf-filter-'+containerId);
+  if(wrap) wrap.querySelectorAll('.rf-fbtn').forEach(b=>{ if(!b.classList.contains('rf-apply')) b.classList.remove('on'); });
+  if(btn) btn.classList.add('on');
+  const cust=document.getElementById('rf-custom-'+containerId); if(cust) cust.style.display='none';
+  _recentRange[containerId]={days, from:null, to:null};
+  buildRecentActivity(isModel, containerId);
+}
+function toggleRecentCustom(containerId){
+  const cust=document.getElementById('rf-custom-'+containerId); if(!cust) return;
+  const showing = cust.style.display!=='none';
+  cust.style.display = showing ? 'none' : 'inline-flex';
+  // mark Custom button active
+  const wrap=document.getElementById('rf-filter-'+containerId);
+  if(wrap) wrap.querySelectorAll('.rf-fbtn').forEach(b=>{ if(!b.classList.contains('rf-apply')) b.classList.toggle('on', b.dataset.range==='custom'); });
+}
+function applyRecentCustom(containerId, isModel){
+  const from=document.getElementById('rf-from-'+containerId)?.value||null;
+  const to  =document.getElementById('rf-to-'+containerId)?.value||null;
+  if(!from && !to){ return; }
+  _recentRange[containerId]={days:null, from, to};
+  buildRecentActivity(isModel, containerId);
+}
+
 async function buildRecentActivity(isModel, containerId){
   const el=document.getElementById(containerId); if(!el) return;
   const money=n=>Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
   const whole=n=>Number(Math.abs(n||0)).toLocaleString('en-IN',{maximumFractionDigits:0});
+
+  // Resolve the active window (default: last 10 days)
+  const rng=_recentRange[containerId]||{days:10};
+  let fromDate=null, toDate=null;
+  if(rng.days){ const c=new Date(); c.setHours(0,0,0,0); c.setDate(c.getDate()-rng.days); fromDate=c; toDate=new Date(); toDate.setHours(23,59,59,999); }
+  else { if(rng.from){ fromDate=new Date(rng.from); fromDate.setHours(0,0,0,0); } if(rng.to){ toDate=new Date(rng.to); toDate.setHours(23,59,59,999); } }
+  const inWindow=d=>{ if(!d) return false; const x=new Date(d); if(fromDate && x<fromDate) return false; if(toDate && x>toDate) return false; return true; };
+
+  el.innerHTML='<div style="padding:16px;color:var(--muted);font-size:12px">Loading…</div>';
+
   let opens=[], closes=[];
   try{
     const r=await Promise.all([
-      sb.from('open_trades').select('id,symbol,company_name,avg_entry_price,entry_price,quantity,remaining_qty,position_size_pct,entry_date').eq('is_model',isModel).order('entry_date',{ascending:false}).limit(20),
-      sb.from('closed_trades').select('symbol,company_name,avg_exit_price,exit_price,quantity,realised_pnl,return_pct,exit_date,origin_open_trade_id').eq('is_model',isModel).order('exit_date',{ascending:false}).limit(20)
+      sb.from('open_trades').select('id,symbol,company_name,avg_entry_price,entry_price,quantity,remaining_qty,position_size_pct,entry_date').eq('is_model',isModel).order('entry_date',{ascending:false}).limit(200),
+      sb.from('closed_trades').select('symbol,company_name,avg_exit_price,exit_price,quantity,realised_pnl,return_pct,exit_date,entry_date,origin_open_trade_id').eq('is_model',isModel).order('exit_date',{ascending:false}).limit(200)
     ]);
     opens=r[0].data||[]; closes=r[1].data||[];
   }catch(e){}
+
   // Map open_trade_id → {sym,name} so pyramids/partials (which key off it) can label themselves.
   const idMap={};
   opens.forEach(t=>{ idMap[t.id]={sym:t.symbol,name:t.company_name||t.symbol}; });
   closes.forEach(c=>{ if(c.origin_open_trade_id) idMap[c.origin_open_trade_id]={sym:c.symbol,name:c.company_name||c.symbol}; });
   const ids=Object.keys(idMap);
+
   let parts=[], pyrs=[];
   if(ids.length){
     try{
       const r2=await Promise.all([
-        sb.from('partial_exits').select('open_trade_id,symbol,exit_date,exit_price,quantity,realised_pnl,return_pct').in('open_trade_id',ids).order('exit_date',{ascending:false}).limit(20),
-        sb.from('trade_entries').select('open_trade_id,entry_date,entry_price,quantity').in('open_trade_id',ids).order('entry_date',{ascending:false}).limit(20)
+        sb.from('partial_exits').select('open_trade_id,symbol,exit_date,exit_price,quantity,realised_pnl,return_pct').in('open_trade_id',ids).order('exit_date',{ascending:false}).limit(300),
+        sb.from('trade_entries').select('open_trade_id,entry_date,entry_price,quantity').in('open_trade_id',ids).order('entry_date',{ascending:false}).limit(300)
       ]);
       parts=r2[0].data||[]; pyrs=r2[1].data||[];
     }catch(e){}
   }
+
   const items=[];
+  // Initial buys
   opens.forEach(t=>{
-    const qty=t.quantity||t.remaining_qty||0, px=t.avg_entry_price||t.entry_price||0, co=t.company_name||t.symbol;
+    if(!inWindow(t.entry_date)) return;
+    const qty=t.quantity||t.remaining_qty||0, px=t.entry_price||t.avg_entry_price||0, co=t.company_name||t.symbol;
     items.push({side:'buy',sym:t.symbol,date:t.entry_date,
-      desc:`Bought ${qty} share${qty==1?'':'s'} of ${co} (${t.symbol}) at an average price of ₹${money(px)}`+(t.position_size_pct!=null?`. Allocation ${Number(t.position_size_pct).toFixed(2)}%`:'')});
+      desc:`Bought ${qty} share${qty==1?'':'s'} of ${co} (${t.symbol}) at ₹${money(px)}`+(t.position_size_pct!=null?`. Allocation ${Number(t.position_size_pct).toFixed(2)}%`:'')});
   });
+  // Pyramid adds
   pyrs.forEach(p=>{
+    if(!inWindow(p.entry_date)) return;
     const m=idMap[p.open_trade_id]||{}, sym=m.sym||'—', co=m.name||sym, qty=p.quantity||0, px=p.entry_price||0;
     items.push({side:'buy',sym,date:p.entry_date,
       desc:`Pyramided ${qty} share${qty==1?'':'s'} into ${co} (${sym}) at ₹${money(px)}`});
   });
-  closes.forEach(t=>{
-    const qty=t.quantity||0, px=t.avg_exit_price||t.exit_price||0, pnl=t.realised_pnl||0, co=t.company_name||t.symbol;
-    items.push({side:'sell',sym:t.symbol,date:t.exit_date,
-      desc:`Sold ${qty} share${qty==1?'':'s'} of ${co} (${t.symbol}) at ₹${money(px)}. Realised P&L ${pnl>=0?'+':'−'}₹${whole(pnl)}`+(t.return_pct!=null?` (${Number(t.return_pct).toFixed(1)}%)`:'')});
-  });
+  // Partial exits
   parts.forEach(p=>{
+    if(!inWindow(p.exit_date)) return;
     const m=idMap[p.open_trade_id]||{}, sym=p.symbol||m.sym||'—', co=m.name||sym, qty=p.quantity||0, px=p.exit_price||0, pnl=p.realised_pnl||0;
     items.push({side:'sell',sym,date:p.exit_date,
       desc:`Partial exit — sold ${qty} share${qty==1?'':'s'} of ${co} (${sym}) at ₹${money(px)}. Realised P&L ${pnl>=0?'+':'−'}₹${whole(pnl)}`+(p.return_pct!=null?` (${Number(p.return_pct).toFixed(1)}%)`:'')});
   });
+  // FULL closes (final exit) — clearly labelled as a close
+  closes.forEach(t=>{
+    if(!inWindow(t.exit_date)) return;
+    const qty=t.quantity||0, px=t.avg_exit_price||t.exit_price||0, pnl=t.realised_pnl||0, co=t.company_name||t.symbol;
+    items.push({side:'sell',sym:t.symbol,date:t.exit_date,
+      desc:`Closed ${co} (${t.symbol}) — final exit at ₹${money(px)}. Total realised P&L ${pnl>=0?'+':'−'}₹${whole(pnl)}`+(t.return_pct!=null?` (${Number(t.return_pct).toFixed(1)}%)`:'')});
+  });
+
   items.sort((a,b)=> new Date(b.date||0) - new Date(a.date||0));
-  const top=items.slice(0,12);
-  if(!top.length){ el.innerHTML='<div style="padding:16px;color:var(--muted);font-size:12px">No recent activity yet.</div>'; return; }
-  el.innerHTML=top.map(it=>{
+
+  if(!items.length){
+    const lbl = rng.days ? `the last ${rng.days} days` : 'the selected range';
+    el.innerHTML=`<div style="padding:16px;color:var(--muted);font-size:12px">No trading activity in ${lbl}.</div>`;
+    return;
+  }
+  el.innerHTML=items.map(it=>{
     const d=it.date?new Date(it.date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}):'';
     return `<div class="rf-item">
       <div class="rf-badge ${it.side==='buy'?'rf-buy':'rf-sell'}">${it.side==='buy'?'BUY':'SELL'}</div>
