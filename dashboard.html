@@ -4326,22 +4326,54 @@ const MT = (() => {
     loadAll();
   }
 
+  // ---------- peak-holding walk (chronological; mirrors admin) ----------
+  // Total Qty = the MAX the running position ever reached, not the sum of
+  // buys. Nets partial exits that happen before a pyramid (e.g. RRKABEL:
+  // +1550 → −450 → −775 → +775 → −22 → peak 1550, not 2325).
+  async function computePeakQty(id, ot){
+    const { data: pyr } = await sb.from('trade_entries')
+      .select('entry_date,quantity,created_at').eq('open_trade_id',id);
+    const { data: ex }  = await sb.from('partial_exits')
+      .select('exit_date,quantity,created_at').eq('open_trade_id',id);
+    const ev=[];
+    ev.push({ d:ot.entry_date, ts:ot.created_at, k:'buy',  q:+ot.quantity||0 });
+    (pyr||[]).forEach(e=>ev.push({ d:e.entry_date, ts:e.created_at, k:'buy',  q:+e.quantity||0 }));
+    (ex||[]).forEach(e=>ev.push({ d:e.exit_date,  ts:e.created_at, k:'sell', q:+e.quantity||0 }));
+    ev.sort((a,b)=>{
+      const dd=new Date(a.d)-new Date(b.d); if(dd) return dd;
+      const tt=new Date(a.ts||a.d)-new Date(b.ts||b.d); if(tt) return tt;
+      return (a.k==='buy'?0:1)-(b.k==='buy'?0:1);
+    });
+    let qty=0, peak=0;
+    for(const e of ev){ if(e.k==='buy'){ qty+=e.q; if(qty>peak)peak=qty; } else { qty=Math.max(0,qty-e.q); } }
+    return { peakQty:peak, remainingQty:qty };
+  }
+
   // ---------- recompute (mirrors the model engine) ----------
   async function recompute(id){
-    const { data: ot } = await sb.from('open_trades').select('quantity,entry_price').eq('id',id).single();
+    const { data: ot } = await sb.from('open_trades').select('quantity,entry_price,entry_date,created_at').eq('id',id).single();
     if(!ot) return;
     const baseQty=ot.quantity||0, basePx=ot.entry_price||0;
     const { data: pyr } = await sb.from('trade_entries').select('entry_price,quantity').eq('open_trade_id',id);
     const legs=pyr||[];
     const pyrQty=legs.reduce((s,e)=>s+(e.quantity||0),0);
     const pyrCost=legs.reduce((s,e)=>s+(e.entry_price*e.quantity),0);
-    const totalQty=baseQty+pyrQty;
-    const wavg=totalQty>0?(basePx*baseQty+pyrCost)/totalQty:basePx;
-    const { data: ex } = await sb.from('partial_exits').select('quantity').eq('open_trade_id',id);
-    const sold=(ex||[]).reduce((s,e)=>s+(e.quantity||0),0);
+    const boughtQty=baseQty+pyrQty;
+    const wavg=boughtQty>0?(basePx*baseQty+pyrCost)/boughtQty:basePx;
+    // Total Qty = peak holding (chronological), not sum of buys.
+    let totalQty, sold;
+    try {
+      const pk=await computePeakQty(id, ot);
+      totalQty = pk.peakQty>0 ? pk.peakQty : boughtQty;
+      sold     = Math.max(0, boughtQty - pk.remainingQty);
+    } catch(_) {
+      const { data: ex } = await sb.from('partial_exits').select('quantity').eq('open_trade_id',id);
+      sold     = (ex||[]).reduce((s,e)=>s+(e.quantity||0),0);
+      totalQty = boughtQty;
+    }
     await sb.from('open_trades').update({
       avg_entry_price:Math.round(wavg*100)/100, total_quantity:totalQty,
-      remaining_qty:Math.max(0,totalQty-sold), has_pyramid:legs.length>0,
+      remaining_qty:Math.max(0,boughtQty-sold), has_pyramid:legs.length>0,
       updated_at:new Date().toISOString()
     }).eq('id',id);
   }
@@ -4423,7 +4455,8 @@ const MT = (() => {
     const pnl=Math.round((px-avg)*qty*100)/100, ret=Math.round((px-avg)/avg*10000)/100;
     const { error } = await sb.from('partial_exits').insert({ open_trade_id:t.id, symbol:t.symbol, exit_date:date, exit_price:px, quantity:qty, realised_pnl:pnl, return_pct:ret, avg_entry_price:avg, notes:$('mm-notes').value||null });
     if(error){ alert('mt-modal-alert','Error: '+error.message,'err'); return; }
-    await sb.from('open_trades').update({ remaining_qty:rem-qty, has_partial_exit:true, updated_at:new Date().toISOString() }).eq('id',t.id);
+    await recompute(t.id);
+    await sb.from('open_trades').update({ has_partial_exit:true, updated_at:new Date().toISOString() }).eq('id',t.id);
     closeModal(); loadAll();
   }
 
