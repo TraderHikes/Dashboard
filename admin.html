@@ -1872,9 +1872,11 @@ document.getElementById('form-partial').addEventListener('submit', async e => {
       notes:            fd.get('notes') || null,
     });
 
-    // 2. Update remaining qty in open_trades
+    // 2. Recompute the whole position (peak qty, remaining, avg) chronologically
+    //    so Total Qty stays the true PEAK holding and remaining stays exact.
+    await recomputeOpenTrade(tradeId, 'Partial exit booked');
+    // Keep the partial-exit badge honest
     await sb.from('open_trades').update({
-      remaining_qty:    newRemQty,
       has_partial_exit: true,
       updated_at:       new Date().toISOString(),
     }).eq('id', tradeId);
@@ -2096,6 +2098,46 @@ async function deleteTrade(id, symbol) {
 // deployed capital under average-cost accounting. Deployed capital peaks right
 // after a buy; that maximum ÷ capital_at_entry is the largest position size the
 // stock ever carried — correct no matter how buys and sells are interleaved.
+/* ──────────────────────────────────────────────────────────────
+   computePeakQty(openId, t)
+   Walks the trade chronologically (initial buy + pyramids + partial
+   exits, ordered by date then created_at) and returns the PEAK holding
+   — the maximum the running position ever reached.
+
+   Why this matters: "Total Qty" should be the largest position actually
+   held at any instant, NOT the sum of all buys. If partial exits happen
+   before a pyramid, the pyramid may not push the position above its
+   earlier peak. e.g. RRKABEL:
+     +1550 (peak 1550) → −450 (1100) → −775 (325) → +775 (1100) → −22 (1078)
+   Sum-of-buys would say 2325; the true peak is 1550.
+
+   Returns { peakQty, remainingQty }.
+   ────────────────────────────────────────────────────────────── */
+async function computePeakQty(openId, t) {
+  const { data: pyr }   = await sb.from('trade_entries')
+    .select('entry_date,quantity,created_at').eq('open_trade_id', openId);
+  const { data: exits } = await sb.from('partial_exits')
+    .select('exit_date,quantity,created_at').eq('open_trade_id', openId);
+
+  const ev = [];
+  ev.push({ d:t.entry_date, ts:t.created_at, k:'buy',  q:+t.quantity||0 });
+  (pyr||[]).forEach(e => ev.push({ d:e.entry_date, ts:e.created_at, k:'buy',  q:+e.quantity||0 }));
+  (exits||[]).forEach(e => ev.push({ d:e.exit_date,  ts:e.created_at, k:'sell', q:+e.quantity||0 }));
+
+  ev.sort((a,b) => {
+    const dd = new Date(a.d)  - new Date(b.d);            if (dd) return dd;
+    const tt = new Date(a.ts||a.d) - new Date(b.ts||b.d); if (tt) return tt;
+    return (a.k==='buy'?0:1) - (b.k==='buy'?0:1);         // buy before sell on an exact tie
+  });
+
+  let qty = 0, peak = 0;
+  for (const e of ev) {
+    if (e.k === 'buy') { qty += e.q; if (qty > peak) peak = qty; }
+    else               { qty = Math.max(0, qty - e.q); }
+  }
+  return { peakQty: peak, remainingQty: qty };
+}
+
 async function computePeakExposurePct(openId, t) {
   const cap = t && t.capital_at_entry;
   const { data: pyr }   = await sb.from('trade_entries')
@@ -3627,7 +3669,7 @@ async function deleteEntryLeg(entryId, tradeId) {
 async function recomputeOpenTrade(tradeId, label) {
   // Read the immutable base from open_trades
   const { data: ot } = await sb.from('open_trades')
-    .select('quantity,entry_price').eq('id', tradeId).single();
+    .select('quantity,entry_price,entry_date,created_at').eq('id', tradeId).single();
   if (!ot) return;
   const baseQty = ot.quantity || 0;
   const basePx  = ot.entry_price || 0;
@@ -3640,23 +3682,35 @@ async function recomputeOpenTrade(tradeId, label) {
   const pyrQty  = pyrLegs.reduce((s,e)=>s + (e.quantity||0), 0);
   const pyrCost = pyrLegs.reduce((s,e)=>s + (e.entry_price*e.quantity), 0);
 
-  const totalQty = baseQty + pyrQty;
-  const wavg = totalQty > 0 ? (basePx*baseQty + pyrCost) / totalQty : basePx;
+  // avg is the qty-weighted blend of ALL buys (base + pyramids) — unchanged.
+  const boughtQty = baseQty + pyrQty;
+  const wavg = boughtQty > 0 ? (basePx*baseQty + pyrCost) / boughtQty : basePx;
 
-  // Subtract already-sold qty (partial exits) for true remaining
-  const { data: exits } = await sb.from('partial_exits')
-    .select('quantity').eq('open_trade_id', tradeId);
-  const soldQty = (exits||[]).reduce((s,e)=>s + (e.quantity||0), 0);
+  // ── Total Qty = PEAK holding, not sum-of-buys ──
+  // Walk the trade chronologically so partial exits BEFORE a pyramid are
+  // netted: the position's true maximum is what we report. Falls back to
+  // sum-of-buys only if the walk can't run.
+  let totalQty, soldQty;
+  try {
+    const pk = await computePeakQty(tradeId, ot);
+    totalQty = pk.peakQty > 0 ? pk.peakQty : boughtQty;
+    soldQty  = Math.max(0, boughtQty - pk.remainingQty);   // total ever sold
+  } catch (_) {
+    const { data: exits } = await sb.from('partial_exits')
+      .select('quantity').eq('open_trade_id', tradeId);
+    soldQty  = (exits||[]).reduce((s,e)=>s + (e.quantity||0), 0);
+    totalQty = boughtQty;
+  }
 
   await sb.from('open_trades').update({
     avg_entry_price: Math.round(wavg*100)/100,
-    total_quantity:  totalQty,
-    remaining_qty:   Math.max(0, totalQty - soldQty),
+    total_quantity:  totalQty,                       // peak holding
+    remaining_qty:   Math.max(0, boughtQty - soldQty),
     has_pyramid:     pyrLegs.length > 0,   // ← badge reflects pyramids only
     updated_at:      new Date().toISOString(),
   }).eq('id', tradeId);
 
-  showEditAlert(`✓ ${label}. Position: ${totalQty} @ ₹${(Math.round(wavg*100)/100).toLocaleString('en-IN')}${pyrLegs.length?` (base ${baseQty} + ${pyrLegs.length} pyramid leg${pyrLegs.length>1?'s':''})`:' (no pyramids)'}.`,'success');
+  showEditAlert(`✓ ${label}. Position peak ${totalQty} · ₹${(Math.round(wavg*100)/100).toLocaleString('en-IN')}${pyrLegs.length?` (base ${baseQty} + ${pyrLegs.length} pyramid leg${pyrLegs.length>1?'s':''})`:' (no pyramids)'}.`,'success');
   toast(label + ' — position updated');
 }
 
