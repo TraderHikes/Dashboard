@@ -2258,23 +2258,36 @@ document.getElementById('form-close-trade').addEventListener('submit', async e =
         .order('exit_date');
       const pxs = pxLegs || [];
 
-      // Reconstruct the INITIAL leg from the blended average (exact: avg is the
-      // qty-weighted blend, so subtracting the pyramid legs recovers the first
-      // buy). initialQty = totalQty − ΣpyrQty ; initialCost = avg·totalQty − ΣpyrCost
-      const pyrQty  = pyr.reduce((s,e)=>s+(Number(e.quantity)||0),0);
-      const pyrCost = pyr.reduce((s,e)=>s+(Number(e.entry_price)||0)*(Number(e.quantity)||0),0);
-      const initialQty   = Math.max(0, totalQty - pyrQty);
-      const initialCost  = (avgEntry * totalQty) - pyrCost;
-      let   initialPrice = (initialQty > 0 && initialCost > 0) ? (initialCost/initialQty) : avgEntry;
-      if (!isFinite(initialPrice) || initialPrice <= 0) initialPrice = avgEntry;
-      const initQtyShown = initialQty > 0 ? initialQty : totalQty;
+      // ── INITIAL leg: record the TRUE original execution ──────────────
+      // open_trades.entry_price / quantity / entry_date are the immutable
+      // first buy — the pyramid form never overwrites them (it only updates
+      // avg_entry_price / total_quantity). So we copy the REAL executed
+      // numbers verbatim, exactly like we do for pyramid & partial legs.
+      // This is a genuine execution record, NOT a figure backed out of the
+      // blended average.
+      const trueInitPrice = Number(t.entry_price) || 0;
+      const trueInitQty   = Number(t.quantity)    || 0;   // original base qty
+
+      // Fallback ONLY if the original initial somehow isn't available
+      // (legacy/edited rows): reconstruct from the average so the snapshot is
+      // never empty. Normal trades never hit this path.
+      let initPrice = trueInitPrice, initQty = trueInitQty;
+      if (initPrice <= 0 || initQty <= 0) {
+        const pyrQty  = pyr.reduce((s,e)=>s+(Number(e.quantity)||0),0);
+        const pyrCost = pyr.reduce((s,e)=>s+(Number(e.entry_price)||0)*(Number(e.quantity)||0),0);
+        const rQty  = Math.max(0, totalQty - pyrQty);
+        const rCost = (avgEntry * totalQty) - pyrCost;
+        let   rPx   = (rQty > 0 && rCost > 0) ? (rCost/rQty) : avgEntry;
+        if (!isFinite(rPx) || rPx <= 0) rPx = avgEntry;
+        initPrice = rPx; initQty = rQty > 0 ? rQty : totalQty;
+      }
 
       // Build the ordered leg list
       const legs = [];
       let legNo = 0;
       legs.push({ closed_trade_id: closedId, leg_no: legNo++, kind:'initial',
-        leg_date: t.entry_date, price: initialPrice, quantity: initQtyShown,
-        amount: initialPrice*initQtyShown, realised_pnl: null, return_pct: null,
+        leg_date: t.entry_date, price: initPrice, quantity: initQty,
+        amount: initPrice*initQty, realised_pnl: null, return_pct: null,
         notes: t.trade_notes || null });
       pyr.forEach(e=>{
         const price=Number(e.entry_price)||0, qty=Number(e.quantity)||0;
