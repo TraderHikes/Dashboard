@@ -7337,13 +7337,53 @@ async function buildClosedJourney(t){
   const totalQty = Number(t.quantity) || 0;
   const avgEntry = Number(t.avg_entry_price) || 0;
 
-  // Pyramid legs (ungated — the old has_pyramid gate was always false on
-  // closed_trades because that column only ever exists on open_trades).
+  // ── PREFERRED: read the frozen journey snapshot (trades closed after the
+  //    snapshot feature shipped). This is permanent and independent of the
+  //    working tables, so it's always authoritative when present. We only
+  //    need the ENTRY legs here (initial + pyramid); partials & final exit
+  //    are rendered separately by the card from cache.partials / t.
+  try {
+    const { data: snap } = await sb.from('closed_trade_journey')
+      .select('leg_no,kind,leg_date,price,quantity,amount')
+      .eq('closed_trade_id', t.id)
+      .in('kind', ['initial','pyramid'])
+      .order('leg_no');
+    if (snap && snap.length) {
+      const legs = snap.map(s => ({
+        kind: s.kind, date: s.leg_date,
+        price: Number(s.price)||0, qty: Number(s.quantity)||0,
+        amount: Number(s.amount) || (Number(s.price)||0)*(Number(s.quantity)||0),
+      }));
+      const initial = legs.find(l=>l.kind==='initial') || legs[0];
+      return {
+        legs, initialPrice: initial ? initial.price : avgEntry,
+        initialQty: initial ? initial.qty : totalQty, initialDate: t.entry_date,
+        totalInvested: legs.reduce((s,l)=>s+l.amount, 0),
+        hasPyramid: legs.some(l=>l.kind==='pyramid'),
+        source: 'snapshot',
+      };
+    }
+  } catch(_){ /* fall through to live reconstruction */ }
+
+  // ── FALLBACK: reconstruct from live tables (trades closed before the
+  //    snapshot feature; works only while their legs still exist).
+  // Resolve the original open_trade_id (stored, or recovered via partial_exits).
+  let originId = t.origin_open_trade_id || null;
+  if (!originId && t.symbol){
+    const { data: pxLink } = await sb.from('partial_exits')
+      .select('open_trade_id,exit_date')
+      .eq('symbol', t.symbol)
+      .gte('exit_date', t.entry_date)
+      .lte('exit_date', t.exit_date)
+      .limit(1);
+    if (pxLink && pxLink.length) originId = pxLink[0].open_trade_id;
+  }
+
   let pyr = [];
-  if (t.origin_open_trade_id){
+  if (originId){
     const { data } = await sb.from('trade_entries')
       .select('entry_date,entry_price,quantity')
-      .eq('open_trade_id', t.origin_open_trade_id)
+      .eq('open_trade_id', originId)
       .order('entry_date');
     pyr = data || [];
   }
@@ -7378,6 +7418,7 @@ async function buildClosedJourney(t){
     legs, initialPrice, initialQty:initialQtyShown, initialDate:t.entry_date,
     totalInvested: legs.reduce((s,l)=>s+l.amount, 0),
     hasPyramid: pyr.length > 0,
+    source: 'reconstructed',
   };
 }
 
@@ -7393,7 +7434,7 @@ function journeyEntriesHtml(j){
       <span style="color:var(--muted);min-width:80px">${l.date||''}</span>
       <span style="color:${isInit?'var(--white)':col};min-width:50px">${isInit?'Initial Entry':'Pyramid Add'}</span>
       <span style="color:var(--text2);font-family:var(--fm)">₹${inr(l.price)} × ${l.qty} shares</span>
-      <span style="color:${col};margin-left:auto;font-size:9px">${isInit?'':'+ '}₹${inr(l.amount)}</span>
+      <span style="color:${isInit?'var(--white)':col};margin-left:auto;font-size:9px">${isInit?'':'+ '}₹${inr(l.amount)}</span>
     </div>`;
   }).join('');
   // Total Invested footer only when there's more than the initial leg
