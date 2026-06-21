@@ -217,6 +217,12 @@ body{overflow-x:hidden;
 .rf-din:focus{border-color:var(--blue-lt);outline:none}
 .rf-dsep{color:var(--muted);font-size:10px}
 .rf-apply{background:var(--blue);border-color:var(--blue-lt);color:#fff}
+.rf-cap{font-size:10px;color:var(--muted);padding:2px 4px 8px;font-family:var(--fm);position:sticky;top:0;background:var(--card);z-index:2}
+.rf-more{color:var(--blue-lt);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.rf-more:hover{color:var(--blue)}
+.recent-feed::-webkit-scrollbar{width:8px}
+.recent-feed::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:4px}
+.recent-feed::-webkit-scrollbar-thumb:hover{background:var(--blue)}
 .ch-r{display:flex;align-items:center;gap:8px}
 
 /* ═══ PORTFOLIO OVERVIEW ═══ */
@@ -5794,7 +5800,11 @@ function setRecentRange(containerId, isModel, btn, days){
   // toggle active button
   const wrap=document.getElementById('rf-filter-'+containerId);
   if(wrap) wrap.querySelectorAll('.rf-fbtn').forEach(b=>{ if(!b.classList.contains('rf-apply')) b.classList.remove('on'); });
-  if(btn) btn.classList.add('on');
+  // Highlight the passed button, or fall back to matching by data-range
+  // (so programmatic calls — e.g. the "show 30d" hint — still light up the tab).
+  let target = (btn && btn.classList) ? btn : null;
+  if(!target && wrap) target = wrap.querySelector('.rf-fbtn[data-range="'+days+'"]');
+  if(target) target.classList.add('on');
   const cust=document.getElementById('rf-custom-'+containerId); if(cust) cust.style.display='none';
   _recentRange[containerId]={days, from:null, to:null};
   buildRecentActivity(isModel, containerId);
@@ -5836,7 +5846,23 @@ async function buildRecentActivity(isModel, containerId){
       sb.from('closed_trades').select('symbol,company_name,avg_exit_price,exit_price,quantity,realised_pnl,return_pct,exit_date,entry_date,origin_open_trade_id').eq('is_model',isModel).order('exit_date',{ascending:false}).limit(200)
     ]);
     opens=r[0].data||[]; closes=r[1].data||[];
-  }catch(e){}
+    // Surface (don't swallow) query errors — a failed closes query is exactly
+    // how full closes would silently disappear from this feed.
+    if(r[0].error) console.error('[recent] open_trades query error:', r[0].error);
+    if(r[1].error) console.error('[recent] closed_trades query error:', r[1].error);
+    // Resilience: if the explicit-column closes query failed or returned
+    // nothing, retry with select('*') (the same query the closed-trade cards
+    // use successfully). A single renamed/blocked column then can't wipe out
+    // the whole closes list.
+    if(r[1].error || closes.length===0){
+      const fb = await sb.from('closed_trades').select('*').eq('is_model',isModel).order('exit_date',{ascending:false}).limit(200);
+      if(fb.data && fb.data.length){ closes=fb.data; console.log('[recent] closes fallback select(*) →', closes.length); }
+      if(fb.error) console.error('[recent] closes fallback error:', fb.error);
+    }
+    console.log('[recent]', containerId, 'isModel='+isModel,
+      '| opens:', opens.length, '| closes:', closes.length,
+      closes.map(c=>`${c.symbol}@${c.exit_date}`));
+  }catch(e){ console.error('[recent] fetch threw:', e); }
 
   // Map open_trade_id → {sym,name} so pyramids/partials (which key off it) can label themselves.
   const idMap={};
@@ -5887,12 +5913,31 @@ async function buildRecentActivity(isModel, containerId){
 
   items.sort((a,b)=> new Date(b.date||0) - new Date(a.date||0));
 
+  // Detect closed trades that exist but fall OUTSIDE the current window, so we
+  // can tell the user to widen the range rather than leave them hunting.
+  const closesOutside = closes.filter(t=>!inWindow(t.exit_date));
+  const rangeLbl = rng.days ? `last ${rng.days} days` : 'selected range';
+
+  // Caption: count + active range (+ widen hint when relevant)
+  let caption = `<div class="rf-cap">${items.length} event${items.length==1?'':'s'} · ${rangeLbl}`;
+  if(closesOutside.length){
+    const names=[...new Set(closesOutside.slice(0,4).map(c=>c.symbol))].join(', ');
+    caption += ` · <span class="rf-more" onclick="setRecentRange('${containerId}',${isModel},null,30)">${closesOutside.length} closed trade${closesOutside.length==1?'':'s'} (${names}${closesOutside.length>4?'…':''}) outside this window — show 30d</span>`;
+  }
+  caption += `</div>`;
+
   if(!items.length){
     const lbl = rng.days ? `the last ${rng.days} days` : 'the selected range';
-    el.innerHTML=`<div style="padding:16px;color:var(--muted);font-size:12px">No trading activity in ${lbl}.</div>`;
+    let html=`<div style="padding:16px;color:var(--muted);font-size:12px">No trading activity in ${lbl}.`;
+    if(closesOutside.length){
+      const names=[...new Set(closesOutside.slice(0,4).map(c=>c.symbol))].join(', ');
+      html += `<br><span class="rf-more" onclick="setRecentRange('${containerId}',${isModel},null,30)">${closesOutside.length} closed trade${closesOutside.length==1?'':'s'} (${names}${closesOutside.length>4?'…':''}) are older — show last 30 days</span>`;
+    }
+    html += `</div>`;
+    el.innerHTML=html;
     return;
   }
-  el.innerHTML=items.map(it=>{
+  el.innerHTML=caption+items.map(it=>{
     const d=it.date?new Date(it.date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}):'';
     return `<div class="rf-item">
       <div class="rf-badge ${it.side==='buy'?'rf-buy':'rf-sell'}">${it.side==='buy'?'BUY':'SELL'}</div>
