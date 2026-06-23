@@ -2814,6 +2814,24 @@ async function saveIndexFlags() {
   const { error } = await sb.from('index_ema_flags').upsert(rows, { onConflict: 'index_key' });
   if(error) { showAlert('idx-error', '✗ ' + error.message, 'error'); return; }
   showAlert('idx-success', '✓ Index EMA flags saved.', 'success');
+  // Welded recompute: Key Indices feed the Market Score, so refresh it right
+  // after saving — no separate click. Best-effort; never blocks the save.
+  triggerScoreRecompute('key_indices');
+}
+
+// ── Fire a slim Market-Score recompute (score_only pipeline mode) ──────────
+// Calls a Supabase Edge Function that holds the GitHub token server-side and
+// dispatches the workflow. The token is NEVER in client code. Non-blocking:
+// a failure here leaves your saved data intact — the next scheduled run will
+// still recompute.
+async function triggerScoreRecompute(reason){
+  try{
+    const { data, error } = await sb.functions.invoke('recompute-score', {
+      body: { reason: reason || 'manual', at: new Date().toISOString() }
+    });
+    if(error){ console.warn('Recompute trigger failed (non-blocking):', error); return; }
+    showAlert('idx-success', '✓ Saved · Market Score recompute queued (updates in ~1 min).', 'success');
+  }catch(e){ console.warn('Recompute trigger error (non-blocking):', e); }
 }
 
 // ════════════════════════════════════════════
