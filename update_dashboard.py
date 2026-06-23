@@ -967,7 +967,7 @@ def build_rationale(score):
     """Deterministic summary always; AI polish only on the meaningful EOD/flow
     runs (keeps cost negligible and intraday runs fast)."""
     facts = _deterministic_rationale(score)
-    if RUN_MODE in ("full_eod", "fii_dii"):
+    if RUN_MODE in ("full_eod", "fii_dii", "score_only"):
         ai = _ai_rationale(score, facts)
         if ai:
             return ai
@@ -1777,13 +1777,101 @@ def fetch_candles_for_watchlist():
         import traceback; traceback.print_exc()
 
 
+def recompute_score_only():
+    """SLIM recompute of the Market Score — NO Nifty-500 re-fetch.
+
+    Why this exists: the breadth pillars (21/50/200 EMA, A/D, 52w H/L, PDH/PDL,
+    thrust) require downloading 2y of data for ~500 stocks — minutes of work —
+    and only change once a day at EOD. But the FII/DII and Key-Index pillars are
+    fed MANUALLY and may change any night. This re-runs compute_market_score()
+    using the breadth tallies ALREADY STORED on the latest market_breadth row,
+    while the FII/DII and index pillars refresh live (compute_market_score calls
+    _fii_dii_flow5d() and _index_trend_score(), which read fresh from the DB).
+
+    Result: the composite recomputes in seconds, reflecting your manual FII/DII
+    and Key-Index edits, without touching the expensive market fetch.
+
+    This is the single 'recalculation engine' that both triggers call — the
+    Save-weld in the Admin Panel and the Supabase webhook on fii_dii_activity.
+    """
+    print("🧮 SCORE-ONLY recompute (reusing stored breadth, fresh FII/DII + index)\n")
+
+    # 1. Pull the most recent breadth row — it holds the raw tallies we reuse.
+    try:
+        rows = (sb.table("market_breadth")
+                  .select("*").order("snapshot_date", desc=True).limit(1)
+                  .execute().data or [])
+    except Exception as e:
+        print(f"   ❌ could not read latest market_breadth row: {e}")
+        return None
+    if not rows:
+        print("   ⚠️  no market_breadth row yet — run a full_eod first. Nothing to recompute.")
+        return None
+    r = rows[0]
+    target_date = r.get("snapshot_date")
+
+    # 2. Extract the stored breadth tallies (the expensive-to-compute inputs).
+    def gi(key, default=0):
+        v = r.get(key)
+        return default if v is None else v
+    p21  = gi("pct_above_21ema", 50)
+    p50  = gi("pct_above_50ema", 50)
+    p200 = gi("pct_above_200ema", 50)
+    adv  = gi("advancing");        dec = gi("declining")
+    h52  = gi("new_52w_highs");    l52 = gi("new_52w_lows")
+    pdh  = gi("above_pdh");        pdl = gi("below_pdl")
+    s_up = gi("strong_up_count");  s_dn = gi("strong_down_count")
+
+    # India VIX: reuse what the row stored (full_eod computes & stores it).
+    # If absent, compute_market_score treats None as neutral — acceptable for
+    # a slim recompute that isn't re-fetching market data.
+    india_vix = r.get("india_vix")
+
+    # 3. Recompute the score. FII/DII + index pillars refresh live inside.
+    score = compute_market_score(
+        p21, p50, p200, adv, dec, h52, l52, pdh, pdl,
+        s_up, s_dn, india_vix,
+    )
+
+    # 4. Rationale refresh (keeps the narrative in sync with the new number).
+    try:
+        merged = dict(r); merged.update(score)
+        score["score_rationale"] = build_rationale(merged)
+    except Exception as e:
+        print(f"   ⚠️  rationale refresh skipped: {e}")
+
+    # 5. Write back ONLY the score fields onto the SAME dated row.
+    payload = {"snapshot_date": target_date}
+    payload.update(score)
+    try:
+        sb.table("market_breadth").upsert(payload, on_conflict="snapshot_date").execute()
+        # Mirror to the lightweight teaser table if present (best-effort).
+        try:
+            sb.table("market_teaser").upsert({
+                "snapshot_date":      target_date,
+                "composite_smoothed": payload.get("composite_smoothed"),
+                "market_signal":      payload.get("market_signal"),
+                "rationale":          payload.get("score_rationale"),
+            }, on_conflict="snapshot_date").execute()
+        except Exception:
+            pass
+        print(f"   ✓ score recomputed for {target_date}: "
+              f"composite {payload.get('composite_smoothed')} "
+              f"({payload.get('market_signal')}) · FII/DII pillar "
+              f"{score.get('score_breakdown',{}).get('pillars',{}).get('fii_dii')}")
+    except Exception as e:
+        print(f"   ❌ write-back failed: {e}")
+        return None
+    return payload
+
+
 if __name__ == "__main__":
     # ── Trading-day gate ──────────────────────────────────────
     # Skip dated market-data runs (intraday, FII/DII, EOD) on weekends & NSE
     # holidays, so no indicator records data for a non-trading day.
     # The pre-market BRIEF is exempt: it's news, not dated market data, and is
     # useful every day (and must be testable on weekends).
-    if RUN_MODE != "premarket" and not is_trading_day():
+    if RUN_MODE not in ("premarket", "score_only") and not is_trading_day():
         print(f"{'='*56}")
         print(f"  MARKET CLOSED on {TODAY} ({NOW_IST.strftime('%A')}) — "
               f"weekend or NSE holiday.")
@@ -1808,7 +1896,11 @@ if __name__ == "__main__":
             return None
 
     try:
-        if RUN_MODE == "intraday":
+        if RUN_MODE == "score_only":
+            print("🧮 SCORE-ONLY\n")
+            run_step("recompute_score", recompute_score_only)
+
+        elif RUN_MODE == "intraday":
             print("⚡ INTRADAY\n")
             run_step("cmp_open_trades", fetch_cmp_for_open_trades)
             run_step("index_levels",    fetch_index_levels)
