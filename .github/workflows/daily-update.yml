@@ -21,7 +21,7 @@ on:
   workflow_dispatch:
     inputs:
       run_mode:
-        description: 'Run mode (premarket / intraday / full_eod / fii_dii)'
+        description: 'Run mode (premarket / intraday / full_eod / fii_dii / score_only)'
         required: false
         default: 'full_eod'
 
@@ -53,6 +53,11 @@ jobs:
       # Decide RUN_MODE explicitly per slot so the pipeline never has to guess.
       # Manual runs use the dispatch input; scheduled runs are mapped by IST hour
       # to match the cron schedule above.
+      # NOTE: 'score_only' is a manual/dispatch-only mode (no cron). It is fired
+      # on demand by the Supabase Edge Function 'recompute-score' whenever Key
+      # Indices are saved in the Admin Panel or FII/DII data changes (DB webhook).
+      # It re-runs ONLY compute_market_score() using the latest stored breadth
+      # tallies + fresh manual FII/DII + index data — seconds, no Nifty-500 fetch.
       - name: Determine run mode
         id: mode
         run: |
