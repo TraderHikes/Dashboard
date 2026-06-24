@@ -380,6 +380,12 @@
         </form>
       </div>
 
+      <!-- New-user request access -->
+      <div style="text-align:center;margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,.07)">
+        <span style="font-size:12.5px;color:var(--muted)">New to Market Basecamp? </span>
+        <button type="button" class="link-btn" id="request-access-btn" style="font-weight:700">Request Access</button>
+      </div>
+
     </div><!-- /main-panel -->
 
     <!-- ── FORGOT PASSWORD PANEL ── -->
@@ -401,6 +407,22 @@
           <button type="button" class="link-btn" id="back-btn">← Back to sign in</button>
         </div>
       </form>
+    </div>
+
+    <!-- ── ACCESS REQUEST / PENDING PANEL ── -->
+    <div class="panel hidden" id="pending-panel">
+      <div style="text-align:center">
+        <div style="font-size:40px;margin-bottom:10px">⏳</div>
+        <div style="font-size:17px;font-weight:700;color:var(--white,#fff);margin-bottom:8px" id="pending-title">Request received</div>
+        <p style="font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:18px" id="pending-msg">
+          Your access request has been submitted. A TraderHikes admin will review it shortly.
+          You'll be able to sign in once your access is approved.
+        </p>
+        <div id="pending-extra"></div>
+        <button type="button" class="btn-submit" id="pending-back-btn" style="margin-top:6px">
+          <span class="btn-text">← Back to sign in</span>
+        </button>
+      </div>
     </div>
 
   </div><!-- /card-body -->
@@ -425,19 +447,50 @@ const LOGIN_URL     = 'https://dashboard.traderhikes.com/login.html';
 const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// Admin email — must match is_admin() in the database. Admin always gets in.
+const ADMIN_EMAIL = 'traderhikes@gmail.com';
+
 // ═══════════════════════════════════════════════
-// CHECK IF ALREADY LOGGED IN
+// APPROVAL GATE
+// ───────────────────────────────────────────────
+// A signed-in user may ONLY enter the dashboard if they are the admin OR
+// their email exists in approved_students with a non-expired plan. Anyone
+// else is signed out and routed to the access-request flow. This is the
+// gate that was previously missing — without it, ANY Google account could
+// enter at the free tier.
+// ═══════════════════════════════════════════════
+async function isApproved(email) {
+  if (!email) return false;
+  if (email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) return true;
+  const { data, error } = await sb.from('approved_students')
+    .select('email, access_until')
+    .eq('email', email.toLowerCase())
+    .maybeSingle();
+  if (error || !data) return false;
+  // Expired access (access_until in the past) does NOT count as approved.
+  if (data.access_until && new Date(data.access_until) < new Date()) return false;
+  return true;
+}
+
+// ═══════════════════════════════════════════════
+// CHECK IF ALREADY LOGGED IN  (now gated)
 // ═══════════════════════════════════════════════
 (async () => {
-  // Handle the OAuth callback — Supabase puts tokens in the URL hash after
-  // Google redirects back. getSession() processes this automatically.
-  // Anyone signed in goes to the dashboard; their tier (free/paid/course)
-  // and RLS decide what they can see. First-time Google sign-in auto-creates
-  // a free profile via the signup trigger.
   const { data: { session } } = await sb.auth.getSession();
-  if (session) {
-    showChecking(true);
-    window.location.href = DASHBOARD_URL;
+  if (!session) return;  // not signed in — show the login panel as normal
+
+  const email = session.user?.email || '';
+  showChecking(true);
+
+  if (await isApproved(email)) {
+    window.location.href = DASHBOARD_URL;   // approved → into the dashboard
+  } else {
+    // Signed in with Google/email but NOT approved. Record the request,
+    // sign them out (so they hold no usable session), and show pending.
+    await recordAccessRequest(email, session.user?.user_metadata?.full_name || '', 'google');
+    await sb.auth.signOut();
+    showChecking(false);
+    showPending(email);
   }
 })();
 
@@ -504,8 +557,16 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
       return;
     }
 
-    showSuccess('Signed in! Loading your dashboard...');
-    setTimeout(() => { window.location.href = DASHBOARD_URL; }, 800);
+    showSuccess('Signed in! Checking access…');
+    const email = data.user?.email || '';
+    if (await isApproved(email)) {
+      setTimeout(() => { window.location.href = DASHBOARD_URL; }, 600);
+    } else {
+      await recordAccessRequest(email, data.user?.user_metadata?.full_name || '', 'email');
+      await sb.auth.signOut();
+      setLoading('submit-btn', false);
+      showPending(email);
+    }
 
   } catch (err) {
     showError('Something went wrong. Please try again.');
@@ -544,6 +605,59 @@ document.getElementById('reset-form').addEventListener('submit', async (e) => {
     showSuccess('Reset link sent! Check your inbox. Link expires in 1 hour.');
     document.getElementById('reset-form').reset();
   }
+});
+
+// ═══════════════════════════════════════════════
+// ACCESS REQUESTS  (Path A: request → admin approves)
+// ═══════════════════════════════════════════════
+// Record (or refresh) this user's access request. Idempotent on email:
+// re-requesting just updates the existing row rather than erroring.
+async function recordAccessRequest(email, fullName, source) {
+  if (!email) return;
+  try {
+    await sb.from('access_requests').upsert({
+      email: email.toLowerCase(),
+      full_name: fullName || null,
+      source: source || 'google',
+      status: 'pending',
+      requested_at: new Date().toISOString(),
+    }, { onConflict: 'email' });
+  } catch (e) {
+    console.warn('Could not record access request:', e);
+  }
+}
+
+// Show the pending screen. If we can read the user's request row, reflect its
+// real status (pending / approved / denied) so a returning user sees progress.
+async function showPending(email) {
+  document.getElementById('main-panel').classList.add('hidden');
+  document.getElementById('reset-panel').classList.add('hidden');
+  document.getElementById('pending-panel').classList.remove('hidden');
+  clearAlerts();
+
+  const titleEl = document.getElementById('pending-title');
+  const msgEl   = document.getElementById('pending-msg');
+  const extraEl = document.getElementById('pending-extra');
+  extraEl.innerHTML = '';
+
+  // Default (just submitted)
+  titleEl.textContent = 'Request received';
+  msgEl.innerHTML = `Thanks${email ? ', <strong>'+email+'</strong>' : ''}! Your access request has been submitted. `
+    + `A TraderHikes admin will review it shortly. You'll be able to sign in once approved.`;
+}
+
+// Triggered by the "Request Access" link: kicks off Google sign-in, which
+// (for an unapproved user) flows back through the gate and lands on pending.
+document.getElementById('request-access-btn').addEventListener('click', () => {
+  clearAlerts();
+  showInfo('Continue with Google to submit your access request.');
+  signInWithGoogle();
+});
+
+document.getElementById('pending-back-btn').addEventListener('click', () => {
+  document.getElementById('pending-panel').classList.add('hidden');
+  document.getElementById('main-panel').classList.remove('hidden');
+  clearAlerts();
 });
 
 // ═══════════════════════════════════════════════
