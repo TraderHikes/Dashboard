@@ -3335,6 +3335,19 @@ const ADMIN_URL    = 'https://dashboard.traderhikes.com/admin.html';
 const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// Global HTML-escape fallback. Several functions define their own local `esc`;
+// this guarantees that ANY reference to esc — even from a scope without a local
+// one — resolves to a working function instead of throwing "esc is not defined".
+// (Local definitions still shadow this where present; this is the safety net.)
+window.esc = window.esc || (s => (s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
+var esc = window.esc;
+
+// Build stamp — confirms which version of dashboard.html is actually running.
+// If the console doesn't show this exact line, the browser is serving a CACHED
+// old file: do an "Empty Cache and Hard Reload".
+const DASH_BUILD = 'msh-esc-fix-2026-06-24b';
+console.log('%c[dashboard build] '+DASH_BUILD, 'color:#39ff14;font-weight:700');
+
 /* ── AUTH GUARD + ROLE ── anyone signed in; RLS + tier decide what they see */
 (async () => {
   const { data: { session } } = await sb.auth.getSession();
@@ -5864,7 +5877,7 @@ async function buildRecentActivity(isModel, containerId){
   try{
     const r=await Promise.all([
       sb.from('open_trades').select('id,symbol,company_name,avg_entry_price,entry_price,quantity,remaining_qty,position_size_pct,entry_date').eq('is_model',isModel).order('entry_date',{ascending:false}).limit(200),
-      sb.from('closed_trades').select('symbol,company_name,avg_exit_price,exit_price,quantity,realised_pnl,return_pct,exit_date,entry_date,origin_open_trade_id').eq('is_model',isModel).order('exit_date',{ascending:false}).limit(200)
+      sb.from('closed_trades').select('*').eq('is_model',isModel).order('exit_date',{ascending:false}).limit(200)
     ]);
     opens=r[0].data||[]; closes=r[1].data||[];
     if(r[0].error) console.error('[recent] open_trades query error:', r[0].error);
