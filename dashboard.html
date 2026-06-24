@@ -7971,7 +7971,7 @@ function loadScriptOnce(src){
 
 
 /* ─ RENDER RS ─ */
-function renderRS(){document.getElementById('rs-tbody').innerHTML=rsD.map(s=>{const pips=Array.from({length:10},(_,i)=>`<div class="rs-pip ${i<Math.round(s.rs/10)?(s.rs>=90?'elite':'on'):''}"></div>`).join('');const spark=s.sp.map(v=>`<div class="sp" style="height:${v}%;background:${v>70?'var(--green)':v>50?'var(--blue)':'var(--amber)'}"></div>`).join('');const vc=s.vol==='high'?'vh':s.vol==='med'?'vm':'vn';const vl=s.vol==='high'?`+${s.vc}% 🔥`:`+${s.vc}%`;return`<tr><td style="color:var(--muted);font-weight:700;font-family:var(--fm)">${s.r}</td><td><div class="sname">${s.name}</div><div class="ssec">NSE:${s.sym} · ${s.sec}</div></td><td class="r" style="font-weight:700;color:var(--white)">${s.cmp.toLocaleString('en-IN')}</td><td class="r" style="color:var(--muted)">${s.hi52.toLocaleString('en-IN')}</td><td class="r" style="color:var(--red);font-weight:600">${s.fh}%</td><td><div class="rs-wrap">${pips}<span class="rs-num ${s.rs>=90?'elite':''}">${s.rs}</span></div></td><td class="r"><span class="ema-tag ${s.e21?'et-on':'et-off'}">${s.e21?'✓ Above':'✗ Below'}</span></td><td class="r"><span class="ema-tag ${s.e50?'et-on':'et-off'}">${s.e50?'✓ Above':'✗ Below'}</span></td><td class="r"><span class="ema-tag ${s.e200?'et-on':'et-near'}">${s.e200?'✓ Above':'≈ Near'}</span></td><td><span class="vol-tag ${vc}">${vl}</span></td><td><span class="setup">${s.setup}</span></td><td><div class="spark">${spark}</div></td><td><span class="wl-s ${s.wl?'on':''}" onclick="this.classList.toggle('on')">★</span></td></tr>`;}).join('');}
+function renderRS(){const _rt=document.getElementById('rs-tbody');if(!_rt)return;_rt.innerHTML=rsD.map(s=>{const pips=Array.from({length:10},(_,i)=>`<div class="rs-pip ${i<Math.round(s.rs/10)?(s.rs>=90?'elite':'on'):''}"></div>`).join('');const spark=s.sp.map(v=>`<div class="sp" style="height:${v}%;background:${v>70?'var(--green)':v>50?'var(--blue)':'var(--amber)'}"></div>`).join('');const vc=s.vol==='high'?'vh':s.vol==='med'?'vm':'vn';const vl=s.vol==='high'?`+${s.vc}% 🔥`:`+${s.vc}%`;return`<tr><td style="color:var(--muted);font-weight:700;font-family:var(--fm)">${s.r}</td><td><div class="sname">${s.name}</div><div class="ssec">NSE:${s.sym} · ${s.sec}</div></td><td class="r" style="font-weight:700;color:var(--white)">${s.cmp.toLocaleString('en-IN')}</td><td class="r" style="color:var(--muted)">${s.hi52.toLocaleString('en-IN')}</td><td class="r" style="color:var(--red);font-weight:600">${s.fh}%</td><td><div class="rs-wrap">${pips}<span class="rs-num ${s.rs>=90?'elite':''}">${s.rs}</span></div></td><td class="r"><span class="ema-tag ${s.e21?'et-on':'et-off'}">${s.e21?'✓ Above':'✗ Below'}</span></td><td class="r"><span class="ema-tag ${s.e50?'et-on':'et-off'}">${s.e50?'✓ Above':'✗ Below'}</span></td><td class="r"><span class="ema-tag ${s.e200?'et-on':'et-near'}">${s.e200?'✓ Above':'≈ Near'}</span></td><td><span class="vol-tag ${vc}">${vl}</span></td><td><span class="setup">${s.setup}</span></td><td><div class="spark">${spark}</div></td><td><span class="wl-s ${s.wl?'on':''}" onclick="this.classList.toggle('on')">★</span></td></tr>`;}).join('');}
 
 /* ── A/D HISTORY TOGGLE ── */
 let adHistoryLoaded = false;
@@ -8833,6 +8833,7 @@ function mscFallbackRationale(sig, comp, R, T, P){
 
 // ── Market Score History (daily snapshots from market_breadth) ──
 function mshBreakdownHTML(d){
+  const esc = s => (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const bd = d.score_breakdown || {};
   const P  = bd.pillars || {};
   const comp = d.composite_smoothed!=null?Math.round(d.composite_smoothed):'\u2014';
@@ -8872,6 +8873,9 @@ function mshBreakdownHTML(d){
 
 const MSH = (()=>{
   let data = [];
+  // Local escape helper — esc is defined as a const inside other functions and
+  // is NOT in scope here. Define our own so the render never throws.
+  const esc = s => (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   async function load(){
     const rowsEl = document.getElementById('msh-rows'); if(!rowsEl) return;
     rowsEl.innerHTML='<tr><td colspan="3" style="padding:16px;text-align:center;color:var(--muted)">Loading history…</td></tr>';
