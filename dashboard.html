@@ -8875,14 +8875,35 @@ const MSH = (()=>{
   async function load(){
     const rowsEl = document.getElementById('msh-rows'); if(!rowsEl) return;
     rowsEl.innerHTML='<tr><td colspan="3" style="padding:16px;text-align:center;color:var(--muted)">Loading history…</td></tr>';
+    const fail = (msg)=>{ rowsEl.innerHTML='<tr><td colspan="3" style="padding:16px;text-align:center;color:var(--muted)">'+msg+'</td></tr>'; };
     try{
-      const { data:d, error } = await sb.from('market_breadth')
-        .select('snapshot_date,composite_smoothed,market_signal,regime_score,tactical_score,score_breakdown,score_rationale')
+      console.log('[msh] load() started — querying market_breadth…');
+      // Race the query against a timeout so a hung request can never leave the
+      // table stuck on "Loading…" forever.
+      const query = sb.from('market_breadth')
+        .select('snapshot_date,composite_smoothed,market_signal,score_breakdown')
         .order('snapshot_date',{ascending:false}).limit(90);
-      if(error){ console.error('[msh] query error:', error); }
+      const timeout = new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),12000));
+      let res;
+      try { res = await Promise.race([query, timeout]); }
+      catch(te){ console.error('[msh] query timed out / threw:', te); fail('History request timed out. Check connection and reopen.'); return; }
+
+      let { data:d, error } = res;
+      if(error){
+        console.error('[msh] query error, retrying with select(*):', error);
+        try{
+          const fb = await Promise.race([
+            sb.from('market_breadth').select('*').order('snapshot_date',{ascending:false}).limit(90),
+            new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),12000))
+          ]);
+          d = fb.data; if(fb.error){ console.error('[msh] fallback error:', fb.error); }
+        }catch(fe){ console.error('[msh] fallback timed out:', fe); }
+      }
+      console.log('[msh] rows returned:', (d||[]).length,
+        '| with composite:', (d||[]).filter(r=>r.composite_smoothed!=null).length);
       data = (d||[]).filter(r=>r.composite_smoothed!=null);
-    }catch(e){ console.error('[msh] load threw:', e); data=[]; }
-    if(!data.length){ rowsEl.innerHTML='<tr><td colspan="3" style="padding:16px;text-align:center;color:var(--muted)">No score history yet. Daily scores will appear here as the pipeline runs.</td></tr>'; return; }
+    }catch(e){ console.error('[msh] load threw:', e); fail('Could not load history — see console.'); return; }
+    if(!data.length){ fail('No score history yet. Daily scores will appear here as the pipeline runs.'); return; }
     rowsEl.innerHTML = data.map(r=>{
       const c=Math.round(r.composite_smoothed), col=mscCol(c);
       const dt=new Date(r.snapshot_date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
@@ -8917,7 +8938,13 @@ function toggleScoreHistory(){
   const opening = (w.style.maxHeight==='' || w.style.maxHeight==='0px');
   w.style.maxHeight = opening ? '460px' : '0px';
   if(b) b.classList.toggle('open', opening);
-  if(opening && !_mshLoaded){ _mshLoaded=true; MSH.load(); }
+  // Load on open. Re-attempt if it hasn't successfully populated yet (don't let
+  // a one-shot flag permanently lock an empty table after an earlier failure).
+  if(opening){
+    const rowsEl=document.getElementById('msh-rows');
+    const hasRealRows = rowsEl && rowsEl.querySelector('.msh-check'); // a real data row has a Check button
+    if(!hasRealRows){ MSH.load(); }
+  }
 }
 
 function renderMarketScore(d){
