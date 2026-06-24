@@ -2158,8 +2158,8 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
     <div id="msh-wrap">
       <div class="msh-inner">
         <table class="msh-table">
-          <thead><tr><th>Date</th><th>Market Score</th><th>Market Breadth Details</th></tr></thead>
-          <tbody id="msh-rows"><tr><td colspan="3" style="padding:16px;text-align:center;color:var(--muted)">Loading history…</td></tr></tbody>
+          <thead><tr><th>Date</th><th>Market Score</th><th>Regime/Slow</th><th>Tactical/Fast</th><th>Market Conditions</th><th>Details</th></tr></thead>
+          <tbody id="msh-rows"><tr><td colspan="6" style="padding:16px;text-align:center;color:var(--muted)">Loading history…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -3345,7 +3345,7 @@ var esc = window.esc;
 // Build stamp — confirms which version of dashboard.html is actually running.
 // If the console doesn't show this exact line, the browser is serving a CACHED
 // old file: do an "Empty Cache and Hard Reload".
-const DASH_BUILD = 'msh-esc-fix-2026-06-24b';
+const DASH_BUILD = 'msh-history-cols-2026-06-25';
 console.log('%c[dashboard build] '+DASH_BUILD, 'color:#39ff14;font-weight:700');
 
 /* ── AUTH GUARD + ROLE ── anyone signed in; RLS + tier decide what they see */
@@ -8891,8 +8891,8 @@ const MSH = (()=>{
   const esc = s => (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   async function load(){
     const rowsEl = document.getElementById('msh-rows'); if(!rowsEl) return;
-    rowsEl.innerHTML='<tr><td colspan="3" style="padding:16px;text-align:center;color:var(--muted)">Loading history…</td></tr>';
-    const fail = (msg)=>{ rowsEl.innerHTML='<tr><td colspan="3" style="padding:16px;text-align:center;color:var(--muted)">'+msg+'</td></tr>'; };
+    rowsEl.innerHTML='<tr><td colspan="6" style="padding:16px;text-align:center;color:var(--muted)">Loading history…</td></tr>';
+    const fail = (msg)=>{ rowsEl.innerHTML='<tr><td colspan="6" style="padding:16px;text-align:center;color:var(--muted)">'+msg+'</td></tr>'; };
     try{
       console.log('[msh] load() started — querying market_breadth…');
       // Race the query against a timeout so a hung request can never leave the
@@ -8924,9 +8924,19 @@ const MSH = (()=>{
     rowsEl.innerHTML = data.map(r=>{
       const c=Math.round(r.composite_smoothed), col=mscCol(c);
       const dt=new Date(r.snapshot_date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+      const bd = r.score_breakdown || {};
+      const R = (bd.regime!=null)?Math.round(bd.regime):(r.regime_score!=null?Math.round(r.regime_score):null);
+      const T = (bd.tactical!=null)?Math.round(bd.tactical):(r.tactical_score!=null?Math.round(r.tactical_score):null);
+      const Rc = R!=null?mscCol(R):'var(--muted)';
+      const Tc = T!=null?mscCol(T):'var(--muted)';
+      const sig = r.market_signal||'';
+      const sigCol = /bull/i.test(sig)?'var(--green)':/caut|bear/i.test(sig)?'var(--red)':/neutral/i.test(sig)?'var(--amber)':'var(--text2)';
       return `<tr>
         <td style="padding:10px 14px;font-family:var(--fm);color:var(--text)">${dt}</td>
-        <td style="padding:10px 14px;font-family:var(--fm);font-weight:800;color:${col}">${c}<span style="color:var(--muted);font-weight:400;font-size:10px"> \u00b7 ${esc(r.market_signal||'')}</span></td>
+        <td style="padding:10px 14px;font-family:var(--fm);font-weight:800;color:${col}">${c}</td>
+        <td style="padding:10px 14px;font-family:var(--fm);font-weight:700;color:${Rc}">${R!=null?R:'\u2014'}</td>
+        <td style="padding:10px 14px;font-family:var(--fm);font-weight:700;color:${Tc}">${T!=null?T:'\u2014'}</td>
+        <td style="padding:10px 14px;font-weight:600;color:${sigCol}">${esc(sig)}</td>
         <td style="padding:10px 14px"><button class="msh-check" onclick="MSH.open('${r.snapshot_date}')">Check</button></td>
       </tr>`;
     }).join('');
