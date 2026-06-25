@@ -447,6 +447,10 @@ const LOGIN_URL     = 'https://dashboard.traderhikes.com/login.html';
 const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// Build stamp — confirms which login.html is actually running (vs a cached one).
+const LOGIN_BUILD = 'login-gate-ilike-2026-06-25';
+console.log('%c[login build] '+LOGIN_BUILD, 'color:#39ff14;font-weight:700');
+
 // Admin email — must match is_admin() in the database. Admin always gets in.
 const ADMIN_EMAIL = 'traderhikes@gmail.com';
 
@@ -461,18 +465,18 @@ const ADMIN_EMAIL = 'traderhikes@gmail.com';
 // ═══════════════════════════════════════════════
 async function isApproved(email) {
   if (!email) return false;
-  if (email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) return true;
-  // Case-insensitive match (ilike) so stored-email casing can't cause a
-  // false "not approved". Take the most recent row if duplicates exist.
+  if (email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) { console.log('[gate] admin → approved'); return true; }
   const { data, error } = await sb.from('approved_students')
     .select('email, access_until')
     .ilike('email', email)
     .order('enrolled_at', { ascending: false })
     .limit(1);
-  if (error) { console.warn('isApproved query error:', error); return false; }
+  console.log('[gate] isApproved("'+email+'") →', { rowsReturned: (data||[]).length, data, error });
+  if (error) { console.warn('[gate] query error (RLS likely blocking read):', error); return false; }
   const row = data && data[0];
-  if (!row) return false;
-  if (row.access_until && new Date(row.access_until) < new Date()) return false;
+  if (!row) { console.warn('[gate] NO ROW returned — either not approved OR RLS hides the row from this user'); return false; }
+  if (row.access_until && new Date(row.access_until) < new Date()) { console.warn('[gate] approval EXPIRED at', row.access_until); return false; }
+  console.log('[gate] APPROVED ✓');
   return true;
 }
 
