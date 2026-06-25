@@ -2200,7 +2200,8 @@ document.getElementById('form-close-trade').addEventListener('submit', async e =
     exchange:          t.exchange || 'NSE',
     entry_date:        t.entry_date,
     avg_entry_price:   avgEntry,
-    quantity:          totalQty,          // total ever bought
+    quantity:          totalQty,          // total ever bought (peak)
+    final_exit_qty:    remQty,            // shares sold in the FINAL exit (reliable; not reverse-computed)
     sl_price:          t.sl_price,
     exit_date:         exitDate,
     avg_exit_price:    avgExit,
@@ -3535,9 +3536,16 @@ async function loadAllFinalExits() {
   const fmt = (n) => '\u20b9' + Math.abs(n).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
   tbody.innerHTML = cts.map(c => {
-    // Final-leg qty = total ever bought − qty already sold in partials.
+    // Final-leg qty: use the directly-stored value when present (reliable);
+    // otherwise fall back to (total − partials) for older closed trades.
     const partialQty = partialQtyFor(c);
-    const finalQty   = Math.max(0, (c.quantity||0) - partialQty);
+    let finalQty;
+    if (c.final_exit_qty != null) {
+      finalQty = c.final_exit_qty;
+    } else {
+      const computed = (c.quantity||0) - partialQty;
+      finalQty = computed > 0 ? computed : null;   // null (not 0) → shows "—" only when truly unknown
+    }
     const pnl = c.realised_pnl || 0;
     const pnlStr = `<span style="color:${pnl>=0?'var(--green)':'var(--red)'}">${pnl>=0?'+':''}${fmt(pnl)}</span>`;
     const ret = c.return_pct;
