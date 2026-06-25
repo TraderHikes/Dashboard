@@ -6796,23 +6796,31 @@ async function renderClosed(){
   c.appendChild(grid);
 
   for(const t of trades) {
-    // Fetch partial exits for THIS SPECIFIC trade. Match by origin_open_trade_id
-    // (the exact trade), NOT by symbol — matching by symbol merged partials from
-    // multiple closed trades in the same stock (e.g. two RRKABEL trades),
-    // doubling legs and corrupting the final-exit qty.
+    // Partial exits for THIS trade. PREFER the frozen journey snapshot (it
+    // survives even after the origin open-trade is deleted); fall back to the
+    // live partial_exits table matched by origin_open_trade_id (never by
+    // symbol — that merged multiple trades in the same stock).
     let partials = [];
-    if (t.origin_open_trade_id) {
-      const { data } = await sb.from('partial_exits')
-        .select('*').eq('open_trade_id', t.origin_open_trade_id)
-        .order('exit_date');
-      partials = data || [];
-    } else {
-      // Legacy fallback (no origin id): symbol + this trade's date window.
-      const { data } = await sb.from('partial_exits')
-        .select('*').eq('symbol', t.symbol)
-        .gte('exit_date', t.entry_date).lte('exit_date', t.exit_date)
-        .order('exit_date');
-      partials = data || [];
+    {
+      const { data: snapParts } = await sb.from('closed_trade_journey')
+        .select('leg_date,price,quantity,realised_pnl,return_pct,notes')
+        .eq('closed_trade_id', t.id).eq('kind','partial').order('leg_no');
+      if (snapParts && snapParts.length) {
+        // Map snapshot legs to the shape the card expects.
+        partials = snapParts.map(s => ({
+          exit_date: s.leg_date, exit_price: s.price, quantity: s.quantity,
+          realised_pnl: s.realised_pnl, return_pct: s.return_pct, notes: s.notes,
+        }));
+      } else if (t.origin_open_trade_id) {
+        const { data } = await sb.from('partial_exits')
+          .select('*').eq('open_trade_id', t.origin_open_trade_id).order('exit_date');
+        partials = data || [];
+      } else {
+        const { data } = await sb.from('partial_exits')
+          .select('*').eq('symbol', t.symbol)
+          .gte('exit_date', t.entry_date).lte('exit_date', t.exit_date).order('exit_date');
+        partials = data || [];
+      }
     }
 
     const pxList   = partials || [];
@@ -7350,23 +7358,31 @@ async function renderUserClosed(){
   c.appendChild(grid);
 
   for(const t of trades) {
-    // Fetch partial exits for THIS SPECIFIC trade. Match by origin_open_trade_id
-    // (the exact trade), NOT by symbol — matching by symbol merged partials from
-    // multiple closed trades in the same stock (e.g. two RRKABEL trades),
-    // doubling legs and corrupting the final-exit qty.
+    // Partial exits for THIS trade. PREFER the frozen journey snapshot (it
+    // survives even after the origin open-trade is deleted); fall back to the
+    // live partial_exits table matched by origin_open_trade_id (never by
+    // symbol — that merged multiple trades in the same stock).
     let partials = [];
-    if (t.origin_open_trade_id) {
-      const { data } = await sb.from('partial_exits')
-        .select('*').eq('open_trade_id', t.origin_open_trade_id)
-        .order('exit_date');
-      partials = data || [];
-    } else {
-      // Legacy fallback (no origin id): symbol + this trade's date window.
-      const { data } = await sb.from('partial_exits')
-        .select('*').eq('symbol', t.symbol)
-        .gte('exit_date', t.entry_date).lte('exit_date', t.exit_date)
-        .order('exit_date');
-      partials = data || [];
+    {
+      const { data: snapParts } = await sb.from('closed_trade_journey')
+        .select('leg_date,price,quantity,realised_pnl,return_pct,notes')
+        .eq('closed_trade_id', t.id).eq('kind','partial').order('leg_no');
+      if (snapParts && snapParts.length) {
+        // Map snapshot legs to the shape the card expects.
+        partials = snapParts.map(s => ({
+          exit_date: s.leg_date, exit_price: s.price, quantity: s.quantity,
+          realised_pnl: s.realised_pnl, return_pct: s.return_pct, notes: s.notes,
+        }));
+      } else if (t.origin_open_trade_id) {
+        const { data } = await sb.from('partial_exits')
+          .select('*').eq('open_trade_id', t.origin_open_trade_id).order('exit_date');
+        partials = data || [];
+      } else {
+        const { data } = await sb.from('partial_exits')
+          .select('*').eq('symbol', t.symbol)
+          .gte('exit_date', t.entry_date).lte('exit_date', t.exit_date).order('exit_date');
+        partials = data || [];
+      }
     }
 
     const pxList   = partials || [];
