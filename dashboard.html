@@ -6796,12 +6796,24 @@ async function renderClosed(){
   c.appendChild(grid);
 
   for(const t of trades) {
-    // Fetch partial exits for this trade
-    const{data:partials}=await sb.from('partial_exits')
-      .select('*').eq('symbol', t.symbol)
-      .gte('exit_date', t.entry_date)
-      .lte('exit_date', t.exit_date)
-      .order('exit_date');
+    // Fetch partial exits for THIS SPECIFIC trade. Match by origin_open_trade_id
+    // (the exact trade), NOT by symbol — matching by symbol merged partials from
+    // multiple closed trades in the same stock (e.g. two RRKABEL trades),
+    // doubling legs and corrupting the final-exit qty.
+    let partials = [];
+    if (t.origin_open_trade_id) {
+      const { data } = await sb.from('partial_exits')
+        .select('*').eq('open_trade_id', t.origin_open_trade_id)
+        .order('exit_date');
+      partials = data || [];
+    } else {
+      // Legacy fallback (no origin id): symbol + this trade's date window.
+      const { data } = await sb.from('partial_exits')
+        .select('*').eq('symbol', t.symbol)
+        .gte('exit_date', t.entry_date).lte('exit_date', t.exit_date)
+        .order('exit_date');
+      partials = data || [];
+    }
 
     const pxList   = partials || [];
     _closedCache[t.id] = { trade: t, partials: pxList };
@@ -6901,7 +6913,7 @@ async function renderClosed(){
           <span style="color:var(--red);font-weight:700;min-width:14px">▼</span>
           <span style="color:var(--muted);min-width:80px">${t.exit_date}</span>
           <span style="color:var(--white);min-width:50px">Final Exit</span>
-          <span style="color:var(--text2);font-family:var(--fm)">₹${Number(t.avg_exit_price||0).toLocaleString('en-IN')} × ${(t.quantity||0)-(pxList.reduce((s,p)=>s+p.quantity,0))} shares</span>
+          <span style="color:var(--text2);font-family:var(--fm)">₹${Number(t.avg_exit_price||0).toLocaleString('en-IN')} × ${t.final_exit_qty!=null?t.final_exit_qty:Math.max(0,(t.quantity||0)-(pxList.reduce((s,p)=>s+p.quantity,0)))} shares</span>
           <span style="color:${finalPnl>=0?'var(--green)':'var(--red)'};font-family:var(--fm);font-weight:700;margin-left:auto">
             ${finalPnl>=0?'+':''}₹${Math.abs(finalPnl).toLocaleString('en-IN',{maximumFractionDigits:0})}
           </span>
@@ -7338,12 +7350,24 @@ async function renderUserClosed(){
   c.appendChild(grid);
 
   for(const t of trades) {
-    // Fetch partial exits for this trade
-    const{data:partials}=await sb.from('partial_exits')
-      .select('*').eq('symbol', t.symbol)
-      .gte('exit_date', t.entry_date)
-      .lte('exit_date', t.exit_date)
-      .order('exit_date');
+    // Fetch partial exits for THIS SPECIFIC trade. Match by origin_open_trade_id
+    // (the exact trade), NOT by symbol — matching by symbol merged partials from
+    // multiple closed trades in the same stock (e.g. two RRKABEL trades),
+    // doubling legs and corrupting the final-exit qty.
+    let partials = [];
+    if (t.origin_open_trade_id) {
+      const { data } = await sb.from('partial_exits')
+        .select('*').eq('open_trade_id', t.origin_open_trade_id)
+        .order('exit_date');
+      partials = data || [];
+    } else {
+      // Legacy fallback (no origin id): symbol + this trade's date window.
+      const { data } = await sb.from('partial_exits')
+        .select('*').eq('symbol', t.symbol)
+        .gte('exit_date', t.entry_date).lte('exit_date', t.exit_date)
+        .order('exit_date');
+      partials = data || [];
+    }
 
     const pxList   = partials || [];
     _closedCache[t.id] = { trade: t, partials: pxList };
@@ -7443,7 +7467,7 @@ async function renderUserClosed(){
           <span style="color:var(--red);font-weight:700;min-width:14px">▼</span>
           <span style="color:var(--muted);min-width:80px">${t.exit_date}</span>
           <span style="color:var(--white);min-width:50px">Final Exit</span>
-          <span style="color:var(--text2);font-family:var(--fm)">₹${Number(t.avg_exit_price||0).toLocaleString('en-IN')} × ${(t.quantity||0)-(pxList.reduce((s,p)=>s+p.quantity,0))} shares</span>
+          <span style="color:var(--text2);font-family:var(--fm)">₹${Number(t.avg_exit_price||0).toLocaleString('en-IN')} × ${t.final_exit_qty!=null?t.final_exit_qty:Math.max(0,(t.quantity||0)-(pxList.reduce((s,p)=>s+p.quantity,0)))} shares</span>
           <span style="color:${finalPnl>=0?'var(--green)':'var(--red)'};font-family:var(--fm);font-weight:700;margin-left:auto">
             ${finalPnl>=0?'+':''}₹${Math.abs(finalPnl).toLocaleString('en-IN',{maximumFractionDigits:0})}
           </span>
