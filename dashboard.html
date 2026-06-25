@@ -6898,34 +6898,8 @@ async function renderClosed(){
         <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;
           letter-spacing:.5px;margin-bottom:8px">Trade Journey</div>
 
-        <!-- Entries: initial + pyramid adds = Total Invested -->
-        ${entriesHtml}
-
-        <!-- Partial exits -->
-        ${pxList.map(px=>{
-          const pc = px.realised_pnl>=0?'var(--green)':'var(--red)';
-          return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:10px;padding-left:8px">
-            <span style="color:var(--amber);font-weight:700;min-width:14px">◆</span>
-            <span style="color:var(--muted);min-width:80px">${px.exit_date}</span>
-            <span style="color:var(--amber);min-width:50px">Partial Exit</span>
-            <span style="color:var(--text2);font-family:var(--fm)">₹${Number(px.exit_price).toLocaleString('en-IN')} × ${px.quantity} shares</span>
-            <span style="color:${pc};font-family:var(--fm);font-weight:700;margin-left:auto">
-              ${px.realised_pnl>=0?'+':''}₹${Math.abs(px.realised_pnl).toLocaleString('en-IN',{maximumFractionDigits:0})}
-              <span style="font-size:9px">(${px.return_pct>=0?'+':''}${Number(px.return_pct).toFixed(2)}%)</span>
-            </span>
-          </div>`;
-        }).join('')}
-
-        <!-- Final exit -->
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:10px">
-          <span style="color:var(--red);font-weight:700;min-width:14px">▼</span>
-          <span style="color:var(--muted);min-width:80px">${t.exit_date}</span>
-          <span style="color:var(--white);min-width:50px">Final Exit</span>
-          <span style="color:var(--text2);font-family:var(--fm)">₹${Number(t.avg_exit_price||0).toLocaleString('en-IN')} × ${t.final_exit_qty!=null?t.final_exit_qty:Math.max(0,(t.quantity||0)-(pxList.reduce((s,p)=>s+p.quantity,0)))} shares</span>
-          <span style="color:${finalPnl>=0?'var(--green)':'var(--red)'};font-family:var(--fm);font-weight:700;margin-left:auto">
-            ${finalPnl>=0?'+':''}₹${Math.abs(finalPnl).toLocaleString('en-IN',{maximumFractionDigits:0})}
-          </span>
-        </div>
+        <!-- Unified chronological journey: initial → partials/pyramids by date → final -->
+        ${unifiedJourneyHtml(t, _journey, pxList, finalPnl)}
 
         <!-- Notes only — P&L shown in header badge -->
         ${t.trade_notes?`<div style="border-top:1px solid var(--bdr);margin-top:8px;padding-top:8px;font-size:9px;color:var(--muted);font-style:italic">"${t.trade_notes}"</div>`:''}
@@ -7460,34 +7434,8 @@ async function renderUserClosed(){
         <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;
           letter-spacing:.5px;margin-bottom:8px">Trade Journey</div>
 
-        <!-- Entries: initial + pyramid adds = Total Invested -->
-        ${entriesHtml}
-
-        <!-- Partial exits -->
-        ${pxList.map(px=>{
-          const pc = px.realised_pnl>=0?'var(--green)':'var(--red)';
-          return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:10px;padding-left:8px">
-            <span style="color:var(--amber);font-weight:700;min-width:14px">◆</span>
-            <span style="color:var(--muted);min-width:80px">${px.exit_date}</span>
-            <span style="color:var(--amber);min-width:50px">Partial Exit</span>
-            <span style="color:var(--text2);font-family:var(--fm)">₹${Number(px.exit_price).toLocaleString('en-IN')} × ${px.quantity} shares</span>
-            <span style="color:${pc};font-family:var(--fm);font-weight:700;margin-left:auto">
-              ${px.realised_pnl>=0?'+':''}₹${Math.abs(px.realised_pnl).toLocaleString('en-IN',{maximumFractionDigits:0})}
-              <span style="font-size:9px">(${px.return_pct>=0?'+':''}${Number(px.return_pct).toFixed(2)}%)</span>
-            </span>
-          </div>`;
-        }).join('')}
-
-        <!-- Final exit -->
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:10px">
-          <span style="color:var(--red);font-weight:700;min-width:14px">▼</span>
-          <span style="color:var(--muted);min-width:80px">${t.exit_date}</span>
-          <span style="color:var(--white);min-width:50px">Final Exit</span>
-          <span style="color:var(--text2);font-family:var(--fm)">₹${Number(t.avg_exit_price||0).toLocaleString('en-IN')} × ${t.final_exit_qty!=null?t.final_exit_qty:Math.max(0,(t.quantity||0)-(pxList.reduce((s,p)=>s+p.quantity,0)))} shares</span>
-          <span style="color:${finalPnl>=0?'var(--green)':'var(--red)'};font-family:var(--fm);font-weight:700;margin-left:auto">
-            ${finalPnl>=0?'+':''}₹${Math.abs(finalPnl).toLocaleString('en-IN',{maximumFractionDigits:0})}
-          </span>
-        </div>
+        <!-- Unified chronological journey: initial → partials/pyramids by date → final -->
+        ${unifiedJourneyHtml(t, _journey, pxList, finalPnl)}
 
         <!-- Notes only — P&L shown in header badge -->
         ${t.trade_notes?`<div style="border-top:1px solid var(--bdr);margin-top:8px;padding-top:8px;font-size:9px;color:var(--muted);font-style:italic">"${t.trade_notes}"</div>`:''}
@@ -7638,6 +7586,92 @@ async function buildClosedJourney(t){
     hasPyramid: pyr.length > 0,
     source: 'reconstructed',
   };
+}
+
+/* ── UNIFIED chronological journey renderer ──────────────────────────────
+   Merges initial + pyramids + partials + final into ONE list sorted by date
+   (chronological story: Initial → Partial → Pyramid → Partial → Final, exactly
+   as it happened), and renders it in a single pass. Replaces the old split
+   where all pyramids were bundled, then partials appended separately.
+   Inputs: the trade `t`, the journey object `j` (entry legs), the partial list
+   `pxList`, and the computed `finalPnl`. */
+function unifiedJourneyHtml(t, j, pxList, finalPnl){
+  const inr = n => Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2});
+  const inr0 = n => Math.abs(Number(n||0)).toLocaleString('en-IN',{maximumFractionDigits:0});
+
+  // Collect every leg into a common shape.
+  const legs = [];
+  // Entry legs (initial + pyramids) from the journey object.
+  (j.legs||[]).forEach(l => {
+    legs.push({
+      kind: l.kind, date: l.date, price: l.price, qty: l.qty, amount: l.amount,
+      pnl: null, ret: null,
+    });
+  });
+  // Partial exits.
+  (pxList||[]).forEach(px => {
+    legs.push({
+      kind: 'partial', date: px.exit_date, price: px.exit_price, qty: px.quantity,
+      amount: (px.exit_price||0)*(px.quantity||0),
+      pnl: px.realised_pnl, ret: px.return_pct,
+    });
+  });
+  // Final exit (always last).
+  const finalQty = t.final_exit_qty!=null ? t.final_exit_qty
+                   : Math.max(0,(t.quantity||0)-((pxList||[]).reduce((s,p)=>s+(p.quantity||0),0)));
+  const finalLeg = {
+    kind: 'final', date: t.exit_date, price: t.avg_exit_price||0, qty: finalQty,
+    amount: (t.avg_exit_price||0)*finalQty, pnl: finalPnl, ret: null, _isFinal: true,
+  };
+
+  // Sort entry+partial legs chronologically; initial first as a tiebreaker,
+  // final always appended at the very end.
+  legs.sort((a,b)=>{
+    const dd = new Date(a.date) - new Date(b.date);
+    if (dd) return dd;
+    // same date: buys before sells, initial before pyramid
+    const rank = k => k==='initial'?0 : k==='pyramid'?1 : 2;
+    return rank(a.kind) - rank(b.kind);
+  });
+  legs.push(finalLeg);
+
+  // Render each leg.
+  const styleFor = k => k==='initial' ? { mark:'▲', col:TRADE_COLORS.entry, label:'Initial Entry', indent:false }
+                      : k==='pyramid' ? { mark:'▲', col:TRADE_COLORS.pyramid, label:'Pyramid Add', indent:true }
+                      : k==='partial' ? { mark:'◆', col:'var(--amber)', label:'Partial Exit', indent:true }
+                      :                  { mark:'▼', col:'var(--red)', label:'Final Exit', indent:false };
+
+  const rows = legs.map(l => {
+    const s = styleFor(l.kind);
+    const isEntry = (l.kind==='initial' || l.kind==='pyramid');
+    // Right-side amount: entries show invested (₹amount); exits show P&L.
+    let right;
+    if (isEntry) {
+      right = `<span style="color:${l.kind==='initial'?'var(--white)':s.col};margin-left:auto;font-size:9px">${l.kind==='initial'?'':'+ '}₹${inr(l.amount)}</span>`;
+    } else {
+      const pc = (l.pnl||0)>=0 ? 'var(--green)' : 'var(--red)';
+      const retTxt = (l.ret!=null) ? ` <span style="font-size:9px">(${l.ret>=0?'+':''}${Number(l.ret).toFixed(2)}%)</span>` : '';
+      right = `<span style="color:${pc};font-family:var(--fm);font-weight:700;margin-left:auto">${(l.pnl||0)>=0?'+':''}₹${inr0(l.pnl)}${retTxt}</span>`;
+    }
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:10px${s.indent?';padding-left:8px':''}">
+      <span style="color:${s.col};font-weight:700;min-width:14px">${s.mark}</span>
+      <span style="color:var(--muted);min-width:80px">${l.date||''}</span>
+      <span style="color:${l.kind==='initial'||l.kind==='final'?'var(--white)':s.col};min-width:50px">${s.label}</span>
+      <span style="color:var(--text2);font-family:var(--fm)">₹${inr(l.price)} × ${l.qty} shares</span>
+      ${right}
+    </div>`;
+  }).join('');
+
+  // Total Invested footer placed right after the LAST entry leg would be ideal,
+  // but to keep the chronological flow clean we show it as a subtle summary line.
+  const totalInvested = (j.legs||[]).reduce((s,l)=>s+(l.amount||0),0);
+  const footer = `<div style="display:flex;align-items:center;gap:8px;margin:6px 0 5px;font-size:10px;border-top:1px dashed var(--bdr);padding-top:7px">
+      <span style="min-width:14px"></span><span style="min-width:80px"></span>
+      <span style="color:var(--white);font-weight:700;min-width:50px">Total Invested</span>
+      <span style="margin-left:auto;color:var(--white);font-weight:700;font-family:var(--fm)">₹${inr(totalInvested)}</span>
+    </div>`;
+
+  return rows + footer;
 }
 
 /* Journey-log HTML built from a journey object (shared by both closed
