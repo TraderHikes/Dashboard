@@ -2256,6 +2256,64 @@ document.getElementById('form-close-trade').addEventListener('submit', async e =
     }
   }
 
+  // ── Freeze a permanent JOURNEY snapshot (every leg) before the delete ──
+  // The open-trade delete below CASCADE-wipes pyramid legs and orphans
+  // partials, so we must snapshot the full journey NOW, while the legs still
+  // exist. One row per leg into closed_trade_journey, keyed to the closed
+  // trade. The dashboard reads this frozen snapshot, so the log survives
+  // anything that happens to the working tables afterwards. Best-effort:
+  // a failure must not block the close.
+  if (closedId) {
+    try {
+      // Full leg data (the earlier `partials` fetch was pnl/qty only).
+      const { data: pyrLegs } = await sb.from('trade_entries')
+        .select('entry_date,entry_price,quantity,notes')
+        .eq('open_trade_id', openId).order('entry_date', { ascending: true });
+      const { data: partLegs } = await sb.from('partial_exits')
+        .select('exit_date,exit_price,quantity,realised_pnl,return_pct,notes')
+        .eq('open_trade_id', openId).order('exit_date', { ascending: true });
+
+      // Build a chronologically ordered leg list: initial → (pyramids & partials
+      // interleaved by date) → final.
+      const pyramidQty  = (pyrLegs||[]).reduce((s,e)=>s+(e.quantity||0),0);
+      const pyramidCost = (pyrLegs||[]).reduce((s,e)=>s+((e.entry_price||0)*(e.quantity||0)),0);
+      // Reconstruct the INITIAL leg (original buy before any pyramids):
+      const boughtQty   = (totalQty || 0);                 // peak/total stored
+      // initial qty = total ever bought − pyramids; but to be robust use the
+      // open trade's own original quantity if present.
+      const initialQty  = Math.max(0, (t.quantity || boughtQty) - 0); // base buy qty
+      const initialPx   = t.entry_price || avgEntry;
+
+      const mid = [];
+      mid.push({ kind:'initial', d:t.entry_date, px:initialPx, q:t.quantity || initialQty,
+                 pnl:null, ret:null, note:t.trade_notes || null });
+      (pyrLegs||[]).forEach(e => mid.push({
+        kind:'pyramid', d:e.entry_date, px:e.entry_price, q:e.quantity,
+        pnl:null, ret:null, note:e.notes || null }));
+      (partLegs||[]).forEach(e => mid.push({
+        kind:'partial', d:e.exit_date, px:e.exit_price, q:e.quantity,
+        pnl:e.realised_pnl, ret:e.return_pct, note:e.notes || null }));
+      // Sort the middle legs by date (initial stays first, final appended last).
+      const initialLeg = mid.shift();
+      mid.sort((a,b)=> new Date(a.d) - new Date(b.d));
+      const ordered = [initialLeg, ...mid, {
+        kind:'final', d:exitDate, px:avgExit, q:remQty,
+        pnl:finalPnl, ret:returnPct, note:(fd.get('trade_notes')||'').trim() || null }];
+
+      const journeyRows = ordered.map((l, i) => ({
+        closed_trade_id: closedId, leg_no: i, kind: l.kind,
+        leg_date: l.d, price: l.px, quantity: l.q,
+        amount: (l.px||0)*(l.q||0),
+        realised_pnl: l.pnl, return_pct: l.ret, notes: l.note,
+      }));
+      if (journeyRows.length) {
+        await sb.from('closed_trade_journey').insert(journeyRows);
+      }
+    } catch (jErr) {
+      console.warn('Journey snapshot failed (non-blocking):', jErr);
+    }
+  }
+
   // Delete from open_trades
   await sb.from('open_trades').delete().eq('id', openId);
   btn.disabled = false; btn.textContent = 'Confirm Final Exit';
