@@ -462,13 +462,17 @@ const ADMIN_EMAIL = 'traderhikes@gmail.com';
 async function isApproved(email) {
   if (!email) return false;
   if (email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) return true;
+  // Case-insensitive match (ilike) so stored-email casing can't cause a
+  // false "not approved". Take the most recent row if duplicates exist.
   const { data, error } = await sb.from('approved_students')
     .select('email, access_until')
-    .eq('email', email.toLowerCase())
-    .maybeSingle();
-  if (error || !data) return false;
-  // Expired access (access_until in the past) does NOT count as approved.
-  if (data.access_until && new Date(data.access_until) < new Date()) return false;
+    .ilike('email', email)
+    .order('enrolled_at', { ascending: false })
+    .limit(1);
+  if (error) { console.warn('isApproved query error:', error); return false; }
+  const row = data && data[0];
+  if (!row) return false;
+  if (row.access_until && new Date(row.access_until) < new Date()) return false;
   return true;
 }
 
