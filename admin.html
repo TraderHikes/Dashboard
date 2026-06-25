@@ -3640,7 +3640,7 @@ async function deleteEntryLeg(entryId, tradeId) {
 async function recomputeOpenTrade(tradeId, label) {
   // Read the immutable base from open_trades
   const { data: ot } = await sb.from('open_trades')
-    .select('quantity,entry_price').eq('id', tradeId).single();
+    .select('quantity,entry_price,entry_date,created_at').eq('id', tradeId).single();
   if (!ot) return;
   const baseQty = ot.quantity || 0;
   const basePx  = ot.entry_price || 0;
@@ -3653,24 +3653,64 @@ async function recomputeOpenTrade(tradeId, label) {
   const pyrQty  = pyrLegs.reduce((s,e)=>s + (e.quantity||0), 0);
   const pyrCost = pyrLegs.reduce((s,e)=>s + (e.entry_price*e.quantity), 0);
 
-  const totalQty = baseQty + pyrQty;
-  const wavg = totalQty > 0 ? (basePx*baseQty + pyrCost) / totalQty : basePx;
+  // avg = qty-weighted blend of ALL buys (base + pyramids)
+  const boughtQty = baseQty + pyrQty;
+  const wavg = boughtQty > 0 ? (basePx*baseQty + pyrCost) / boughtQty : basePx;
 
-  // Subtract already-sold qty (partial exits) for true remaining
-  const { data: exits } = await sb.from('partial_exits')
-    .select('quantity').eq('open_trade_id', tradeId);
-  const soldQty = (exits||[]).reduce((s,e)=>s + (e.quantity||0), 0);
+  // ── Total Qty = PEAK holding (chronological walk), not sum-of-buys ──
+  // Walk initial buy + pyramids + partial exits in date order so that exits
+  // occurring BEFORE a pyramid are netted. remaining_qty is the running
+  // position at the END of the walk — which is ALWAYS correct after any
+  // add/edit/DELETE of a leg, because it's rebuilt from what currently exists.
+  let totalQty, remainingQty;
+  try {
+    const pk = await computePeakQty(tradeId, ot);
+    totalQty     = pk.peakQty > 0 ? pk.peakQty : boughtQty;
+    remainingQty = pk.remainingQty;
+  } catch (_) {
+    const { data: exits } = await sb.from('partial_exits')
+      .select('quantity').eq('open_trade_id', tradeId);
+    const soldQty = (exits||[]).reduce((s,e)=>s + (e.quantity||0), 0);
+    totalQty     = boughtQty;
+    remainingQty = Math.max(0, boughtQty - soldQty);
+  }
 
   await sb.from('open_trades').update({
     avg_entry_price: Math.round(wavg*100)/100,
     total_quantity:  totalQty,
-    remaining_qty:   Math.max(0, totalQty - soldQty),
-    has_pyramid:     pyrLegs.length > 0,   // ← badge reflects pyramids only
+    remaining_qty:   Math.max(0, remainingQty),
+    has_pyramid:     pyrLegs.length > 0,
     updated_at:      new Date().toISOString(),
   }).eq('id', tradeId);
 
-  showEditAlert(`✓ ${label}. Position: ${totalQty} @ ₹${(Math.round(wavg*100)/100).toLocaleString('en-IN')}${pyrLegs.length?` (base ${baseQty} + ${pyrLegs.length} pyramid leg${pyrLegs.length>1?'s':''})`:' (no pyramids)'}.`,'success');
+  showEditAlert(`✓ ${label}. Peak ${totalQty} · ${Math.max(0,remainingQty)} remaining @ ₹${(Math.round(wavg*100)/100).toLocaleString('en-IN')}${pyrLegs.length?` (base ${baseQty} + ${pyrLegs.length} pyramid leg${pyrLegs.length>1?'s':''})`:''}.`,'success');
   toast(label + ' — position updated');
+}
+
+// Chronological peak-holding walk. Returns the max position ever held (peak)
+// and the CURRENT remaining position (after all existing exits). Because this
+// is rebuilt from whatever legs currently exist, deleting a partial exit or a
+// pyramid leg always produces the correct remaining qty.
+async function computePeakQty(tradeId, ot) {
+  const { data: pyr }   = await sb.from('trade_entries')
+    .select('entry_date,quantity,created_at').eq('open_trade_id', tradeId);
+  const { data: exits } = await sb.from('partial_exits')
+    .select('exit_date,quantity,created_at').eq('open_trade_id', tradeId);
+  const ev = [];
+  ev.push({ d:ot.entry_date, ts:ot.created_at, k:'buy',  q:+ot.quantity||0 });
+  (pyr||[]).forEach(e => ev.push({ d:e.entry_date, ts:e.created_at, k:'buy',  q:+e.quantity||0 }));
+  (exits||[]).forEach(e => ev.push({ d:e.exit_date,  ts:e.created_at, k:'sell', q:+e.quantity||0 }));
+  ev.sort((a,b) => {
+    const dd = new Date(a.d) - new Date(b.d);              if (dd) return dd;
+    const tt = new Date(a.ts||a.d) - new Date(b.ts||b.d);  if (tt) return tt;
+    return (a.k==='buy'?0:1) - (b.k==='buy'?0:1);
+  });
+  let qty = 0, peak = 0;
+  for (const e of ev) {
+    if (e.k === 'buy') { qty += e.q; if (qty > peak) peak = qty; }
+    else               { qty = Math.max(0, qty - e.q); }
+  }
+  return { peakQty: peak, remainingQty: qty };
 }
 
 // ── Partial Exits ─────────────────────────────────────
