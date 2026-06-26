@@ -2170,25 +2170,56 @@ document.getElementById('form-close-trade').addEventListener('submit', async e =
     return;
   }
 
-  // Use avg_entry_price and remaining_qty (accounts for pyramids + partials)
+  // Use avg_entry_price; compute the FINAL exit quantity ROBUSTLY below
+  // (do NOT trust a possibly-stale remaining_qty — that caused KIRLPNU/CRAFTSMAN
+  //  to compute final P&L on PEAK qty, massively overstating realised P&L).
   const avgEntry   = t.avg_entry_price || t.entry_price;
-  const remQty     = t.remaining_qty   || t.quantity;
   const totalQty   = t.total_quantity  || t.quantity;
   const avgExit    = parseFloat(fd.get('avg_exit_price'));
   const exitDate   = fd.get('exit_date');
   const holdingDays = Math.round((new Date(exitDate) - new Date(t.entry_date)) / 86400000);
 
-  // P&L on remaining (final) position
+  // Fetch partial exits ONCE (qty + pnl) — needed for both the final-qty
+  // computation and the total realised.
+  const { data: partials } = await sb
+    .from('partial_exits').select('realised_pnl,quantity').eq('open_trade_id', openId);
+  const partialPnl = partials ? partials.reduce((s,p) => s+(p.realised_pnl||0), 0) : 0;
+  const partialQty = partials ? partials.reduce((s,p) => s+(p.quantity||0), 0) : 0;
+
+  // Total ever bought = initial + all pyramid legs (NOT the peak holding).
+  const { data: pyrForQty } = await sb
+    .from('trade_entries').select('quantity').eq('open_trade_id', openId);
+  const pyramidQty   = pyrForQty ? pyrForQty.reduce((s,e)=>s+(e.quantity||0),0) : 0;
+  const totalBought  = (t.entry_quantity || t.quantity || 0) + pyramidQty;
+
+  // FINAL exit qty = everything that's left = total bought − already-sold partials.
+  // Prefer the live remaining_qty ONLY when it is consistent with this; otherwise
+  // trust the first-principles figure. This is the core correctness guarantee.
+  let remQty = totalBought - partialQty;
+  if (!(remQty > 0)) {
+    // Fallback: if leg data is incomplete, fall back to remaining_qty, then to
+    // a clamped 0 — never to peak (which is what caused the bug).
+    remQty = (t.remaining_qty && t.remaining_qty > 0) ? t.remaining_qty : 0;
+  }
+
+  // P&L on the FINAL (remaining) position only.
   const finalPnl  = (avgExit - avgEntry) * remQty;
   const returnPct = ((avgExit - avgEntry) / avgEntry) * 100;
 
-  // Fetch partial exits to calculate total realised P&L
-  const { data: partials } = await sb
-    .from('partial_exits').select('realised_pnl,quantity').eq('open_trade_id', openId);
-
-  const partialPnl   = partials ? partials.reduce((s,p) => s+(p.realised_pnl||0), 0) : 0;
   const totalRealised = finalPnl + partialPnl;
-  const partialQty    = partials ? partials.reduce((s,p) => s+(p.quantity||0), 0) : 0;
+
+  // ── SANITY GUARD ──────────────────────────────────────────────────────
+  // If the final qty would exceed total-bought-minus-partials, something is
+  // wrong with the leg data; refuse to store a bogus P&L rather than ship a
+  // corrupt record. (Belt-and-suspenders against any future data drift.)
+  if (totalBought > 0 && remQty > (totalBought - partialQty) + 1) {
+    showAlert('close-error',
+      `Quantity check failed: computed final qty ${remQty} exceeds remaining ` +
+      `(${totalBought} bought − ${partialQty} sold). Close aborted to avoid a ` +
+      `wrong P&L. Please verify the trade's legs.`, 'error');
+    btn.disabled = false; btn.textContent = 'Confirm Final Exit';
+    return;
+  }
 
   // True peak exposure — robust to interleaved pyramids & partial exits.
   const peakPosPct = await computePeakExposurePct(openId, t);
