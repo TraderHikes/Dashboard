@@ -2114,6 +2114,45 @@ async function deleteTrade(id, symbol) {
 // deployed capital under average-cost accounting. Deployed capital peaks right
 // after a buy; that maximum ÷ capital_at_entry is the largest position size the
 // stock ever carried — correct no matter how buys and sells are interleaved.
+// ── Shared FIFO P&L engine (Indian broker standard: first-in-first-out) ──
+// Given chronologically-ordered buy/sell events, returns total realised P&L
+// and per-sell P&L by consuming the oldest lots first. For non-pyramided
+// trades (single buy lot) this equals the simple (exit−entry)×qty, so it is
+// safe to use universally.
+function computeFifoPnl(events){
+  const lots=[]; let total=0; const legs=[];
+  for(const ev of events){
+    if(ev.kind==='buy'){ lots.push({qty:ev.qty,price:ev.price}); legs.push({...ev,pnl:null}); }
+    else{
+      let rem=ev.qty, pnl=0;
+      while(rem>0 && lots.length){
+        const lot=lots[0]; const take=Math.min(rem,lot.qty);
+        pnl+=take*(ev.price-lot.price); lot.qty-=take; rem-=take;
+        if(lot.qty===0) lots.shift();
+      }
+      pnl=Math.round(pnl*100)/100; total+=pnl;
+      legs.push({...ev,pnl});
+    }
+  }
+  return { totalPnl: Math.round(total*100)/100, legs };
+}
+
+// Build the chronological event list for an OPEN trade (initial + pyramids +
+// partials), optionally appending a final sell, then run FIFO.
+async function fifoForOpenTrade(openId, t, finalSell /* {qty,price,date} | null */){
+  const { data: pyr } = await sb.from('trade_entries')
+    .select('entry_date,entry_price,quantity,created_at').eq('open_trade_id', openId);
+  const { data: parts } = await sb.from('partial_exits')
+    .select('exit_date,exit_price,quantity,created_at').eq('open_trade_id', openId);
+  const ev = [];
+  ev.push({kind:'buy',  qty:+t.quantity||0, price:+(t.entry_price||t.avg_entry_price)||0, d:t.entry_date, ts:t.created_at});
+  (pyr||[]).forEach(e=>ev.push({kind:'buy',  qty:+e.quantity||0, price:+e.entry_price||0, d:e.entry_date, ts:e.created_at}));
+  (parts||[]).forEach(e=>ev.push({kind:'sell', qty:+e.quantity||0, price:+e.exit_price||0,  d:e.exit_date,  ts:e.created_at}));
+  if(finalSell) ev.push({kind:'sell', qty:+finalSell.qty||0, price:+finalSell.price||0, d:finalSell.date, ts:new Date().toISOString()});
+  ev.sort((a,b)=> new Date(a.d)-new Date(b.d) || new Date(a.ts||a.d)-new Date(b.ts||b.d) || (a.kind==='buy'?-1:1));
+  return computeFifoPnl(ev);
+}
+
 async function computePeakExposurePct(openId, t) {
   const cap = t && t.capital_at_entry;
   const { data: pyr }   = await sb.from('trade_entries')
@@ -2206,7 +2245,22 @@ document.getElementById('form-close-trade').addEventListener('submit', async e =
   const finalPnl  = (avgExit - avgEntry) * remQty;
   const returnPct = ((avgExit - avgEntry) / avgEntry) * 100;
 
-  const totalRealised = finalPnl + partialPnl;
+  // ── Total realised P&L via FIFO (Indian broker standard) ──
+  // Replaces the old blended (finalPnl + partialPnl), which mis-priced exits
+  // on pyramided trades. FIFO consumes oldest lots first; for non-pyramided
+  // trades it equals the simple calc, so it is always correct.
+  let totalRealised, finalPnlFifo;
+  try {
+    const fifo = await fifoForOpenTrade(openId, t, { qty: remQty, price: avgExit, date: exitDate });
+    totalRealised = fifo.totalPnl;
+    // final-leg P&L = the FIFO P&L of the last sell event
+    const sells = fifo.legs.filter(l=>l.kind==='sell');
+    finalPnlFifo = sells.length ? sells[sells.length-1].pnl : (avgExit-avgEntry)*remQty;
+  } catch(e) {
+    console.warn('FIFO compute failed, falling back to blended:', e);
+    totalRealised = finalPnl + partialPnl;
+    finalPnlFifo  = finalPnl;
+  }
 
   // ── SANITY GUARD ──────────────────────────────────────────────────────
   // If the final qty would exceed total-bought-minus-partials, something is
@@ -2329,7 +2383,7 @@ document.getElementById('form-close-trade').addEventListener('submit', async e =
       mid.sort((a,b)=> new Date(a.d) - new Date(b.d));
       const ordered = [initialLeg, ...mid, {
         kind:'final', d:exitDate, px:avgExit, q:remQty,
-        pnl:finalPnl, ret:returnPct, note:(fd.get('trade_notes')||'').trim() || null }];
+        pnl:finalPnlFifo, ret:returnPct, note:(fd.get('trade_notes')||'').trim() || null }];
 
       const journeyRows = ordered.map((l, i) => ({
         closed_trade_id: closedId, leg_no: i, kind: l.kind,
