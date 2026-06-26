@@ -7931,82 +7931,71 @@ async function downloadClosedPDF(id){
     }
     yPos += Math.ceil(detail.length/2)*18 + 22;
 
-    // ── Entry (initial + pyramid adds = Total Invested) ──
-    // Entry breakdown driven by the shared journey (initial leg + pyramids).
-    const _legs = journey.legs;
-    sectionTitle('Entry');
+    // ── Trade Journey (CHRONOLOGICAL: initial -> partials/pyramids by date -> final) ──
+    // One unified, date-ordered section that mirrors the dashboard card, with
+    // reasons retained for every exit leg. Replaces the old split (Entry block,
+    // then Partial Exits, then Final Exit) which bundled pyramids together.
+    sectionTitle('Trade Journey');
     doc.setFontSize(9.5);
-    if(_legs.length > 1){
-      _legs.forEach((l) => {
-        doc.setFont('helvetica','bold'); doc.setTextColor(40,40,40);
-        doc.text(l.kind==='initial'?'Initial Entry':'Pyramid Add', M+4, yPos);
-        doc.setFont('helvetica','normal'); doc.setTextColor(70,70,70);
-        doc.text(`${fmtINR(l.price)} × ${l.qty}`, M+120, yPos);
+
+    // Build the merged, ordered leg list.
+    const _jLegs = [];
+    (journey.legs||[]).forEach(l => _jLegs.push({
+      kind:l.kind, date:l.date, price:l.price, qty:l.qty, amount:l.amount,
+      pnl:null, ret:null, notes:l.notes||null }));
+    px.forEach(p => _jLegs.push({
+      kind:'partial', date:p.exit_date, price:p.exit_price, qty:p.quantity,
+      amount:(p.exit_price||0)*(p.quantity||0),
+      pnl:p.realised_pnl, ret:p.return_pct, notes:p.notes||null }));
+    _jLegs.sort((a,b)=>{
+      const dd = new Date(a.date)-new Date(b.date); if(dd) return dd;
+      const rank = k => k==='initial'?0 : k==='pyramid'?1 : 2;
+      return rank(a.kind)-rank(b.kind);
+    });
+    const _finalQty = t.final_exit_qty!=null ? t.final_exit_qty
+                      : Math.max(0,(t.quantity||0)-px.reduce((s,p)=>s+(p.quantity||0),0));
+    _jLegs.push({ kind:'final', date:t.exit_date, price:t.avg_exit_price, qty:_finalQty,
+      amount:(t.avg_exit_price||0)*_finalQty, pnl:finalPnl, ret:t.return_pct,
+      notes:(t.exit_reason||'') + (t.trade_notes?(' — '+t.trade_notes):'') });
+
+    const _label = k => k==='initial'?'Initial Entry' : k==='pyramid'?'Pyramid Add'
+                       : k==='partial'?'Partial Exit' : 'Final Exit';
+
+    _jLegs.forEach(l => {
+      const isEntry = (l.kind==='initial' || l.kind==='pyramid');
+      doc.setFont('helvetica','bold'); doc.setTextColor(40,40,40);
+      doc.text(`${l.date}`, M+4, yPos);
+      doc.setFont('helvetica','bold'); doc.setTextColor(
+        l.kind==='initial'?40:(l.kind==='pyramid'?90:(l.kind==='partial'?180:170)),
+        l.kind==='pyramid'?90:(l.kind==='initial'?40:120),
+        l.kind==='pyramid'?160:60);
+      doc.text(_label(l.kind), M+70, yPos);
+      doc.setFont('helvetica','normal'); doc.setTextColor(70,70,70);
+      doc.text(`${fmtINR(l.price)} × ${l.qty}`, M+170, yPos);
+      if(isEntry){
         doc.setTextColor(25,25,25);
         doc.text(`${fmtINR(l.amount)}`, W-M, yPos, {align:'right'});
-        yPos += 15;
-      });
-      doc.setDrawColor(225,228,235); doc.setLineWidth(0.5);
-      doc.line(M+4, yPos-4, W-M, yPos-4);
-      doc.setFont('helvetica','bold'); doc.setTextColor(25,25,25);
-      doc.text('Total Invested', M+4, yPos+9);
-      doc.text(`${fmtINR(journey.totalInvested)}`, W-M, yPos+9, {align:'right'});
-      yPos += 24;
-    } else {
-      const l = _legs[0] || { price:t.avg_entry_price, qty:t.quantity, amount:(Number(t.avg_entry_price)||0)*(Number(t.quantity)||0) };
-      doc.setFont('helvetica','bold'); doc.setTextColor(40,40,40);
-      doc.text('Initial Entry', M+4, yPos);
-      doc.setFont('helvetica','normal'); doc.setTextColor(70,70,70);
-      doc.text(`${fmtINR(l.price)} × ${l.qty||0}`, M+120, yPos);
-      doc.setTextColor(25,25,25);
-      doc.text(`${fmtINR(l.amount)}`, W-M, yPos, {align:'right'});
-      yPos += 18;
-    }
+      } else {
+        doc.setTextColor(l.pnl>=0?30:170, l.pnl>=0?140:40, l.pnl>=0?90:40);
+        const retTxt = (l.ret!=null && l.kind==='partial') ? ` (${l.ret>=0?'+':''}${Number(l.ret).toFixed(2)}%)` : '';
+        doc.text(`${sign(l.pnl)}${fmtINR(l.pnl)}${retTxt}`, W-M, yPos, {align:'right'});
+      }
+      yPos += 14;
+      if(l.notes && (l.kind==='partial' || l.kind==='final')){
+        doc.setTextColor(120,120,120); doc.setFont('helvetica','italic'); doc.setFontSize(9);
+        const lines = doc.splitTextToSize('Reason: ' + l.notes, W-2*M-14);
+        doc.text(lines, M+14, yPos); yPos += lines.length*11 + 4;
+        doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
+      } else { yPos += 2; }
+    });
 
-    // ── Partial Exits (with reasons) ──
-    if(px.length){
-      sectionTitle('Partial Exits');
-      doc.setFontSize(9.5);
-      px.forEach((p,idx) => {
-        doc.setTextColor(40,40,40); doc.setFont('helvetica','bold');
-        doc.text(`${idx+1}.  ${p.exit_date}`, M+4, yPos);
-        doc.setFont('helvetica','normal'); doc.setTextColor(70,70,70);
-        doc.text(`${fmtINR(p.exit_price)} × ${p.quantity}`, M+120, yPos);
-        doc.setTextColor(p.realised_pnl>=0?30:170, p.realised_pnl>=0?140:40, p.realised_pnl>=0?90:40);
-        doc.text(`${sign(p.realised_pnl)}${fmtINR(p.realised_pnl)} (${p.return_pct>=0?'+':''}${Number(p.return_pct||0).toFixed(2)}%)`, W-M, yPos, {align:'right'});
-        yPos += 14;
-        if(p.notes){
-          doc.setTextColor(120,120,120); doc.setFont('helvetica','italic'); doc.setFontSize(9);
-          const lines = doc.splitTextToSize('Reason: ' + p.notes, W-2*M-10);
-          doc.text(lines, M+14, yPos); yPos += lines.length*11 + 4;
-          doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
-        } else { yPos += 4; }
-      });
-      yPos += 10;
-    }
-
-    // ── Final Exit (reason + notes folded in, no separate Notes section) ──
-    sectionTitle('Final Exit');
-    doc.setFontSize(9.5);
-    const finalQty = (t.quantity||0) - px.reduce((s,p)=>s+(p.quantity||0),0);
-    doc.setTextColor(40,40,40); doc.setFont('helvetica','bold');
-    doc.text(`${t.exit_date}`, M+4, yPos);
-    doc.setFont('helvetica','normal'); doc.setTextColor(70,70,70);
-    doc.text(`${fmtINR(t.avg_exit_price)} × ${finalQty}`, M+120, yPos);
-    doc.setTextColor(finalPnl>=0?30:170, finalPnl>=0?140:40, finalPnl>=0?90:40);
-    doc.text(`${sign(finalPnl)}${fmtINR(finalPnl)}`, W-M, yPos, {align:'right'});
-    yPos += 14;
-    if(t.exit_reason){
-      doc.setTextColor(120,120,120); doc.setFont('helvetica','italic'); doc.setFontSize(9);
-      const lines = doc.splitTextToSize('Reason: ' + t.exit_reason, W-2*M-10);
-      doc.text(lines, M+14, yPos); yPos += lines.length*11 + 2;
-    }
-    // Notes folded directly under the final-exit reason (same block, no gap)
-    if(t.trade_notes){
-      doc.setTextColor(120,120,120); doc.setFont('helvetica','italic'); doc.setFontSize(9);
-      const lines = doc.splitTextToSize('Notes: ' + t.trade_notes, W-2*M-10);
-      doc.text(lines, M+14, yPos); yPos += lines.length*11;
-    }
+    // Total Invested summary line.
+    doc.setDrawColor(225,228,235); doc.setLineWidth(0.5);
+    doc.line(M+4, yPos-2, W-M, yPos-2);
+    doc.setFont('helvetica','bold'); doc.setTextColor(25,25,25);
+    doc.text('Total Invested', M+4, yPos+11);
+    doc.text(`${fmtINR(journey.totalInvested)}`, W-M, yPos+11, {align:'right'});
+    yPos += 26;
 
     // ── TraderHikes footer (black band, large logo + clickable links) ──
     const PH = doc.internal.pageSize.getHeight();
