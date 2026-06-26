@@ -4384,6 +4384,39 @@ const MT = (() => {
   // Total Qty = the MAX the running position ever reached, not the sum of
   // buys. Nets partial exits that happen before a pyramid (e.g. RRKABEL:
   // +1550 → −450 → −775 → +775 → −22 → peak 1550, not 2325).
+  // ── Shared FIFO P&L engine (Indian broker standard) — user side ──
+  // Mirrors the admin engine so user-closed trades get the same correct,
+  // broker-standard P&L. For non-pyramided trades FIFO == simple calc.
+  function computeFifoPnl(events){
+    const lots=[]; let total=0; const legs=[];
+    for(const ev of events){
+      if(ev.kind==='buy'){ lots.push({qty:ev.qty,price:ev.price}); legs.push({...ev,pnl:null}); }
+      else{
+        let rem=ev.qty, pnl=0;
+        while(rem>0 && lots.length){
+          const lot=lots[0]; const take=Math.min(rem,lot.qty);
+          pnl+=take*(ev.price-lot.price); lot.qty-=take; rem-=take;
+          if(lot.qty===0) lots.shift();
+        }
+        pnl=Math.round(pnl*100)/100; total+=pnl; legs.push({...ev,pnl});
+      }
+    }
+    return { totalPnl: Math.round(total*100)/100, legs };
+  }
+  async function fifoForOpenTrade(openId, t, finalSell){
+    const { data: pyr } = await sb.from('trade_entries')
+      .select('entry_date,entry_price,quantity,created_at').eq('open_trade_id', openId);
+    const { data: parts } = await sb.from('partial_exits')
+      .select('exit_date,exit_price,quantity,created_at').eq('open_trade_id', openId);
+    const ev=[];
+    ev.push({kind:'buy', qty:+t.quantity||0, price:+(t.entry_price||t.avg_entry_price)||0, d:t.entry_date, ts:t.created_at});
+    (pyr||[]).forEach(e=>ev.push({kind:'buy', qty:+e.quantity||0, price:+e.entry_price||0, d:e.entry_date, ts:e.created_at}));
+    (parts||[]).forEach(e=>ev.push({kind:'sell', qty:+e.quantity||0, price:+e.exit_price||0, d:e.exit_date, ts:e.created_at}));
+    if(finalSell) ev.push({kind:'sell', qty:+finalSell.qty||0, price:+finalSell.price||0, d:finalSell.date, ts:new Date().toISOString()});
+    ev.sort((a,b)=> new Date(a.d)-new Date(b.d) || new Date(a.ts||a.d)-new Date(b.ts||b.d) || (a.kind==='buy'?-1:1));
+    return computeFifoPnl(ev);
+  }
+
   async function computePeakQty(id, ot){
     const { data: pyr } = await sb.from('trade_entries')
       .select('entry_date,quantity,created_at').eq('open_trade_id',id);
@@ -4515,17 +4548,33 @@ const MT = (() => {
   }
 
   async function submitClose(){
-    const t=modalTrade; const avg=t.avg_entry_price||t.entry_price, rem=t.remaining_qty??t.quantity, tot=t.total_quantity||t.quantity;
+    const t=modalTrade; const avg=t.avg_entry_price||t.entry_price, tot=t.total_quantity||t.quantity;
     const date=$('mm-date').value, px=parseFloat($('mm-price').value);
     if(!date||!(px>0)){ alert('mt-modal-alert','Enter a valid exit date and price.','err'); return; }
-    const finalPnl=(px-avg)*rem, ret=(px-avg)/avg*100;
     const { data: parts } = await sb.from('partial_exits').select('realised_pnl,quantity').eq('open_trade_id',t.id);
-    const partialPnl=(parts||[]).reduce((s,p)=>s+(p.realised_pnl||0),0);
     const partialQty=(parts||[]).reduce((s,p)=>s+(p.quantity||0),0);
-    const totalRealised=finalPnl+partialPnl;
+    // FINAL qty = total bought − partials (first principles; never peak fallback).
+    const { data: pyrQ } = await sb.from('trade_entries').select('quantity').eq('open_trade_id',t.id);
+    const pyramidQty=(pyrQ||[]).reduce((s,e)=>s+(e.quantity||0),0);
+    const totalBought=(t.quantity||0)+pyramidQty;
+    let rem = totalBought - partialQty;
+    if(!(rem>0)) rem = (t.remaining_qty && t.remaining_qty>0) ? t.remaining_qty : 0;
+    // Total realised via FIFO (broker standard), not blended.
+    let totalRealised, finalPnlFifo;
+    try {
+      const fifo = await fifoForOpenTrade(t.id, t, { qty:rem, price:px, date });
+      totalRealised = fifo.totalPnl;
+      const sells = fifo.legs.filter(l=>l.kind==='sell');
+      finalPnlFifo = sells.length ? sells[sells.length-1].pnl : (px-avg)*rem;
+    } catch(e){
+      console.warn('FIFO failed, blended fallback:', e);
+      const partialPnl=(parts||[]).reduce((s,p)=>s+(p.realised_pnl||0),0);
+      totalRealised=(px-avg)*rem + partialPnl; finalPnlFifo=(px-avg)*rem;
+    }
+    const ret=(px-avg)/avg*100;
     const holding=Math.round((new Date(date)-new Date(t.entry_date))/86400000);
     const payload={ symbol:t.symbol, company_name:t.company_name, sector:t.sector, exchange:t.exchange||'NSE',
-      entry_date:t.entry_date, avg_entry_price:avg, quantity:tot, sl_price:t.sl_price,
+      entry_date:t.entry_date, avg_entry_price:avg, quantity:tot, final_exit_qty:rem, sl_price:t.sl_price,
       exit_date:date, avg_exit_price:px, realised_pnl:Math.round(totalRealised*100)/100,
       return_pct:Math.round(ret*100)/100, holding_days:holding, exit_reason:$('mm-reason').value||null,
       trade_notes:$('mm-notes').value||t.trade_notes||null, partial_exit_qty:partialQty>0?partialQty:null,
