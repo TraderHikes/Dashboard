@@ -1184,8 +1184,15 @@ canvas.tc{display:block;width:100%;height:100%}
 .side-nav{display:flex;flex-direction:column;gap:8px}
 .side-bottom{display:flex;flex-direction:column;gap:10px;flex-shrink:0}
 .side-bell{position:relative}
-.bell-btn{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;border-radius:13px;cursor:pointer;transition:all .16s;color:var(--text2)}
-.bell-btn:hover{background:var(--card2);color:var(--white)}
+.bell-btn{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 4px;border-radius:13px;cursor:pointer;transition:all .16s;color:var(--text2)}
+/* Icon sits in its own box so the highlight wraps just the icon (Canva-style). */
+.bell-btn svg{display:block}
+.bell-ic-box{width:44px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:11px;border:1px solid transparent;transition:all .16s}
+.bell-btn:hover .bell-ic-box{background:var(--card2)}
+.bell-btn:hover{color:var(--white)}
+.bell-btn.open{color:#fff}
+.bell-btn.open .bell-ic-box{color:var(--blue-lt);background:linear-gradient(160deg,rgba(92,111,251,.30),rgba(92,111,251,.12));border-color:rgba(143,163,255,.45);box-shadow:0 2px 8px rgba(92,111,251,.18)}
+body.theme-light .bell-btn.open .bell-ic-box{background:linear-gradient(160deg,#3344e6,#4a5bf0);border-color:#3344e6;color:#fff;box-shadow:0 4px 14px rgba(51,68,230,.32)}
 .bell-btn.has-unread{color:var(--blue-lt)}
 .bell-lbl{font-size:10px;font-weight:600;letter-spacing:.3px}
 .bell-badge{position:absolute;top:2px;right:14px;min-width:16px;height:16px;padding:0 4px;border-radius:9px;background:var(--red);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px var(--bg2)}
@@ -1353,7 +1360,7 @@ body.theme-light .ch-wrap.wm-full .ch-rs{color:#3344e6;background:rgba(51,68,230
   <div class="side-bottom">
     <div class="side-bell">
       <div class="bell-btn" id="bell-btn" onclick="toggleBell(event)" title="Notifications &amp; Messages">
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+        <div class="bell-ic-box"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></div>
         <span class="bell-badge" id="bell-badge" style="display:none">0</span>
         <span class="bell-lbl">Inbox</span>
       </div>
@@ -3403,7 +3410,7 @@ async function signOut() {
   await sb.auth.signOut();
   window.location.href = LOGIN_URL;
 }
-function toggleAcct(e){ if(e) e.stopPropagation(); const p=document.getElementById('acct-pop'); if(p) p.classList.toggle('open'); }
+function toggleAcct(e){ if(e) e.stopPropagation(); const p=document.getElementById('acct-pop'); if(!p) return; const opening=!p.classList.contains('open'); p.classList.toggle('open'); if(opening){ const bp=document.getElementById('bell-pop'); if(bp) bp.classList.remove('open'); const bb=document.getElementById('bell-btn'); if(bb) bb.classList.remove('open'); } }
 document.addEventListener('click', e=>{ const p=document.getElementById('acct-pop'); if(p && p.classList.contains('open') && !e.target.closest('.side-acct')) p.classList.remove('open'); });
 function toggleTheme(){ const on=document.body.classList.toggle('theme-light'); const ts=document.getElementById('theme-state'); if(ts) ts.textContent=on?'Light':'Dark'; try{ localStorage.setItem('mb-theme', on?'light':'dark'); }catch(e){} }
 
@@ -3630,6 +3637,10 @@ function toggleBell(e){
   const p=document.getElementById('bell-pop'); if(!p) return;
   const opening=!p.classList.contains('open');
   p.classList.toggle('open');
+  // Reflect open state on the button (drives the icon highlight).
+  const btn=document.getElementById('bell-btn'); if(btn) btn.classList.toggle('open', opening);
+  // Auto-collapse the account popup when opening the inbox.
+  if(opening){ const ap=document.getElementById('acct-pop'); if(ap) ap.classList.remove('open'); }
   if(opening){
     loadNotifications();
     if(BELL.canMsg) loadMessages();
@@ -3760,7 +3771,7 @@ function updateBellBadge(){
 }
 
 // close bell on outside click
-document.addEventListener('click', e=>{ const p=document.getElementById('bell-pop'); if(p && p.classList.contains('open') && !e.target.closest('.side-bell')) p.classList.remove('open'); });
+document.addEventListener('click', e=>{ const p=document.getElementById('bell-pop'); if(p && p.classList.contains('open') && !e.target.closest('.side-bell')){ p.classList.remove('open'); const bb=document.getElementById('bell-btn'); if(bb) bb.classList.remove('open'); } });
 
 /* ════ DAILY MARKET BRIEF (paid + admin) ════ */
 async function loadMarketBrief(){
