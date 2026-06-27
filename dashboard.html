@@ -7921,7 +7921,7 @@ async function downloadClosedPDF(id){
         const img = canvas.toDataURL('image/png');
         const iw = W - 2*M, ih = iw * (canvas.height / canvas.width);
         doc.addImage(img, 'PNG', M, yPos, iw, ih);
-        yPos += ih + 26;
+        yPos += ih + 44;   // more breathing room between chart and Trade Details
       } catch(capErr){
         console.warn('Chart capture failed, continuing without image:', capErr);
       }
@@ -7961,32 +7961,39 @@ async function downloadClosedPDF(id){
     _exitQty += _finalExitQty;
     const trueAvgExit = _exitQty>0 ? _exitVal/_exitQty : (t.avg_exit_price||0);
 
-    const detail = [
-      ['Entry Date', String(t.entry_date)],          ['Avg Entry', fmtINR(t.avg_entry_price)],
-      ['Exit Date',  String(t.exit_date)],            ['Avg Exit',  fmtINR(trueAvgExit)],
-      ['Duration',   `${t.holding_days||0} days`],    ['Stop Loss', t.sl_price?fmtINR(t.sl_price):'—'],
-      ['Total Qty',  String(t.quantity||0)],          ['Realised P&L', `${sign(t.realised_pnl)}${fmtINR(t.realised_pnl)}`],
+    // Two independent columns (different lengths). Left = lifecycle/% ; Right = prices/P&L.
+    const detailL = [
+      ['Entry Date', String(t.entry_date)],
+      ['Exit Date',  String(t.exit_date)],
+      ['Duration',   `${t.holding_days||0} days`],
       ['Position Size', t.position_size_pct!=null?`${Number(t.position_size_pct).toFixed(2)}%`:'—'],
-                                                      ['Return %', `${t.return_pct>=0?'+':''}${Number(t.return_pct||0).toFixed(2)}%`],
-      ['Initial Entry', fmtINR(journey.initialPrice)],
-                                                      ['Return (Initial)', retFromInitial!=null?`${retFromInitial>=0?'+':''}${retFromInitial.toFixed(2)}%`:'—'],
       ['Portfolio Impact', portfolioImpact!=null?`${portfolioImpact>=0?'+':''}${portfolioImpact.toFixed(2)}%`:'—'],
-                                                      ['Partial Exits', px.length?String(px.length):'None'],
+      ['Return %', `${t.return_pct>=0?'+':''}${Number(t.return_pct||0).toFixed(2)}%`],
+    ];
+    const detailR = [
+      ['Initial Entry', fmtINR(journey.initialPrice)],
+      ['Avg Entry', fmtINR(t.avg_entry_price)],
+      ['Avg Exit',  fmtINR(trueAvgExit)],
+      ['Final Exit', fmtINR(t.avg_exit_price)],
+      ['Stop Loss', t.sl_price?fmtINR(t.sl_price):'—'],
+      ['Realised P&L', `${sign(t.realised_pnl)}${fmtINR(t.realised_pnl)}`],
+      ['Return (Initial)', retFromInitial!=null?`${retFromInitial>=0?'+':''}${retFromInitial.toFixed(2)}%`:'—'],
     ];
     doc.setFont('helvetica','normal'); doc.setFontSize(10);
-    const colX = [M+4, M+108, W/2+4, W/2+108];      // label/val for left & right columns (wider label gap)
-    for(let i=0;i<detail.length;i+=2){
-      const rowY = yPos + (i/2)*18 + 12;
-      // left pair
-      doc.setTextColor(120,120,120); doc.text(detail[i][0], colX[0], rowY);
-      doc.setTextColor(25,25,25);    doc.text(detail[i][1], colX[1], rowY);
-      // right pair
-      if(detail[i+1]){
-        doc.setTextColor(120,120,120); doc.text(detail[i+1][0], colX[2], rowY);
-        doc.setTextColor(25,25,25);    doc.text(detail[i+1][1], colX[3], rowY);
+    const colX = [M+4, M+108, W/2+4, W/2+108];      // label/val for left & right columns
+    const rowsN = Math.max(detailL.length, detailR.length);
+    for(let i=0;i<rowsN;i++){
+      const rowY = yPos + i*18 + 12;
+      if(detailL[i]){
+        doc.setTextColor(120,120,120); doc.text(detailL[i][0], colX[0], rowY);
+        doc.setTextColor(25,25,25);    doc.text(detailL[i][1], colX[1], rowY);
+      }
+      if(detailR[i]){
+        doc.setTextColor(120,120,120); doc.text(detailR[i][0], colX[2], rowY);
+        doc.setTextColor(25,25,25);    doc.text(detailR[i][1], colX[3], rowY);
       }
     }
-    yPos += Math.ceil(detail.length/2)*18 + 22;
+    yPos += rowsN*18 + 40;   // more breathing room before Trade Journey
 
     // ── Trade Journey (CHRONOLOGICAL: initial -> partials/pyramids by date -> final) ──
     // One unified, date-ordered section that mirrors the dashboard card, with
