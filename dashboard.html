@@ -101,10 +101,10 @@ body{overflow-x:hidden;
 .logo-wrap{display:flex;align-items:center;gap:12px}
 /* NiveshAstra brand logo. Dark UI is the default, so the white-text (dark-theme)
    lockup is shown; the light variant is kept for any future light theme. */
-.brand-logo{height:44px;width:auto;display:block}
+.brand-logo{height:36px;width:auto;display:block}
 .brand-logo-light{display:none}
-body.light-theme .brand-logo-dark{display:none}
-body.light-theme .brand-logo-light{display:block}
+body.theme-light .brand-logo-dark{display:none}
+body.theme-light .brand-logo-light{display:block}
 .logo-icon{
   width:42px;height:42px;border-radius:10px;
   background:linear-gradient(135deg,#1a2040 0%,#0e1528 100%);
@@ -729,7 +729,7 @@ canvas.tc{display:block;width:100%;height:100%}
   .hdr-stat-l{font-size:8px}
   .hdr-stat-v{font-size:11px}
   .regime-pill{font-size:10px;padding:4px 10px;flex-shrink:0}
-  .brand-logo{height:36px}
+  .brand-logo{height:30px}
   .logo-icon{width:30px;height:30px;font-size:11px}
   .htime,.live-pill{display:none}
   .hdr-r{gap:6px}
@@ -1243,12 +1243,12 @@ canvas.tc{display:block;width:100%;height:100%}
 .mbrief-empty{padding:18px;text-align:center;color:var(--muted);font-size:12px}
 .mbrief-src{font-size:11px;color:var(--muted);margin-top:12px;line-height:1.6}
 .mbrief-src a{color:var(--blue-lt);text-decoration:none}
-.side .ng-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:11px 4px;border-radius:13px;color:var(--muted);cursor:pointer;border:1px solid transparent;transition:all .16s;text-align:center;line-height:1.15;background:none;box-shadow:none;white-space:normal}
+.side .ng-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;margin:0 6px;border-radius:12px;color:var(--muted);cursor:pointer;border:1px solid transparent;transition:all .16s;text-align:center;line-height:1.15;background:none;box-shadow:none;white-space:normal}
 .side .ng-btn .ng-ic{width:23px;height:23px;display:flex;align-items:center;justify-content:center}
 .side .ng-btn .ng-ic svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .side .ng-btn .ng-lbl{font-size:9.5px;font-weight:600;letter-spacing:.01em}
 .side .ng-btn:hover{color:var(--text2);background:var(--card2)}
-.side .ng-btn.active{color:#fff;background:linear-gradient(160deg,rgba(92,111,251,.34),rgba(92,111,251,.10));border-color:rgba(143,163,255,.5);box-shadow:0 0 0 1px rgba(92,111,251,.25),0 6px 18px rgba(92,111,251,.28)}
+.side .ng-btn.active{color:#fff;background:linear-gradient(160deg,rgba(92,111,251,.30),rgba(92,111,251,.12));border-color:rgba(143,163,255,.45);box-shadow:0 2px 8px rgba(92,111,251,.18)}
 .side .ng-btn.active .ng-ic{color:var(--blue-lt)}
 .side .ng-btn.active::after{display:none}
 .side-acct{position:relative;flex-shrink:0}
