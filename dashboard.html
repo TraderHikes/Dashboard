@@ -1243,13 +1243,16 @@ canvas.tc{display:block;width:100%;height:100%}
 .mbrief-empty{padding:18px;text-align:center;color:var(--muted);font-size:12px}
 .mbrief-src{font-size:11px;color:var(--muted);margin-top:12px;line-height:1.6}
 .mbrief-src a{color:var(--blue-lt);text-decoration:none}
-.side .ng-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;margin:0 6px;border-radius:12px;color:var(--muted);cursor:pointer;border:1px solid transparent;transition:all .16s;text-align:center;line-height:1.15;background:none;box-shadow:none;white-space:normal}
-.side .ng-btn .ng-ic{width:23px;height:23px;display:flex;align-items:center;justify-content:center}
+.side .ng-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:6px 4px;margin:0 6px;border-radius:12px;color:var(--muted);cursor:pointer;border:1px solid transparent;transition:all .16s;text-align:center;line-height:1.15;background:none;box-shadow:none;white-space:normal}
+/* Icon sits in its own rounded box — this is what gets the highlight (Canva-style). */
+.side .ng-btn .ng-ic{width:44px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:11px;border:1px solid transparent;transition:all .16s}
 .side .ng-btn .ng-ic svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .side .ng-btn .ng-lbl{font-size:9.5px;font-weight:600;letter-spacing:.01em}
-.side .ng-btn:hover{color:var(--text2);background:var(--card2)}
-.side .ng-btn.active{color:#fff;background:linear-gradient(160deg,rgba(92,111,251,.30),rgba(92,111,251,.12));border-color:rgba(143,163,255,.45);box-shadow:0 2px 8px rgba(92,111,251,.18)}
-.side .ng-btn.active .ng-ic{color:var(--blue-lt)}
+.side .ng-btn:hover{color:var(--text2)}
+.side .ng-btn:hover .ng-ic{background:var(--card2)}
+/* Active: highlight ONLY the icon box, not the whole tab. Same blue style. */
+.side .ng-btn.active{color:#fff;background:none;border-color:transparent;box-shadow:none}
+.side .ng-btn.active .ng-ic{color:var(--blue-lt);background:linear-gradient(160deg,rgba(92,111,251,.30),rgba(92,111,251,.12));border-color:rgba(143,163,255,.45);box-shadow:0 2px 8px rgba(92,111,251,.18)}
 .side .ng-btn.active::after{display:none}
 .side-acct{position:relative;flex-shrink:0}
 .acct-btn{display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 4px;border-radius:13px;cursor:pointer;transition:all .16s}
@@ -1286,9 +1289,10 @@ body.theme-light{
   --amber:#c97a00; --amber-dim:rgba(201,122,0,.13); --amber-bd:rgba(201,122,0,.32); --gold:#b8860b;
 }
 /* active sidebar widget: solid blue + white text (a pale tint would hide white text) */
-body.theme-light .side .ng-btn.active{background:linear-gradient(160deg,#3344e6,#4a5bf0);border-color:#3344e6;color:#fff;box-shadow:0 4px 14px rgba(51,68,230,.32)}
-body.theme-light .side .ng-btn.active .ng-ic{color:#fff}
-body.theme-light .side .ng-btn:hover{background:var(--card3)}
+body.theme-light .side .ng-btn.active{background:none;border-color:transparent;color:#3344e6;box-shadow:none}
+body.theme-light .side .ng-btn.active .ng-ic{background:linear-gradient(160deg,#3344e6,#4a5bf0);border-color:#3344e6;color:#fff;box-shadow:0 4px 14px rgba(51,68,230,.32)}
+body.theme-light .side .ng-btn:hover .ng-ic{background:var(--card3)}
+body.theme-light .side .ng-btn:hover .ng-ic{background:var(--card3)}
 /* sub-nav active tab — blue text on a clearer tint */
 body.theme-light .ns-btn.active{background:linear-gradient(180deg,rgba(51,68,230,.13),rgba(51,68,230,.03));color:var(--blue)}
 /* chart OHLC overlay sits ON the dark chart canvas — keep it light regardless of theme */
