@@ -101,7 +101,7 @@ body{overflow-x:hidden;
 .logo-wrap{display:flex;align-items:center;gap:12px}
 /* NiveshAstra brand logo. Dark UI is the default, so the white-text (dark-theme)
    lockup is shown; the light variant is kept for any future light theme. */
-.brand-logo{height:54px;width:auto;display:block}
+.brand-logo{height:44px;width:auto;display:block}
 .brand-logo-light{display:none}
 body.light-theme .brand-logo-dark{display:none}
 body.light-theme .brand-logo-light{display:block}
@@ -729,7 +729,7 @@ canvas.tc{display:block;width:100%;height:100%}
   .hdr-stat-l{font-size:8px}
   .hdr-stat-v{font-size:11px}
   .regime-pill{font-size:10px;padding:4px 10px;flex-shrink:0}
-  .brand-logo{height:44px}
+  .brand-logo{height:36px}
   .logo-icon{width:30px;height:30px;font-size:11px}
   .htime,.live-pill{display:none}
   .hdr-r{gap:6px}
@@ -8053,11 +8053,9 @@ async function downloadClosedPDF(id){
         const pages=doc.internal.getNumberOfPages(), H=doc.internal.pageSize.getHeight();
         for(let p=1;p<=pages;p++){
           doc.setPage(p); doc.setGState(gs);
-          // Large faint logo mark, centred
-          try{ doc.addImage(NIVESH_LOGO_B64,'PNG', W/2-130, H/2-55, 260, 110); }catch(e){}
-          // Subtle wordmark beneath
-          doc.setTextColor(92,111,251); doc.setFont('helvetica','bold'); doc.setFontSize(44);
-          doc.text('NIVESHASTRA', W/2, H/2+130, { align:'center', angle:32 });
+          // Single faint logo-lockup watermark, centred (the lockup already
+          // contains the NIVESH ASTRA wordmark — no separate text line needed).
+          try{ doc.addImage(NIVESH_LOGO_B64,'PNG', W/2-150, H/2-63, 300, 127); }catch(e){}
           doc.setGState(gsr);
         }
       }
