@@ -3951,22 +3951,22 @@ const NAV=[
          body:'One locked, single-page view of the whole market and your book — pre-market pulse, internals, your desk and edge review, switchable in a tap.',
          cta:'Unlock Full Access', url:MSTP_URL},
    subs:[{id:'hawk',label:'Saved Presets'}]},
-  {key:'model',    label:'Model Portfolio', roles:['admin','paid','free'], lockFor:['free','paid'],
-   lock:{kind:'course', title:'Learn live from the Model Swing Trader Portfolio',
-         body:'This is the real book behind the Master Swing Trader Program — followed hands-on inside the course.',
-         cta:'Explore the MSTP Course →', url:MSTP_URL},
-   subs:[{id:'portfolio',label:'360° Overview'},{id:'open',label:'Portfolio'},{id:'closed',label:'Trade Journal'}]},
-  {key:'market',   label:'Market Data Tracker', roles:['admin','paid','free'], lockFor:['free'],
+  {key:'market',   label:'Market Data', roles:['admin','paid','free'], lockFor:['free'],
    lock:{kind:'upgrade', title:'Market Data Tracker',
          body:'Unlock the full multi-indicator market score, breadth across every EMA, and sectoral rotation.',
          cta:'Unlock Full Access', url:MSTP_URL},
    subs:[{id:'marketbrief',label:'Market Brief'},{id:'breadth',label:'Market Breadth'},{id:'sectoral',label:'Sectoral Analysis'},{id:'heatmap',label:'Heatmap'}]},
-  {key:'screener', label:'Model Watchlist', roles:['admin'], lockFor:[],
-   subs:[{id:'filter',label:'Watchlist'},{id:'charts',label:'Chart Scan'}]},
-  {key:'mywl',     label:'My Watchlist', roles:['paid','free'], lockFor:[],
-   subs:[{id:'mywatch',label:'Watchlist'},{id:'mycharts',label:'Chart Scan'}]},
-  {key:'desk',     label:'My Trading Desk', roles:['paid','free'], lockFor:[],
+  {key:'desk',     label:'Portfolio Tracker', roles:['paid','free'], lockFor:[],
    subs:[{id:'mtoverview',label:'360° Overview'},{id:'mtmanager',label:'Trade Manager'},{id:'mtportfolio',label:'Portfolio'},{id:'mtclosed',label:'Trade Journal'}]},
+  {key:'mywl',     label:'Watchlist Scan', roles:['paid','free'], lockFor:[],
+   subs:[{id:'mywatch',label:'Watchlist'},{id:'mycharts',label:'Chart Scan'}]},
+  {key:'model',    label:'Model Portfolio', adminLabel:'Portfolio Tracker', roles:['admin','paid','free'], lockFor:['free','paid'],
+   lock:{kind:'course', title:'Learn live from the Model Swing Trader Portfolio',
+         body:'This is the real book behind the Master Swing Trader Program — followed hands-on inside the course.',
+         cta:'Explore the MSTP Course →', url:MSTP_URL},
+   subs:[{id:'portfolio',label:'360° Overview'},{id:'open',label:'Portfolio'},{id:'closed',label:'Trade Journal'}]},
+  {key:'screener', label:'Watchlist Scan', roles:['admin'], lockFor:[],
+   subs:[{id:'filter',label:'Watchlist'},{id:'charts',label:'Chart Scan'}]},
 ];
 const NAV_ICONS={
   hawk:'<svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>',
@@ -3985,7 +3985,8 @@ const NAVUI=(()=>{
     const gs=vis();
     document.getElementById('nav-groups').innerHTML = gs.map(g=>{
       const locked=g.lockFor.includes(role);
-      return `<div class="ng-btn${locked?' locked':''}" data-g="${g.key}" onclick="NAVUI.selectGroup('${g.key}')" title="${esc(g.label)}"><span class="ng-ic">${NAV_ICONS[g.key]||''}</span><span class="ng-lbl">${esc(g.label)}</span></div>`;
+      const lbl=(role==='admin' && g.adminLabel) ? g.adminLabel : g.label;
+      return `<div class="ng-btn${locked?' locked':''}" data-g="${g.key}" onclick="NAVUI.selectGroup('${g.key}')" title="${esc(lbl)}"><span class="ng-ic">${NAV_ICONS[g.key]||''}</span><span class="ng-lbl">${esc(lbl)}</span></div>`;
     }).join('');
     selectGroup(role==='admin' ? 'hawk' : role==='paid' ? 'hawk' : 'desk');
   }
